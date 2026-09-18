@@ -26,7 +26,7 @@ class FsrsService {
     required String? storedCardJson,
     required StudyRating rating,
   }) {
-    final card = storedCardJson == null
+    final currentCard = storedCardJson == null
         ? fsrs.Card(cardId: wordId)
         : fsrs.Card.fromMap(
             (jsonDecode(storedCardJson) as Map).cast<String, dynamic>(),
@@ -37,7 +37,8 @@ class FsrsService {
       StudyRating.good => fsrs.Rating.good,
       StudyRating.easy => fsrs.Rating.easy,
     };
-    final (:card, :reviewLog) = _scheduler.reviewCard(card, fsrsRating);
+    final (:card, :reviewLog) =
+        _scheduler.reviewCard(currentCard, fsrsRating);
     return FsrsReviewResult(
       card: card.toMap().cast<String, Object?>(),
       reviewLog: reviewLog.toMap().cast<String, Object?>(),
