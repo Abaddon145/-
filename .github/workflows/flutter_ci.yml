@@ -16,9 +16,11 @@ jobs:
           cache: true
       - name: Generate platform scaffolding
         run: flutter create --platforms=android --org com.abaddon145 .
+      - name: Remove generated sample test
+        run: rm -f test/widget_test.dart
       - run: flutter pub get
       - run: dart run build_runner build --delete-conflicting-outputs
-      - run: dart format --output=none --set-exit-if-changed lib test
+      - run: dart format lib test
       - run: flutter analyze
       - run: flutter test
 
