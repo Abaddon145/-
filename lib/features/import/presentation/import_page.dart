@@ -29,17 +29,12 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       _error = null;
     });
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: const ['xlsx'],
-        withData: true,
       );
-      if (result == null) return;
-      final file = result.files.single;
-      final bytes = file.bytes;
-      if (bytes == null) {
-        throw StateError('无法读取所选文件。');
-      }
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
       final preview = _service.parseFirstSheet(Uint8List.fromList(bytes));
       setState(() {
         _preview = preview;
