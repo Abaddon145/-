@@ -14,6 +14,7 @@ Milestone 1 基础版本包含：
 - 韩语 `ko-KR` 系统 TTS
 - 首页、导入页和最小学习卡片闭环
 - 亮色 / 暗色主题
+- 可安装到 iPhone 主屏幕的离线 PWA
 
 手动字段映射、重复词交互策略和完整统计仍按 Issue #2–#4 继续实现。
 
@@ -40,6 +41,8 @@ flutter run
 ## iPhone 安装说明
 
 iOS 构建必须在安装了 Xcode 的 Mac 上执行。连接 iPhone、启用 Developer Mode，并在 Xcode 中选择自己的 Signing Team 后即可运行。未付费的 Personal Team 可用于个人设备测试，但配置文件会定期到期；App Store / TestFlight 分发需要 Apple Developer Program。
+
+不使用苹果签名时，可以打开 GitHub Pages 上的 PWA，在 Safari 分享菜单中选择“添加到主屏幕”。词库和学习进度保存在当前浏览器的本地数据库中。
 
 ## 验证
 
