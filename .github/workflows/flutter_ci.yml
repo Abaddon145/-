@@ -1,0 +1,55 @@
+name: Flutter CI
+
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate platform scaffolding
+        run: flutter create --platforms=android --org com.abaddon145 .
+      - name: Remove generated sample test
+        run: rm -f test/widget_test.dart
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: dart format lib test
+      - run: flutter analyze
+      - run: flutter test
+
+  ios-simulator-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Generate iOS scaffolding
+        run: flutter create --platforms=ios --org com.abaddon145 .
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter build ios --simulator --no-codesign
+
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+      - name: Download Drift web runtime
+        run: |
+          curl -L --fail https://github.com/simolus3/drift/releases/download/drift-2.35.0/sqlite3.wasm -o web/sqlite3.wasm
+          curl -L --fail https://github.com/simolus3/drift/releases/download/drift-2.35.0/drift_worker.js -o web/drift_worker.js
+      - run: flutter build web --release --base-href "/-/" --pwa-strategy offline-first
