@@ -10,6 +10,8 @@ class HomePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final counts = ref.watch(homeCountsProvider);
+    final seed = ref.watch(bundledWordSeedProvider);
+    final wordsReady = seed.hasValue;
     return Scaffold(
       appBar: AppBar(
         title: const Text('KoreanMemo'),
@@ -53,10 +55,19 @@ class HomePage extends ConsumerWidget {
               ),
               const SizedBox(height: 28),
               FilledButton.icon(
-                onPressed: () => context.push('/study'),
+                onPressed: wordsReady ? () => context.push('/study') : null,
                 icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('开始学习'),
+                label: Text(wordsReady ? '开始学习' : '正在导入词库…'),
               ),
+              if (seed.hasError) ...[
+                const SizedBox(height: 12),
+                Text(
+                  '内置词库导入失败：${seed.error}',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: () => context.push('/import'),

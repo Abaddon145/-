@@ -200,35 +200,75 @@ class AppDatabase extends _$AppDatabase {
     required List<WordDraft> drafts,
     required String source,
   }) {
+    return transaction(
+      () => _writeWords(
+        wordBookId: wordBookId,
+        drafts: drafts,
+        source: source,
+      ),
+    );
+  }
+
+  Future<ImportWriteResult?> importWordBookIfMissing({
+    required String name,
+    required String sourceFileName,
+    required List<WordDraft> drafts,
+  }) {
     return transaction(() async {
-      var inserted = 0;
-      var reused = 0;
-      for (var index = 0; index < drafts.length; index++) {
-        final draft = drafts[index];
-        final existing = await (select(words)
-              ..where((row) =>
-                  row.normalizedKorean.equals(draft.normalizedKorean) &
-                  row.normalizedBaseForm.equals(draft.normalizedBaseForm)))
-            .getSingleOrNull();
-        final wordId = existing?.id ??
-            await into(words).insert(
-              draft.toCompanion(source: source),
-            );
-        if (existing == null) {
-          inserted++;
-        } else {
-          reused++;
-        }
-        await into(wordBookWords).insertOnConflictUpdate(
-          WordBookWordsCompanion.insert(
-            wordBookId: wordBookId,
-            wordId: wordId,
-            sortOrder: index,
-          ),
-        );
-      }
-      return ImportWriteResult(inserted: inserted, reused: reused);
+      final existingBook = await (select(wordBooks)
+            ..where((row) => row.sourceFileName.equals(sourceFileName)))
+          .getSingleOrNull();
+      if (existingBook != null) return null;
+
+      final now = DateTime.now().toUtc();
+      final wordBookId = await into(wordBooks).insert(
+        WordBooksCompanion.insert(
+          name: name,
+          sourceFileName: Value(sourceFileName),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+      return _writeWords(
+        wordBookId: wordBookId,
+        drafts: drafts,
+        source: sourceFileName,
+      );
     });
+  }
+
+  Future<ImportWriteResult> _writeWords({
+    required int wordBookId,
+    required List<WordDraft> drafts,
+    required String source,
+  }) async {
+    var inserted = 0;
+    var reused = 0;
+    for (var index = 0; index < drafts.length; index++) {
+      final draft = drafts[index];
+      final existing = await (select(words)
+            ..where((row) =>
+                row.normalizedKorean.equals(draft.normalizedKorean) &
+                row.normalizedBaseForm.equals(draft.normalizedBaseForm)))
+          .getSingleOrNull();
+      final wordId = existing?.id ??
+          await into(words).insert(
+            draft.toCompanion(source: source),
+          );
+      if (existing == null) {
+        inserted++;
+      } else {
+        reused++;
+      }
+      await into(wordBookWords).insertOnConflictUpdate(
+        WordBookWordsCompanion.insert(
+          wordBookId: wordBookId,
+          wordId: wordId,
+          sortOrder: index,
+        ),
+      );
+    }
+    return ImportWriteResult(inserted: inserted, reused: reused);
   }
 
   Future<void> persistReview({
