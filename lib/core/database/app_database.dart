@@ -440,20 +440,36 @@ class AppDatabase extends _$AppDatabase {
         [wordId,isWrong?1:0,isWrong?0:1,isWrong?1:0,now.millisecondsSinceEpoch]);
     });
   }
-  Future<List<LibraryWordEntry>> searchLibraryWords({required String query, required LibraryFilter filter}) async {
-    final q = normalizeLookup(query);
-    final rows = await customSelect(
-      'SELECT w.*, COALESCE(u.is_favorite, 0) AS favorite, COALESCE(u.wrong_count, 0) AS wrong_count '
-      'FROM words w LEFT JOIN user_words u ON u.word_id = w.id '
-      'WHERE (? = \'\' OR lower(w.korean) LIKE ? OR lower(w.meaning_zh) LIKE ? OR lower(w.base_form) LIKE ?) '
-      'AND (? = 0 OR COALESCE(u.is_favorite, 0) = 1) AND (? = 0 OR COALESCE(u.wrong_count, 0) > 0) '
-      'ORDER BY w.korean LIMIT 1000',
-      variables: [Variable<String>(q), Variable<String>('%$q%'), Variable<String>('%$q%'), Variable<String>('%$q%'),
-        Variable<int>(filter == LibraryFilter.favorites ? 1 : 0), Variable<int>(filter == LibraryFilter.wrong ? 1 : 0)],
-      readsFrom: {words, userWords},
-    ).get();
-    return rows.map((r) => LibraryWordEntry(word: Word.fromData(r.data, this),
-      isFavorite: r.read<int>('favorite') != 0, wrongCount: r.read<int>('wrong_count'))).toList();
+  Future<List<LibraryWordEntry>> searchLibraryWords({
+    required String query,
+    required LibraryFilter filter,
+  }) async {
+    final normalized = normalizeLookup(query);
+    final search = normalized.isEmpty
+        ? const Constant<bool>(true)
+        : words.korean.lower().like('%$normalized%') |
+            words.meaningZh.lower().like('%$normalized%') |
+            words.baseForm.lower().like('%$normalized%');
+    final filterExpression = switch (filter) {
+      LibraryFilter.all => const Constant<bool>(true),
+      LibraryFilter.favorites => userWords.isFavorite.equals(true),
+      LibraryFilter.wrong => userWords.wrongCount.isBiggerThanValue(0),
+    };
+    final queryBuilder = select(words).join([
+      leftOuterJoin(userWords, userWords.wordId.equalsExp(words.id)),
+    ])
+      ..where(search & filterExpression)
+      ..orderBy([OrderingTerm.asc(words.korean)])
+      ..limit(1000);
+    final rows = await queryBuilder.get();
+    return rows.map((row) {
+      final userWord = row.readTableOrNull(userWords);
+      return LibraryWordEntry(
+        word: row.readTable(words),
+        isFavorite: userWord?.isFavorite ?? false,
+        wrongCount: userWord?.wrongCount ?? 0,
+      );
+    }).toList();
   }
 
   Future<void> setFavorite(int id, bool value) => customStatement(
