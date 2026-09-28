@@ -12,7 +12,7 @@ void main() {
     final bookId = await source.createWordBook(name: 'test', sourceFileName: 'test.xlsx');
     await source.importWords(wordBookId: bookId, source: 'test.xlsx',
       drafts: const [WordDraft(korean: '학교', meaningZh: '学校')]);
-    var words = await source.searchLibraryWords(query: '学', filter: LibraryFilter.all);
+    final words = await source.searchLibraryWords(query: '学', filter: LibraryFilter.all);
     expect(words, hasLength(1));
     final id = words.single.word.id;
 
