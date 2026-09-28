@@ -89,7 +89,7 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
                 ),
                 const SizedBox(height: 24),
                 DropdownButtonFormField<int>(
-                  value: _newWordsPerDay,
+                  initialValue: _newWordsPerDay,
                   decoration: const InputDecoration(
                     labelText: '每日新词',
                     border: OutlineInputBorder(),
@@ -108,7 +108,7 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
                 ),
                 const SizedBox(height: 18),
                 DropdownButtonFormField<int>(
-                  value: _reviewsPerDay,
+                  initialValue: _reviewsPerDay,
                   decoration: const InputDecoration(
                     labelText: '每日复习上限',
                     border: OutlineInputBorder(),
