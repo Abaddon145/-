@@ -43,7 +43,7 @@ class KoreanMemoApp extends ConsumerWidget {
                   : Colors.white.withValues(alpha: 0.72),
             ),
           ],
-          if (child != null) child,
+          child ?? const SizedBox.shrink(),
         ],
       ),
     );
