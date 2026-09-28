@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/home/presentation/home_page.dart';
 import '../../features/import/presentation/import_page.dart';
+import '../../features/settings/presentation/daily_plan_page.dart';
 import '../../features/study/presentation/study_page.dart';
 
 final appRouter = GoRouter(
@@ -9,5 +10,9 @@ final appRouter = GoRouter(
     GoRoute(path: '/', builder: (context, state) => const HomePage()),
     GoRoute(path: '/import', builder: (context, state) => const ImportPage()),
     GoRoute(path: '/study', builder: (context, state) => const StudyPage()),
+    GoRoute(
+      path: '/settings/daily-plan',
+      builder: (context, state) => const DailyPlanPage(),
+    ),
   ],
 );
