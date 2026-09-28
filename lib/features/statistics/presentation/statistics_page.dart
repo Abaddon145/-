@@ -28,7 +28,7 @@ class StatisticsPage extends ConsumerWidget {
             Text('新词  ${today?.newWords??0}'),
             Text('复习  ${today?.reviews??0}'),
             Text('正确率  $accuracy%'),
-            Text('学习时长  ${mins} 分钟'),
+            Text('学习时长  $mins 分钟'),
           ]))),
           Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text('近 7 天 · 共 $total 次学习',style:Theme.of(context).textTheme.titleMedium)),
           for(final day in days) ListTile(
