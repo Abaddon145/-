@@ -8,6 +8,7 @@ import '../../home/presentation/home_page.dart';
 import '../../library/presentation/library_page.dart';
 import '../../statistics/presentation/statistics_page.dart';
 import '../../study/domain/providers.dart';
+import '../../study/presentation/study_controller.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -42,7 +43,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if(ok!=true)return;
       setState(()=>_busy=true);
       await ref.read(databaseProvider).restoreBackupSnapshot(decoded);
-      ref.invalidate(bundledWordSeedProvider);ref.invalidate(homeCountsProvider);ref.invalidate(dailyPlanProgressProvider);
+      ref.invalidate(homeCountsProvider);ref.invalidate(studyControllerProvider);ref.invalidate(dailyPlanProgressProvider);
       ref.invalidate(libraryWordsProvider);ref.invalidate(recentStatisticsProvider);
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('学习进度已恢复')));
     } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('恢复失败：$e'))); }
