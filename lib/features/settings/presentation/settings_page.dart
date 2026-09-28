@@ -4,7 +4,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../home/presentation/home_page.dart';
 import '../../library/presentation/library_page.dart';
 import '../../statistics/presentation/statistics_page.dart';
 import '../../study/domain/providers.dart';
