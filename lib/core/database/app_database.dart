@@ -1,3 +1,4 @@
+// ignore_for_file: curly_braces_in_flow_control_structures
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -434,8 +435,103 @@ class AppDatabase extends _$AppDatabase {
           ),
         );
       }
+      await customStatement('INSERT INTO user_words (word_id,is_favorite,is_difficult,correct_count,wrong_count,last_seen_at) VALUES (?,0,?,?,?,?) '
+        'ON CONFLICT(word_id) DO UPDATE SET is_difficult=CASE WHEN excluded.is_difficult=1 THEN 1 ELSE user_words.is_difficult END, '
+        'correct_count=user_words.correct_count+excluded.correct_count, wrong_count=user_words.wrong_count+excluded.wrong_count, last_seen_at=excluded.last_seen_at',
+        [wordId,isWrong?1:0,isWrong?0:1,isWrong?1:0,now.millisecondsSinceEpoch]);
     });
   }
+  Future<List<LibraryWordEntry>> searchLibraryWords({
+    required String query,
+    required LibraryFilter filter,
+  }) async {
+    final normalized = normalizeLookup(query);
+    final search = normalized.isEmpty
+        ? const Constant<bool>(true)
+        : words.korean.lower().like('%$normalized%') |
+            words.meaningZh.lower().like('%$normalized%') |
+            words.baseForm.lower().like('%$normalized%');
+    final filterExpression = switch (filter) {
+      LibraryFilter.all => const Constant<bool>(true),
+      LibraryFilter.favorites => userWords.isFavorite.equals(true),
+      LibraryFilter.wrong => userWords.wrongCount.isBiggerThanValue(0),
+    };
+    final queryBuilder = select(words).join([
+      leftOuterJoin(userWords, userWords.wordId.equalsExp(words.id)),
+    ])
+      ..where(search & filterExpression)
+      ..orderBy([OrderingTerm.asc(words.korean)])
+      ..limit(1000);
+    final rows = await queryBuilder.get();
+    return rows.map((row) {
+      final userWord = row.readTableOrNull(userWords);
+      return LibraryWordEntry(
+        word: row.readTable(words),
+        isFavorite: userWord?.isFavorite ?? false,
+        wrongCount: userWord?.wrongCount ?? 0,
+      );
+    }).toList();
+  }
+
+  Future<void> setFavorite(int id, bool value) => customStatement(
+    'INSERT INTO user_words (word_id, is_favorite, is_difficult, correct_count, wrong_count) VALUES (?, ?, 0, 0, 0) '
+    'ON CONFLICT(word_id) DO UPDATE SET is_favorite = excluded.is_favorite', [id, value ? 1 : 0]);
+
+  Future<void> updateWord({required int wordId, required String korean, required String meaningZh}) async {
+    final k = korean.trim(), m = meaningZh.trim();
+    if (k.isEmpty || m.isEmpty) throw ArgumentError('韩语词条和中文释义不能为空');
+    await (update(words)..where((w) => w.id.equals(wordId))).write(WordsCompanion(
+      korean: Value(k), normalizedKorean: Value(normalizeLookup(k)), meaningZh: Value(m),
+      updatedAt: Value(DateTime.now().toUtc())));
+  }
+
+  Future<void> deleteWord(int id) => transaction(() async {
+    await (delete(reviewLogs)..where((r) => r.wordId.equals(id))).go();
+    await (delete(studyCards)..where((r) => r.wordId.equals(id))).go();
+    await (delete(userWords)..where((r) => r.wordId.equals(id))).go();
+    await (delete(wordBookWords)..where((r) => r.wordId.equals(id))).go();
+    await (delete(words)..where((r) => r.id.equals(id))).go();
+  });
+
+  Future<List<DailyStatisticsSummary>> loadRecentStatistics(DateTime now) async {
+    final today = DateTime.utc(now.year, now.month, now.day), start = DateTime.utc(now.year, now.month, now.day).subtract(const Duration(days: 6));
+    final rows = await (select(dailyStatistics)..where((r) => r.date.isBiggerOrEqualValue(start) & r.date.isSmallerOrEqualValue(today))
+      ..orderBy([(r) => OrderingTerm.asc(r.date)])).get();
+    final values = {for (final r in rows) r.date: r};
+    return List.generate(7, (i) { final d = start.add(Duration(days:i)), r = values[d];
+      return DailyStatisticsSummary(date:d,newWords:r?.newWords??0,reviews:r?.reviewWords??0,
+        correct:r?.correctCount??0,wrong:r?.wrongCount??0,durationMs:r?.studyDurationMs??0); });
+  }
+
+  Future<Map<String,Object?>> createBackupSnapshot() async {
+    const tables=['words','word_books','word_book_words','study_cards','review_logs','user_words','daily_statistics','app_settings'];
+    final data=<String,List<Map<String,Object?>>>{};
+    for(final t in tables){ final rows=await customSelect('SELECT * FROM $t').get(); data[t]=rows.map((r)=>Map<String,Object?>.from(r.data)).toList(); }
+    return {'format':'korean-memo-backup','version':1,'createdAt':DateTime.now().toUtc().toIso8601String(),'tables':data};
+  }
+
+  Future<void> restoreBackupSnapshot(Map<String,dynamic> snapshot) async {
+    const columns=<String,List<String>>{
+      'words':['id','korean','normalized_korean','base_form','normalized_base_form','meaning_zh','pronunciation','part_of_speech','example_ko','example_zh','topik_level','category','tags','note','hanja','etymology','source','created_at','updated_at'],
+      'word_books':['id','name','description','source_file_name','created_at','updated_at'],
+      'word_book_words':['word_book_id','word_id','sort_order'],
+      'study_cards':['id','word_id','state','due','stability','difficulty','elapsed_days','scheduled_days','reps','lapses','last_review','fsrs_json','created_at','updated_at'],
+      'review_logs':['id','word_id','submission_token','rating','reviewed_at','state_before','state_after','elapsed_days','scheduled_days','duration_ms','fsrs_review_log_json'],
+      'user_words':['word_id','is_favorite','is_difficult','note','correct_count','wrong_count','last_seen_at'],
+      'daily_statistics':['date','new_words','review_words','correct_count','wrong_count','study_duration_ms'],
+      'app_settings':['key','value','updated_at'],
+    };
+    if(snapshot['format']!='korean-memo-backup'||snapshot['version']!=1) throw const FormatException('不支持的备份格式');
+    final payload=snapshot['tables']; if(payload is! Map) throw const FormatException('备份缺少数据');
+    for(final e in columns.entries){ final list=payload[e.key]; if(list is! List||list.length>100000) throw FormatException('备份表无效：${e.key}');
+      for(final r in list){if(r is! Map||r.keys.toSet().length!=e.value.length||!e.value.every(r.containsKey)) throw FormatException('备份字段无效：${e.key}');}}
+    await transaction(() async {
+      for(final t in ['review_logs','study_cards','word_book_words','user_words','daily_statistics','app_settings','words','word_books']) await customStatement('DELETE FROM $t');
+      for(final t in columns.keys){for(final raw in payload[t] as List){final row=Map<String,Object?>.from(raw as Map), names=columns[t]!;
+        await customStatement('INSERT INTO $t (${names.join(',')}) VALUES (${List.filled(names.length,'?').join(',')})',[for(final n in names) row[n]]);}}
+    });
+  }
+
 }
 
 class DailyPlanSettings {
@@ -587,3 +683,7 @@ DateTime? _dateTime(Object? value) {
 
 DateTime _dailyStatKey(DateTime localDate) =>
     DateTime.utc(localDate.year, localDate.month, localDate.day);
+
+enum LibraryFilter { all, favorites, wrong }
+class LibraryWordEntry { const LibraryWordEntry({required this.word,required this.isFavorite,required this.wrongCount}); final Word word; final bool isFavorite; final int wrongCount; }
+class DailyStatisticsSummary { const DailyStatisticsSummary({required this.date,required this.newWords,required this.reviews,required this.correct,required this.wrong,required this.durationMs}); final DateTime date; final int newWords,reviews,correct,wrong,durationMs; }
