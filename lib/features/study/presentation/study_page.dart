@@ -57,9 +57,9 @@ class StudyPage extends ConsumerWidget {
             children: [
               Icon(Icons.check_circle_rounded, size: 72),
               SizedBox(height: 16),
-              Text('当前词库已完成', style: TextStyle(fontSize: 22)),
+              Text('今日学习计划已完成', style: TextStyle(fontSize: 22)),
               SizedBox(height: 8),
-              Text('可以返回首页导入新的 Excel 词库。'),
+              Text('已达到今日上限，或当前没有到期内容。明天再来继续学习。'),
             ],
           ),
         ),

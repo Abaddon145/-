@@ -106,6 +106,15 @@ class DailyStatistics extends Table {
   Set<Column<Object>> get primaryKey => {date};
 }
 
+class AppSettings extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {key};
+}
+
 @DriftDatabase(
   tables: [
     Words,
@@ -115,6 +124,7 @@ class DailyStatistics extends Table {
     ReviewLogs,
     UserWords,
     DailyStatistics,
+    AppSettings,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -131,7 +141,17 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (migrator) => migrator.createAll(),
+        onUpgrade: (migrator, from, to) async {
+          if (from < 2) {
+            await migrator.createTable(appSettings);
+          }
+        },
+      );
 
   Future<HomeCounts> loadHomeCounts(DateTime nowUtc) async {
     final dueResult = await customSelect(
@@ -155,15 +175,77 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<Word?> nextStudyWord(DateTime nowUtc) async {
-    final dueQuery = select(words).join([
-      innerJoin(studyCards, studyCards.wordId.equalsExp(words.id)),
-    ])
-      ..where(studyCards.due.isSmallerOrEqualValue(nowUtc))
-      ..orderBy([OrderingTerm.asc(studyCards.due)])
-      ..limit(1);
-    final dueRow = await dueQuery.getSingleOrNull();
-    if (dueRow != null) return dueRow.readTable(words);
+  Future<DailyPlanSettings> loadDailyPlanSettings() async {
+    final rows = await (select(appSettings)
+          ..where((row) => row.key.isIn(const [
+                DailyPlanSettings.newWordsKey,
+                DailyPlanSettings.reviewsKey,
+              ])))
+        .get();
+    final values = {for (final row in rows) row.key: int.tryParse(row.value)};
+    return DailyPlanSettings(
+      newWordsPerDay:
+          values[DailyPlanSettings.newWordsKey] ??
+              DailyPlanSettings.defaultNewWords,
+      reviewsPerDay:
+          values[DailyPlanSettings.reviewsKey] ??
+              DailyPlanSettings.defaultReviews,
+    ).normalized();
+  }
+
+  Future<void> saveDailyPlanSettings(DailyPlanSettings settings) async {
+    final normalized = settings.normalized();
+    final now = DateTime.now().toUtc();
+    await batch((batch) {
+      batch.insertAllOnConflictUpdate(appSettings, [
+        AppSettingsCompanion.insert(
+          key: DailyPlanSettings.newWordsKey,
+          value: normalized.newWordsPerDay.toString(),
+          updatedAt: now,
+        ),
+        AppSettingsCompanion.insert(
+          key: DailyPlanSettings.reviewsKey,
+          value: normalized.reviewsPerDay.toString(),
+          updatedAt: now,
+        ),
+      ]);
+    });
+  }
+
+  Future<DailyPlanProgress> loadDailyPlanProgress(DateTime localNow) async {
+    final settings = await loadDailyPlanSettings();
+    final day = _dailyStatKey(localNow);
+    final statistics = await (select(dailyStatistics)
+          ..where((row) => row.date.equals(day)))
+        .getSingleOrNull();
+    return DailyPlanProgress(
+      settings: settings,
+      newWordsDone: statistics?.newWords ?? 0,
+      reviewsDone: statistics?.reviewWords ?? 0,
+      correctCount: statistics?.correctCount ?? 0,
+      wrongCount: statistics?.wrongCount ?? 0,
+      studyDurationMs: statistics?.studyDurationMs ?? 0,
+    );
+  }
+
+  Future<Word?> nextStudyWord(
+    DateTime nowUtc, {
+    required DateTime localNow,
+  }) async {
+    final progress = await loadDailyPlanProgress(localNow);
+
+    if (progress.reviewsDone < progress.settings.reviewsPerDay) {
+      final dueQuery = select(words).join([
+        innerJoin(studyCards, studyCards.wordId.equalsExp(words.id)),
+      ])
+        ..where(studyCards.due.isSmallerOrEqualValue(nowUtc))
+        ..orderBy([OrderingTerm.asc(studyCards.due)])
+        ..limit(1);
+      final dueRow = await dueQuery.getSingleOrNull();
+      if (dueRow != null) return dueRow.readTable(words);
+    }
+
+    if (progress.newWordsDone >= progress.settings.newWordsPerDay) return null;
 
     final newQuery = select(words).join([
       leftOuterJoin(studyCards, studyCards.wordId.equalsExp(words.id)),
@@ -277,6 +359,7 @@ class AppDatabase extends _$AppDatabase {
     required int rating,
     required DateTime reviewedAt,
     required int durationMs,
+    required DateTime localDay,
     required Map<String, Object?> cardMap,
     required Map<String, Object?> reviewLogMap,
   }) {
@@ -319,8 +402,84 @@ class AppDatabase extends _$AppDatabase {
           fsrsReviewLogJson: jsonEncode(reviewLogMap),
         ),
       );
+
+      final day = _dailyStatKey(localDay);
+      final statistics = await (select(dailyStatistics)
+            ..where((row) => row.date.equals(day)))
+          .getSingleOrNull();
+      final isNewWord = previous == null;
+      final isWrong = rating == 1;
+      if (statistics == null) {
+        await into(dailyStatistics).insert(
+          DailyStatisticsCompanion.insert(
+            date: day,
+            newWords: Value(isNewWord ? 1 : 0),
+            reviewWords: Value(isNewWord ? 0 : 1),
+            correctCount: Value(isWrong ? 0 : 1),
+            wrongCount: Value(isWrong ? 1 : 0),
+            studyDurationMs: Value(durationMs),
+          ),
+        );
+      } else {
+        await (update(dailyStatistics)..where((row) => row.date.equals(day)))
+            .write(
+          DailyStatisticsCompanion(
+            newWords: Value(statistics.newWords + (isNewWord ? 1 : 0)),
+            reviewWords: Value(statistics.reviewWords + (isNewWord ? 0 : 1)),
+            correctCount:
+                Value(statistics.correctCount + (isWrong ? 0 : 1)),
+            wrongCount: Value(statistics.wrongCount + (isWrong ? 1 : 0)),
+            studyDurationMs:
+                Value(statistics.studyDurationMs + durationMs),
+          ),
+        );
+      }
     });
   }
+}
+
+class DailyPlanSettings {
+  const DailyPlanSettings({
+    required this.newWordsPerDay,
+    required this.reviewsPerDay,
+  });
+
+  static const newWordsKey = 'daily_new_words';
+  static const reviewsKey = 'daily_reviews';
+  static const defaultNewWords = 20;
+  static const defaultReviews = 100;
+
+  final int newWordsPerDay;
+  final int reviewsPerDay;
+
+  DailyPlanSettings normalized() => DailyPlanSettings(
+        newWordsPerDay: newWordsPerDay.clamp(1, 100).toInt(),
+        reviewsPerDay: reviewsPerDay.clamp(1, 500).toInt(),
+      );
+}
+
+class DailyPlanProgress {
+  const DailyPlanProgress({
+    required this.settings,
+    required this.newWordsDone,
+    required this.reviewsDone,
+    required this.correctCount,
+    required this.wrongCount,
+    required this.studyDurationMs,
+  });
+
+  final DailyPlanSettings settings;
+  final int newWordsDone;
+  final int reviewsDone;
+  final int correctCount;
+  final int wrongCount;
+  final int studyDurationMs;
+
+  int get totalDone => newWordsDone + reviewsDone;
+  int get totalLimit =>
+      settings.newWordsPerDay + settings.reviewsPerDay;
+  double get progress =>
+      totalLimit == 0 ? 0 : (totalDone / totalLimit).clamp(0, 1).toDouble();
 }
 
 class HomeCounts {
@@ -425,3 +584,6 @@ DateTime? _dateTime(Object? value) {
   if (value is DateTime) return value.toUtc();
   return DateTime.tryParse(value?.toString() ?? '')?.toUtc();
 }
+
+DateTime _dailyStatKey(DateTime localDate) =>
+    DateTime.utc(localDate.year, localDate.month, localDate.day);

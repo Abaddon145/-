@@ -35,3 +35,14 @@ final homeCountsProvider = FutureProvider.autoDispose<HomeCounts>((ref) async {
   await ref.watch(bundledWordSeedProvider.future);
   return ref.watch(databaseProvider).loadHomeCounts(DateTime.now().toUtc());
 });
+
+final dailyPlanSettingsProvider =
+    FutureProvider.autoDispose<DailyPlanSettings>((ref) {
+  return ref.watch(databaseProvider).loadDailyPlanSettings();
+});
+
+final dailyPlanProgressProvider =
+    FutureProvider.autoDispose<DailyPlanProgress>((ref) async {
+  await ref.watch(bundledWordSeedProvider.future);
+  return ref.watch(databaseProvider).loadDailyPlanProgress(DateTime.now());
+});
