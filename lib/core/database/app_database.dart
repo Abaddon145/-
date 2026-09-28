@@ -213,6 +213,26 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  Future<String?> loadSetting(String key) async {
+    final row = await (select(appSettings)..where((item) => item.key.equals(key)))
+        .getSingleOrNull();
+    return row?.value;
+  }
+
+  Future<void> saveSetting(String key, String? value) async {
+    if (value == null) {
+      await (delete(appSettings)..where((item) => item.key.equals(key))).go();
+      return;
+    }
+    await into(appSettings).insertOnConflictUpdate(
+      AppSettingsCompanion.insert(
+        key: key,
+        value: value,
+        updatedAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
   Future<DailyPlanProgress> loadDailyPlanProgress(DateTime localNow) async {
     final settings = await loadDailyPlanSettings();
     final day = _dailyStatKey(localNow);
@@ -319,6 +339,47 @@ class AppDatabase extends _$AppDatabase {
       );
     });
   }
+
+  Future<int> addManualWord(WordDraft draft) => transaction(() async {
+    if (draft.korean.trim().isEmpty ||
+        draft.meaningZh.trim().isEmpty ||
+        (draft.partOfSpeech?.trim().isEmpty ?? true)) {
+      throw const FormatException('请填写韩语、中文释义和词性');
+    }
+    final existing = await (select(words)
+          ..where((word) =>
+              word.normalizedKorean.equals(draft.normalizedKorean) &
+              word.normalizedBaseForm.equals(draft.normalizedBaseForm)))
+        .getSingleOrNull();
+    if (existing != null) {
+      throw const FormatException('这个单词已存在，请在词库中编辑');
+    }
+    const source = 'manual://words';
+    final book = await (select(wordBooks)
+          ..where((item) => item.sourceFileName.equals(source)))
+        .getSingleOrNull();
+    final now = DateTime.now().toUtc();
+    final bookId = book?.id ??
+        await into(wordBooks).insert(
+          WordBooksCompanion.insert(
+            name: '手动录入',
+            sourceFileName: const Value(source),
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    final wordId = await into(words).insert(
+      draft.toCompanion(source: '手动录入'),
+    );
+    await into(wordBookWords).insert(
+      WordBookWordsCompanion.insert(
+        wordBookId: bookId,
+        wordId: wordId,
+        sortOrder: wordId,
+      ),
+    );
+    return wordId;
+  });
 
   Future<ImportWriteResult> _writeWords({
     required int wordBookId,
@@ -461,7 +522,7 @@ class AppDatabase extends _$AppDatabase {
     ])
       ..where(search & filterExpression)
       ..orderBy([OrderingTerm.asc(words.korean)])
-      ..limit(1000);
+      ..limit(5000);
     final rows = await queryBuilder.get();
     return rows.map((row) {
       final userWord = row.readTableOrNull(userWords);
@@ -477,12 +538,28 @@ class AppDatabase extends _$AppDatabase {
     'INSERT INTO user_words (word_id, is_favorite, is_difficult, correct_count, wrong_count) VALUES (?, ?, 0, 0, 0) '
     'ON CONFLICT(word_id) DO UPDATE SET is_favorite = excluded.is_favorite', [id, value ? 1 : 0]);
 
-  Future<void> updateWord({required int wordId, required String korean, required String meaningZh}) async {
-    final k = korean.trim(), m = meaningZh.trim();
-    if (k.isEmpty || m.isEmpty) throw ArgumentError('韩语词条和中文释义不能为空');
-    await (update(words)..where((w) => w.id.equals(wordId))).write(WordsCompanion(
-      korean: Value(k), normalizedKorean: Value(normalizeLookup(k)), meaningZh: Value(m),
-      updatedAt: Value(DateTime.now().toUtc())));
+  Future<void> updateWord({
+    required int wordId,
+    required String korean,
+    required String meaningZh,
+    String? partOfSpeech,
+  }) async {
+    final term = korean.trim();
+    final meaning = meaningZh.trim();
+    if (term.isEmpty || meaning.isEmpty) {
+      throw ArgumentError('韩语词条和中文释义不能为空');
+    }
+    await (update(words)..where((word) => word.id.equals(wordId))).write(
+      WordsCompanion(
+        korean: Value(term),
+        normalizedKorean: Value(normalizeLookup(term)),
+        meaningZh: Value(meaning),
+        partOfSpeech: partOfSpeech == null
+            ? const Value.absent()
+            : Value(_nullable(partOfSpeech)),
+        updatedAt: Value(DateTime.now().toUtc()),
+      ),
+    );
   }
 
   Future<void> deleteWord(int id) => transaction(() async {
