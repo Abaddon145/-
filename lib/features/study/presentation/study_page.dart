@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../services/fsrs_service.dart';
@@ -49,27 +51,31 @@ class StudyPage extends ConsumerWidget {
     }
     final word = state.word;
     if (word == null) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.check_circle_rounded, size: 72),
-              SizedBox(height: 16),
-              Text('今日学习计划已完成', style: TextStyle(fontSize: 22)),
-              SizedBox(height: 8),
-              Text('已达到今日上限，或当前没有到期内容。明天再来继续学习。'),
-            ],
-          ),
-        ),
-      );
+      return const _StudyCompletion();
     }
     return Padding(
       key: ValueKey(word.id),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       child: Column(
         children: [
+          ref.watch(studyRoundProgressProvider).when(
+            data: (round) => Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Column(
+                children: [
+                  Row(children: [
+                    Text(round.isExtra ? '加练新词' : '今日新词'),
+                    const Spacer(),
+                    Text('${round.done} / ${round.target}'),
+                  ]),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(value: round.done / round.target),
+                ],
+              ),
+            ),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
           Expanded(
             child: Card(
               child: SingleChildScrollView(
@@ -146,6 +152,142 @@ class StudyPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _StudyCompletion extends ConsumerWidget {
+  const _StudyCompletion();
+
+  Future<void> _continue(BuildContext context, WidgetRef ref, int defaultCount) async {
+    final count = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => _ExtraRoundSheet(defaultCount: defaultCount),
+    );
+    if (count == null || !context.mounted) return;
+    await ref.read(studyControllerProvider.notifier).startExtraRound(count);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final counts = ref.watch(homeCountsProvider);
+    final round = ref.watch(studyRoundProgressProvider).valueOrNull;
+    final plan = ref.watch(dailyPlanProgressProvider).valueOrNull;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.task_alt_rounded, size: 72,
+                color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 20),
+            Text(
+              counts.valueOrNull?.newWords == 0
+                  ? '新词已全部学完'
+                  : round?.isExtra == true ? '这一轮完成了' : '今天的计划已完成',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 12),
+            if (plan != null)
+              Text('今天已学 ${plan.newWordsDone} 个新词 · 复习 ${plan.reviewsDone} 次',
+                  textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            counts.when(
+              data: (value) => value.newWords > 0
+                  ? Column(children: [
+                      Text('词库还有 ${value.newWords} 个新词，可以继续下一轮。',
+                          textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      FilledButton.icon(
+                        onPressed: () => _continue(context, ref,
+                            plan?.settings.newWordsPerDay ?? 20),
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('再学一轮'),
+                      ),
+                    ])
+                  : FilledButton.icon(
+                      onPressed: () => context.go('/library'),
+                      icon: const Icon(Icons.menu_book_outlined),
+                      label: const Text('去词库添加单词'),
+                    ),
+              loading: () => const CircularProgressIndicator(),
+              error: (_, _) => TextButton(
+                onPressed: () => ref.invalidate(homeCountsProvider),
+                child: const Text('重新读取词库'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton(onPressed: () => context.go('/'), child: const Text('返回首页')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ExtraRoundSheet extends StatefulWidget {
+  const _ExtraRoundSheet({required this.defaultCount});
+  final int defaultCount;
+  @override
+  State<_ExtraRoundSheet> createState() => _ExtraRoundSheetState();
+}
+
+class _ExtraRoundSheetState extends State<_ExtraRoundSheet> {
+  final _form = GlobalKey<FormState>();
+  late final TextEditingController _count;
+  @override
+  void initState() {
+    super.initState();
+    _count = TextEditingController(text: '${widget.defaultCount}');
+  }
+  @override
+  void dispose() {
+    _count.dispose();
+    super.dispose();
+  }
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.viewInsetsOf(context).bottom + 24),
+    child: SingleChildScrollView(
+      child: Form(
+        key: _form,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text('再学一轮', style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 8),
+          const Text('选择本轮新词数量，学习记录继续计入今天。'),
+          const SizedBox(height: 20),
+          TextFormField(
+            controller: _count,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(labelText: '本轮新词数量', helperText: '数量不限；词库不足时学完剩余新词即可'),
+            validator: (value) {
+              final count = int.tryParse(value ?? '');
+              return count == null || count < 1 ? '请输入大于 0 的整数' : null;
+            },
+          ),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, children: [
+            for (final count in [10, 20, 50])
+              ActionChip(label: Text('$count 个'), onPressed: () => _count.text = '$count'),
+          ]),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: () {
+              if (_form.currentState!.validate()) {
+                Navigator.pop(context, int.parse(_count.text));
+              }
+            },
+            icon: const Icon(Icons.play_arrow_rounded),
+            label: const Text('开始下一轮'),
+          ),
+        ]),
+      ),
+    ),
+  );
 }
 
 class _RatingBar extends StatelessWidget {

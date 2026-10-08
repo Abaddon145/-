@@ -92,6 +92,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ref.invalidate(studyControllerProvider);
       ref.invalidate(dailyPlanSettingsProvider);
       ref.invalidate(dailyPlanProgressProvider);
+      ref.invalidate(studyRoundProgressProvider);
       ref.invalidate(libraryWordsProvider);
       ref.invalidate(recentStatisticsProvider);
       if (mounted) {
@@ -177,6 +178,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+            const Center(child: Text('KoreanMemo · v0.2.0')),
             if (_busy) ...[
               const SizedBox(height: 16),
               const LinearProgressIndicator(),
