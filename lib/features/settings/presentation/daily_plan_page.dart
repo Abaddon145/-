@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../study/domain/providers.dart';
+import '../../study/presentation/study_controller.dart';
 
 class DailyPlanPage extends ConsumerStatefulWidget {
   const DailyPlanPage({super.key});
@@ -13,12 +16,26 @@ class DailyPlanPage extends ConsumerStatefulWidget {
 }
 
 class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
-  static const _newWordOptions = [5, 10, 15, 20, 30, 50, 100];
-  static const _reviewOptions = [20, 50, 100, 150, 200, 300, 500];
+  final _form = GlobalKey<FormState>();
+  final _newWords = TextEditingController();
+  final _reviews = TextEditingController();
+  bool _initialized = false;
+
+  @override
+  void dispose() {
+    _newWords.dispose();
+    _reviews.dispose();
+    super.dispose();
+  }
+
+  String? _validateCount(String? value, int maximum) {
+    final count = int.tryParse(value ?? '');
+    return count == null || count < 1 || count > maximum
+        ? '请输入 1–$maximum 之间的整数'
+        : null;
+  }
 
   late final Future<DailyPlanSettings> _settingsFuture;
-  int? _newWordsPerDay;
-  int? _reviewsPerDay;
   bool _saving = false;
 
   @override
@@ -28,9 +45,9 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
   }
 
   Future<void> _save() async {
-    final newWords = _newWordsPerDay;
-    final reviews = _reviewsPerDay;
-    if (newWords == null || reviews == null || _saving) return;
+    if (_saving || !_form.currentState!.validate()) return;
+    final newWords = int.parse(_newWords.text);
+    final reviews = int.parse(_reviews.text);
 
     setState(() => _saving = true);
     try {
@@ -43,6 +60,7 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
       ref.invalidate(dailyPlanSettingsProvider);
       ref.invalidate(dailyPlanProgressProvider);
       ref.invalidate(homeCountsProvider);
+      ref.invalidate(studyControllerProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('每日学习计划已保存')),
@@ -77,8 +95,11 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
             if (settings == null) {
               return const Center(child: CircularProgressIndicator());
             }
-            _newWordsPerDay ??= settings.newWordsPerDay;
-            _reviewsPerDay ??= settings.reviewsPerDay;
+            if (!_initialized) {
+              _newWords.text = '${settings.newWordsPerDay}';
+              _reviews.text = '${settings.reviewsPerDay}';
+              _initialized = true;
+            }
 
             return ListView(
               padding: const EdgeInsets.all(20),
@@ -88,42 +109,37 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 24),
-                DropdownButtonFormField<int>(
-                  initialValue: _newWordsPerDay,
-                  decoration: const InputDecoration(
-                    labelText: '每日新词',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.auto_stories_rounded),
-                  ),
-                  items: [
-                    for (final value in _newWordOptions)
-                      DropdownMenuItem(
-                        value: value,
-                        child: Text('$value 个'),
+                Form(
+                  key: _form,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _newWords,
+                        enabled: !_saving,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        validator: (value) => _validateCount(value, 100),
+                        decoration: const InputDecoration(
+                          labelText: '每日新词',
+                          helperText: '1–100 个，按自己的节奏设置',
+                          prefixIcon: Icon(Icons.auto_stories_rounded),
+                        ),
                       ),
-                  ],
-                  onChanged: _saving
-                      ? null
-                      : (value) => setState(() => _newWordsPerDay = value),
-                ),
-                const SizedBox(height: 18),
-                DropdownButtonFormField<int>(
-                  initialValue: _reviewsPerDay,
-                  decoration: const InputDecoration(
-                    labelText: '每日复习上限',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.replay_rounded),
-                  ),
-                  items: [
-                    for (final value in _reviewOptions)
-                      DropdownMenuItem(
-                        value: value,
-                        child: Text('$value 次'),
+                      const SizedBox(height: 18),
+                      TextFormField(
+                        controller: _reviews,
+                        enabled: !_saving,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        validator: (value) => _validateCount(value, 500),
+                        decoration: const InputDecoration(
+                          labelText: '每日复习上限',
+                          helperText: '1–500 次，只安排已到期的内容',
+                          prefixIcon: Icon(Icons.replay_rounded),
+                        ),
                       ),
-                  ],
-                  onChanged: _saving
-                      ? null
-                      : (value) => setState(() => _reviewsPerDay = value),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
                 const Text(

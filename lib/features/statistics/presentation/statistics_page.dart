@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/database/app_database.dart';
-import '../../study/domain/providers.dart';
-
-final recentStatisticsProvider = FutureProvider.autoDispose<List<DailyStatisticsSummary>>((ref) =>
-  ref.watch(databaseProvider).loadRecentStatistics(DateTime.now()));
+import '../domain/providers.dart';
 
 class StatisticsPage extends ConsumerWidget {
   const StatisticsPage({super.key});
@@ -27,10 +23,10 @@ class StatisticsPage extends ConsumerWidget {
             const SizedBox(height:12),
             Text('新词  ${today?.newWords??0}'),
             Text('复习  ${today?.reviews??0}'),
-            Text('正确率  $accuracy%'),
-            Text('学习时长  $mins 分钟'),
+            Text('正确率  ${today == null || today.correct + today.wrong == 0 ? 0 : (today.correct * 100 / (today.correct + today.wrong)).round()}%'),
+            Text('学习时长  ${(today?.durationMs ?? 0) ~/ 60000} 分钟'),
           ]))),
-          Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text('近 7 天 · 共 $total 次学习',style:Theme.of(context).textTheme.titleMedium)),
+          Padding(padding:const EdgeInsets.symmetric(vertical:12),child:Text('近 7 天 · $total 次 · 正确率 $accuracy% · $mins 分钟',style:Theme.of(context).textTheme.titleMedium)),
           for(final day in days) ListTile(
             contentPadding:EdgeInsets.zero,
             title:Text('${day.date.month}月${day.date.day}日'),

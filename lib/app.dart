@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
+import 'core/time/local_day.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/appearance_settings.dart';
 
@@ -19,7 +20,7 @@ class KoreanMemoApp extends ConsumerWidget {
       theme: AppTheme.forPreset(preset),
       themeMode: preset.dark ? ThemeMode.dark : ThemeMode.light,
       routerConfig: appRouter,
-      builder: (context, child) => Stack(
+      builder: (context, child) => LocalDayObserver(child: Stack(
         fit: StackFit.expand,
         children: [
           DecoratedBox(
@@ -45,7 +46,7 @@ class KoreanMemoApp extends ConsumerWidget {
           ],
           child ?? const SizedBox.shrink(),
         ],
-      ),
+      )),
     );
   }
 }
