@@ -47,6 +47,22 @@ abstract final class AppTheme {
       end: Color(0xFFF6E5EF),
     ),
     AppearancePreset(
+      id: 'paper',
+      name: '纸笺',
+      description: '书页般的暖白与墨棕',
+      seed: Color(0xFF78604C),
+      start: Color(0xFFFBF8F0),
+      end: Color(0xFFEDE4D5),
+    ),
+    AppearancePreset(
+      id: 'ocean',
+      name: '海盐',
+      description: '清透的冰蓝色',
+      seed: Color(0xFF246C93),
+      start: Color(0xFFF3FAFF),
+      end: Color(0xFFDCEEF7),
+    ),
+    AppearancePreset(
       id: 'night',
       name: '深夜',
       description: '沉静的深蓝色',
@@ -69,6 +85,21 @@ abstract final class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: Colors.transparent,
+      visualDensity: VisualDensity.standard,
+      textTheme: Typography.material2021().black.apply(
+        bodyColor: scheme.onSurface,
+        displayColor: scheme.onSurface,
+      ),
+      dividerTheme: DividerThemeData(
+        color: scheme.outlineVariant.withValues(alpha: 0.55),
+        thickness: 1,
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary,
+        linearTrackColor: scheme.primary.withValues(alpha: 0.12),
+        linearMinHeight: 6,
+        borderRadius: BorderRadius.circular(12),
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         scrolledUnderElevation: 0,
@@ -76,7 +107,15 @@ abstract final class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: scheme.surface.withValues(alpha: 0.94),
+        height: 76,
         indicatorColor: scheme.primaryContainer,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+          fontSize: 12,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w700 : FontWeight.w500,
+          color: states.contains(WidgetState.selected)
+              ? scheme.primary : scheme.onSurfaceVariant,
+        )),
         elevation: 0,
       ),
       cardTheme: CardThemeData(
@@ -91,6 +130,14 @@ abstract final class AppTheme {
         filled: true,
         fillColor: scheme.surface.withValues(alpha: 0.94),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: scheme.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: scheme.primary, width: 2),
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       ),
       filledButtonTheme: FilledButtonThemeData(

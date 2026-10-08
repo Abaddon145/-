@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/time/local_day.dart';
 import '../../../services/fsrs_service.dart';
 import '../../../services/tts_service.dart';
 import '../../import/data/bundled_word_seed_service.dart';
@@ -32,6 +33,7 @@ final bundledWordSeedProvider = FutureProvider<BundledSeedResult>((ref) {
 });
 
 final homeCountsProvider = FutureProvider.autoDispose<HomeCounts>((ref) async {
+  ref.watch(localDayProvider);
   await ref.watch(bundledWordSeedProvider.future);
   return ref.watch(databaseProvider).loadHomeCounts(DateTime.now().toUtc());
 });
@@ -43,6 +45,7 @@ final dailyPlanSettingsProvider =
 
 final dailyPlanProgressProvider =
     FutureProvider.autoDispose<DailyPlanProgress>((ref) async {
+  ref.watch(localDayProvider);
   await ref.watch(bundledWordSeedProvider.future);
   return ref.watch(databaseProvider).loadDailyPlanProgress(DateTime.now());
 });

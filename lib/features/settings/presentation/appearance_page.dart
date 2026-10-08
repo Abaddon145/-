@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -48,6 +49,20 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       final bytes = Uint8List.fromList(await file.readAsBytes());
       if (bytes.isEmpty || bytes.length > 2 * 1024 * 1024) {
         throw const FormatException('请选择小于 2 MB 的图片');
+      }
+      // Validate decoded pixels before storing a file with an image extension.
+      final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
+      try {
+        final descriptor = await ui.ImageDescriptor.encoded(buffer);
+        try {
+          if (descriptor.width * descriptor.height > 20000000) {
+            throw const FormatException('图片尺寸过大，请选择不超过 2000 万像素的图片');
+          }
+        } finally {
+          descriptor.dispose();
+        }
+      } finally {
+        buffer.dispose();
       }
       await ref.read(databaseProvider).saveSetting(
         AppearanceSettings.backgroundKey,
@@ -103,71 +118,75 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
             const SizedBox(height: 24),
             Text('预设风格', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: AppTheme.presets.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 1.16,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-              ),
-              itemBuilder: (context, index) {
-                final preset = AppTheme.presets[index];
-                final active = selected?.styleId == preset.id;
-                return InkWell(
-                  borderRadius: BorderRadius.circular(24),
-                  onTap: _busy ? null : () => _selectStyle(preset.id),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [preset.start, preset.end],
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final preset in AppTheme.presets)
+                  SizedBox(
+                    width: (MediaQuery.sizeOf(context).width - 52) / 2,
+                    child: Semantics(
+                      button: true,
+                      selected: selected?.styleId == preset.id,
+                      label: '${preset.name}风格',
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: _busy ? null : () => _selectStyle(preset.id),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(24),
+                            gradient: LinearGradient(colors: [preset.start, preset.end]),
+                            border: Border.all(
+                              color: preset.seed,
+                              width: selected?.styleId == preset.id ? 2.5 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                selected?.styleId == preset.id
+                                    ? Icons.check_circle : Icons.circle_outlined,
+                                color: preset.dark ? Colors.white : preset.seed,
+                              ),
+                              const SizedBox(height: 24),
+                              Text(preset.name, style: TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w700,
+                                color: preset.dark ? Colors.white : const Color(0xFF26314A),
+                              )),
+                              const SizedBox(height: 4),
+                              Text(preset.description, style: TextStyle(
+                                fontSize: 12,
+                                color: preset.dark ? Colors.white70 : const Color(0xFF515E76),
+                              )),
+                            ],
+                          ),
+                        ),
                       ),
-                      border: Border.all(
-                        color: active ? preset.seed : preset.seed.withValues(alpha: 0.20),
-                        width: active ? 2.5 : 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Align(
-                          alignment: Alignment.topRight,
-                          child: Icon(
-                            active ? Icons.check_circle : Icons.circle_outlined,
-                            color: preset.dark ? Colors.white : preset.seed,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          preset.name,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: preset.dark ? Colors.white : const Color(0xFF26314A),
-                          ),
-                        ),
-                        Text(
-                          preset.description,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: preset.dark ? Colors.white70 : const Color(0xFF515E76),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
-                );
-              },
+              ],
             ),
             const SizedBox(height: 28),
             Text('自定义背景', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),
+            if (selected?.backgroundBytes != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Image.memory(
+                  selected!.backgroundBytes!,
+                  height: 160,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox(
+                    height: 80,
+                    child: Center(child: Text('背景无法读取，请重新选择图片')),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             Card(
               child: Column(
                 children: [

@@ -72,7 +72,7 @@ class StudyPage extends ConsumerWidget {
         children: [
           Expanded(
             child: Card(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(28),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,

@@ -8,8 +8,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/appearance_settings.dart';
-import '../../library/presentation/library_page.dart';
-import '../../statistics/presentation/statistics_page.dart';
+import '../../library/domain/providers.dart';
+import '../../statistics/domain/providers.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 

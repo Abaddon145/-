@@ -6,17 +6,8 @@ import '../../../core/database/app_database.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 import 'word_editor_sheet.dart';
-
-final librarySearchProvider = StateProvider.autoDispose<String>((ref) => '');
-final libraryFilterProvider =
-    StateProvider.autoDispose<LibraryFilter>((ref) => LibraryFilter.all);
-final libraryWordsProvider =
-    FutureProvider.autoDispose<List<LibraryWordEntry>>((ref) {
-  return ref.watch(databaseProvider).searchLibraryWords(
-        query: ref.watch(librarySearchProvider),
-        filter: ref.watch(libraryFilterProvider),
-      );
-});
+import '../domain/providers.dart';
+import '../../statistics/domain/providers.dart';
 
 class LibraryPage extends ConsumerWidget {
   const LibraryPage({super.key});
@@ -62,6 +53,8 @@ class LibraryPage extends ConsumerWidget {
       await ref.read(databaseProvider).deleteWord(item.word.id);
       ref.invalidate(libraryWordsProvider);
       ref.invalidate(homeCountsProvider);
+      ref.invalidate(dailyPlanProgressProvider);
+      ref.invalidate(recentStatisticsProvider);
       ref.invalidate(studyControllerProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

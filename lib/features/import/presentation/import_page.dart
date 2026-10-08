@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../study/domain/providers.dart';
+import '../../study/presentation/study_controller.dart';
+import '../../library/domain/providers.dart';
 import '../data/excel_import_service.dart';
 import '../domain/import_models.dart';
 
@@ -64,6 +66,9 @@ class _ImportPageState extends ConsumerState<ImportPage> {
         source: fileName,
       );
       ref.invalidate(homeCountsProvider);
+      ref.invalidate(dailyPlanProgressProvider);
+      ref.invalidate(libraryWordsProvider);
+      ref.invalidate(studyControllerProvider);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
