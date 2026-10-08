@@ -81,7 +81,9 @@ class StudyController extends StateNotifier<StudyUiState> {
 
   Future<void> rate(StudyRating rating) async {
     final word = state.word;
-    if (word == null || state.isLoading || state.isSubmitting || !state.isRevealed) return;
+    if (word == null || state.isLoading || state.isSubmitting || !state.isRevealed) {
+      return;
+    }
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       await _repository.submitRating(
