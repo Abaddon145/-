@@ -67,6 +67,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       );
       ref.invalidate(homeCountsProvider);
       ref.invalidate(dailyPlanProgressProvider);
+      ref.invalidate(studyRoundProgressProvider);
       ref.invalidate(libraryWordsProvider);
       ref.invalidate(studyControllerProvider);
       if (!mounted) return;

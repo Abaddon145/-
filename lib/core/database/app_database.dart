@@ -197,6 +197,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> saveDailyPlanSettings(DailyPlanSettings settings) async {
     final normalized = settings.normalized();
     final now = DateTime.now().toUtc();
+    await transaction(() async {
     await batch((batch) {
       batch.insertAllOnConflictUpdate(appSettings, [
         AppSettingsCompanion.insert(
@@ -210,6 +211,10 @@ class AppDatabase extends _$AppDatabase {
           updatedAt: now,
         ),
       ]);
+    });
+      await (delete(appSettings)..where((row) => row.key.isIn(const [
+        'study_round_day', 'study_round_baseline', 'study_round_target',
+      ]))).go();
     });
   }
 
@@ -249,6 +254,36 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  Future<StudyRoundProgress> loadStudyRoundProgress(DateTime localNow) async {
+    final progress = await loadDailyPlanProgress(localNow);
+    final day = await loadSetting('study_round_day');
+    final active = day == _dailyStatKey(localNow).toIso8601String();
+    final baseline = active
+        ? int.tryParse(await loadSetting('study_round_baseline') ?? '') ?? 0
+        : 0;
+    final target = active
+        ? int.tryParse(await loadSetting('study_round_target') ?? '') ?? progress.settings.newWordsPerDay
+        : progress.settings.newWordsPerDay;
+    return StudyRoundProgress(
+      totalNewWords: progress.newWordsDone,
+      baseline: baseline < 0 ? 0 : baseline,
+      target: target < 1 ? progress.settings.newWordsPerDay : target,
+      isExtra: active,
+    );
+  }
+
+  Future<void> startExtraStudyRound(DateTime localNow, int count) async {
+    if (count < 1) {
+      throw const FormatException('请输入大于 0 的整数');
+    }
+    await transaction(() async {
+      final progress = await loadDailyPlanProgress(localNow);
+      await saveSetting('study_round_day', _dailyStatKey(localNow).toIso8601String());
+      await saveSetting('study_round_baseline', progress.newWordsDone.toString());
+      await saveSetting('study_round_target', count.toString());
+    });
+  }
+
   Future<Word?> nextStudyWord(
     DateTime nowUtc, {
     required DateTime localNow,
@@ -266,7 +301,8 @@ class AppDatabase extends _$AppDatabase {
       if (dueRow != null) return dueRow.readTable(words);
     }
 
-    if (progress.newWordsDone >= progress.settings.newWordsPerDay) return null;
+    final round = await loadStudyRoundProgress(localNow);
+    if (progress.newWordsDone >= round.baseline + round.target) return null;
 
     final newQuery = select(words).join([
       leftOuterJoin(studyCards, studyCards.wordId.equalsExp(words.id)),
@@ -626,9 +662,24 @@ class DailyPlanSettings {
   final int reviewsPerDay;
 
   DailyPlanSettings normalized() => DailyPlanSettings(
-        newWordsPerDay: newWordsPerDay.clamp(1, 100).toInt(),
+        newWordsPerDay: newWordsPerDay < 1 ? 1 : newWordsPerDay,
         reviewsPerDay: reviewsPerDay.clamp(1, 500).toInt(),
       );
+}
+
+class StudyRoundProgress {
+  const StudyRoundProgress({
+    required this.totalNewWords,
+    required this.baseline,
+    required this.target,
+    required this.isExtra,
+  });
+  final int totalNewWords;
+  final int baseline;
+  final int target;
+  final bool isExtra;
+  int get done => (totalNewWords - baseline).clamp(0, target).toInt();
+  int get remaining => target - done;
 }
 
 class DailyPlanProgress {

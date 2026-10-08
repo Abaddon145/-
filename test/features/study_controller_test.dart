@@ -10,6 +10,9 @@ class _Repository implements StudyRepository {
   final requests = <Completer<Word?>>[];
 
   @override
+  Future<void> startExtraRound(int count) async {}
+
+  @override
   Future<Word?> nextWord() {
     final result = Completer<Word?>();
     requests.add(result);

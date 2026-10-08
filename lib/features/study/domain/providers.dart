@@ -49,3 +49,11 @@ final dailyPlanProgressProvider =
   await ref.watch(bundledWordSeedProvider.future);
   return ref.watch(databaseProvider).loadDailyPlanProgress(DateTime.now());
 });
+
+final studyRoundProgressProvider =
+    FutureProvider.autoDispose<StudyRoundProgress>((ref) async {
+  ref.watch(localDayProvider);
+  final database = ref.watch(databaseProvider);
+  await ref.watch(bundledWordSeedProvider.future);
+  return database.loadStudyRoundProgress(DateTime.now());
+});

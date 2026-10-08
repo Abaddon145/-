@@ -28,10 +28,10 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
     super.dispose();
   }
 
-  String? _validateCount(String? value, int maximum) {
+  String? _validateCount(String? value, int? maximum) {
     final count = int.tryParse(value ?? '');
-    return count == null || count < 1 || count > maximum
-        ? '请输入 1–$maximum 之间的整数'
+    return count == null || count < 1 || (maximum != null && count > maximum)
+        ? maximum == null ? '请输入大于 0 的整数' : '请输入 1–$maximum 之间的整数'
         : null;
   }
 
@@ -59,6 +59,7 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
           );
       ref.invalidate(dailyPlanSettingsProvider);
       ref.invalidate(dailyPlanProgressProvider);
+      ref.invalidate(studyRoundProgressProvider);
       ref.invalidate(homeCountsProvider);
       ref.invalidate(studyControllerProvider);
       if (!mounted) return;
@@ -118,10 +119,10 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
                         enabled: !_saving,
                         keyboardType: TextInputType.number,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        validator: (value) => _validateCount(value, 100),
+                        validator: (value) => _validateCount(value, null),
                         decoration: const InputDecoration(
                           labelText: '每日新词',
-                          helperText: '1–100 个，按自己的节奏设置',
+                          helperText: '数量不限，按自己的节奏设置',
                           prefixIcon: Icon(Icons.auto_stories_rounded),
                         ),
                       ),
@@ -143,7 +144,7 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  '学习时会优先安排已经到期的复习词，然后加入今日新词。当天达到设置数量后，应用会显示“今日学习计划已完成”。',
+                  '学习时会优先安排已经到期的复习词，然后加入今日新词。完成计划后，可以点击“再学一轮”继续学习新词。',
                 ),
                 const SizedBox(height: 28),
                 FilledButton.icon(

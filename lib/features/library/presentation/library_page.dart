@@ -18,6 +18,7 @@ class LibraryPage extends ConsumerWidget {
     ref.invalidate(libraryWordsProvider);
     ref.invalidate(homeCountsProvider);
     ref.invalidate(dailyPlanProgressProvider);
+      ref.invalidate(studyRoundProgressProvider);
     ref.invalidate(studyControllerProvider);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -54,6 +55,7 @@ class LibraryPage extends ConsumerWidget {
       ref.invalidate(libraryWordsProvider);
       ref.invalidate(homeCountsProvider);
       ref.invalidate(dailyPlanProgressProvider);
+      ref.invalidate(studyRoundProgressProvider);
       ref.invalidate(recentStatisticsProvider);
       ref.invalidate(studyControllerProvider);
       if (context.mounted) {

@@ -71,6 +71,20 @@ class StudyController extends StateNotifier<StudyUiState> {
     }
   }
 
+  Future<void> startExtraRound(int count) async {
+    if (!mounted || state.isLoading || state.isSubmitting) return;
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _repository.startExtraRound(count);
+      if (!mounted) return;
+      onRatingSaved?.call();
+      await load();
+    } catch (error) {
+      if (!mounted) return;
+      state = StudyUiState(error: error);
+    }
+  }
+
   void refreshForNewDay() {
     if (mounted && !state.isSubmitting) load();
   }
@@ -111,6 +125,7 @@ final studyControllerProvider =
     onRatingSaved: () {
       ref.invalidate(homeCountsProvider);
       ref.invalidate(dailyPlanProgressProvider);
+      ref.invalidate(studyRoundProgressProvider);
       ref.invalidate(recentStatisticsProvider);
       ref.invalidate(libraryWordsProvider);
     },

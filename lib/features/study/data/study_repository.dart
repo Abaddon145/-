@@ -10,6 +10,10 @@ class StudyRepository {
   final FsrsService _fsrsService;
   final Uuid _uuid = const Uuid();
 
+  Future<void> startExtraRound(int count) {
+    return _database.startExtraStudyRound(DateTime.now(), count);
+  }
+
   Future<Word?> nextWord() {
     final now = DateTime.now();
     return _database.nextStudyWord(now.toUtc(), localNow: now);
