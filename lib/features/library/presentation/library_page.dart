@@ -135,7 +135,8 @@ class LibraryPage extends ConsumerWidget {
                 ),
                 data: (items) => Column(children: [
                   DropdownButtonFormField<int>(
-                    value: bookId,
+                    key: ValueKey(bookId),
+                    initialValue: bookId,
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: '选择词库'),
                     items: [

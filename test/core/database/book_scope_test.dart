@@ -18,8 +18,8 @@ void main() {
     final now = DateTime(2026, 10, 9, 12);
     expect((await db.nextStudyWord(now.toUtc(), localNow: now))?.korean, '하늘');
     expect((await db.nextStudyWord(now.toUtc(), localNow: now, bookId: special))?.korean, 'curl');
-    expect((await db.searchLibraryWords(bookId: special)).map((e) => e.word.korean), ['curl']);
-    expect((await db.searchLibraryWords(bookId: special, query: '天空')), isEmpty);
+    expect((await db.searchLibraryWords(query: '', filter: LibraryFilter.all, bookId: special)).map((e) => e.word.korean), ['curl']);
+    expect((await db.searchLibraryWords(bookId: special, query: '天空', filter: LibraryFilter.all)), isEmpty);
     expect((await db.loadScopedStudyCounts(null)).newWords, 1);
     expect((await db.loadScopedStudyCounts(special)).newWords, 1);
   });
@@ -36,7 +36,7 @@ void main() {
     expect(result?.reused, 1);
     expect(result?.inserted, 0);
     expect(await db.importWordBookIfMissing(name: '专项', sourceFileName: 'special', drafts: drafts), isNull);
-    expect((await db.searchLibraryWords()).single.word.meaningZh, '薄');
+    expect((await db.searchLibraryWords(query: '', filter: LibraryFilter.all)).single.word.meaningZh, '薄');
     expect(await db.loadWordBooks(), hasLength(2));
   });
 }
