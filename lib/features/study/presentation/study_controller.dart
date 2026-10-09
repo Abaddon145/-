@@ -124,6 +124,7 @@ final studyControllerProvider =
     },
     onRatingSaved: () {
       ref.invalidate(homeCountsProvider);
+      ref.invalidate(studyBookCountsProvider);
       ref.invalidate(dailyPlanProgressProvider);
       ref.invalidate(studyRoundProgressProvider);
       ref.invalidate(recentStatisticsProvider);

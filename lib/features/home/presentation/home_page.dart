@@ -65,7 +65,10 @@ class HomePage extends ConsumerWidget {
                       ),
                       const SizedBox(height: 18),
                       FilledButton.icon(
-                        onPressed: ready ? () => context.go('/study') : null,
+                        onPressed: ready ? () {
+                          ref.read(studyBookProvider.notifier).state = null;
+                          context.go('/study');
+                        } : null,
                         icon: const Icon(Icons.play_arrow_rounded),
                         label: Text(ready ? '开始今天的学习' : '正在准备词库…'),
                       ),

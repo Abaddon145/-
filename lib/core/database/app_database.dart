@@ -287,14 +287,18 @@ class AppDatabase extends _$AppDatabase {
   Future<Word?> nextStudyWord(
     DateTime nowUtc, {
     required DateTime localNow,
+    int? bookId,
   }) async {
     final progress = await loadDailyPlanProgress(localNow);
 
     if (progress.reviewsDone < progress.settings.reviewsPerDay) {
       final dueQuery = select(words).join([
         innerJoin(studyCards, studyCards.wordId.equalsExp(words.id)),
+        if (bookId != null)
+          innerJoin(wordBookWords, wordBookWords.wordId.equalsExp(words.id) & wordBookWords.wordBookId.equals(bookId)),
       ])
-        ..where(studyCards.due.isSmallerOrEqualValue(nowUtc))
+        ..where(studyCards.due.isSmallerOrEqualValue(nowUtc) &
+            (bookId != null ? const Constant<bool>(true) : words.category.isNull() | words.category.equals('工业术语·待补中文').not()))
         ..orderBy([OrderingTerm.asc(studyCards.due)])
         ..limit(1);
       final dueRow = await dueQuery.getSingleOrNull();
@@ -306,12 +310,31 @@ class AppDatabase extends _$AppDatabase {
 
     final newQuery = select(words).join([
       leftOuterJoin(studyCards, studyCards.wordId.equalsExp(words.id)),
+      if (bookId != null)
+        innerJoin(wordBookWords, wordBookWords.wordId.equalsExp(words.id) & wordBookWords.wordBookId.equals(bookId)),
     ])
-      ..where(studyCards.id.isNull())
+      ..where(studyCards.id.isNull() &
+          (bookId != null ? const Constant<bool>(true) : words.category.isNull() | words.category.equals('工业术语·待补中文').not()))
       ..orderBy([OrderingTerm.asc(words.id)])
       ..limit(1);
     final newRow = await newQuery.getSingleOrNull();
     return newRow?.readTable(words);
+  }
+
+  Future<List<WordBook>> loadWordBooks() => (select(wordBooks)
+    ..orderBy([(row) => OrderingTerm.asc(row.id)])).get();
+
+  Future<HomeCounts> loadScopedStudyCounts(int? bookId) async {
+    final scope = bookId == null
+        ? "COALESCE(w.category, '') != '工业术语·待补中文'"
+        : 'EXISTS (SELECT 1 FROM word_book_words b WHERE b.word_id=w.id AND b.word_book_id=?)';
+    final variables = bookId == null ? <Variable>[] : <Variable>[Variable<int>(bookId)];
+    final fresh = await customSelect(
+      'SELECT COUNT(*) AS amount FROM words w WHERE $scope AND NOT EXISTS '
+      '(SELECT 1 FROM study_cards s WHERE s.word_id=w.id)',
+      variables: variables, readsFrom: {words, wordBookWords, studyCards},
+    ).getSingle();
+    return HomeCounts(due: 0, newWords: fresh.read<int>('amount'), completed: 0);
   }
 
   Future<StudyCard?> cardForWord(int wordId) {
@@ -541,6 +564,7 @@ class AppDatabase extends _$AppDatabase {
   Future<List<LibraryWordEntry>> searchLibraryWords({
     required String query,
     required LibraryFilter filter,
+    int? bookId,
   }) async {
     final normalized = normalizeLookup(query);
     final search = normalized.isEmpty
@@ -555,6 +579,8 @@ class AppDatabase extends _$AppDatabase {
     };
     final queryBuilder = select(words).join([
       leftOuterJoin(userWords, userWords.wordId.equalsExp(words.id)),
+      if (bookId != null)
+        innerJoin(wordBookWords, wordBookWords.wordId.equalsExp(words.id) & wordBookWords.wordBookId.equals(bookId)),
     ])
       ..where(search & filterExpression)
       ..orderBy([OrderingTerm.asc(words.korean)])

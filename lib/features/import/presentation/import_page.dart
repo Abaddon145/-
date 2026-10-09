@@ -65,7 +65,9 @@ class _ImportPageState extends ConsumerState<ImportPage> {
         drafts: preview.drafts,
         source: fileName,
       );
+      ref.invalidate(studyBookCountsProvider);
       ref.invalidate(homeCountsProvider);
+      ref.invalidate(wordBooksProvider);
       ref.invalidate(dailyPlanProgressProvider);
       ref.invalidate(studyRoundProgressProvider);
       ref.invalidate(libraryWordsProvider);

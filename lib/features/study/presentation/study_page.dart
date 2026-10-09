@@ -15,7 +15,14 @@ class StudyPage extends ConsumerWidget {
     final state = ref.watch(studyControllerProvider);
     final controller = ref.read(studyControllerProvider.notifier);
     return Scaffold(
-      appBar: AppBar(title: const Text('今日学习')),
+      appBar: AppBar(
+        title: Text(ref.watch(studyBookProvider) == null ? '今日学习' : '词库专项学习'),
+        actions: [
+          if (ref.watch(studyBookProvider) != null)
+            TextButton(onPressed: () => ref.read(studyBookProvider.notifier).state = null,
+              child: const Text('返回日常')),
+        ],
+      ),
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
@@ -88,13 +95,17 @@ class StudyPage extends ConsumerWidget {
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.displayMedium,
                     ),
+                    if (word.tags?.isNotEmpty == true) ...[
+                      const SizedBox(height: 8),
+                      Text(word.tags!),
+                    ],
                     if (word.baseForm.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text('原形：${word.baseForm}'),
                     ],
                     const SizedBox(height: 12),
                     IconButton.filledTonal(
-                      tooltip: '播放韩语发音',
+                      tooltip: '播放发音',
                       onPressed: () => ref
                           .read(ttsServiceProvider)
                           .speakKorean(word.korean),
@@ -171,7 +182,7 @@ class _StudyCompletion extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final counts = ref.watch(homeCountsProvider);
+    final counts = ref.watch(studyBookCountsProvider);
     final round = ref.watch(studyRoundProgressProvider).valueOrNull;
     final plan = ref.watch(dailyPlanProgressProvider).valueOrNull;
     return Center(
@@ -215,7 +226,7 @@ class _StudyCompletion extends ConsumerWidget {
                     ),
               loading: () => const CircularProgressIndicator(),
               error: (_, _) => TextButton(
-                onPressed: () => ref.invalidate(homeCountsProvider),
+                onPressed: () => ref.invalidate(studyBookCountsProvider),
                 child: const Text('重新读取词库'),
               ),
             ),

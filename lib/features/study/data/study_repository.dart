@@ -4,8 +4,9 @@ import '../../../core/database/app_database.dart';
 import '../../../services/fsrs_service.dart';
 
 class StudyRepository {
-  StudyRepository(this._database, this._fsrsService);
+  StudyRepository(this._database, this._fsrsService, {this.bookId});
 
+  final int? bookId;
   final AppDatabase _database;
   final FsrsService _fsrsService;
   final Uuid _uuid = const Uuid();
@@ -16,7 +17,7 @@ class StudyRepository {
 
   Future<Word?> nextWord() {
     final now = DateTime.now();
-    return _database.nextStudyWord(now.toUtc(), localNow: now);
+    return _database.nextStudyWord(now.toUtc(), localNow: now, bookId: bookId);
   }
 
   Future<void> submitRating({
