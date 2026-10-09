@@ -89,6 +89,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       await ref.read(databaseProvider).restoreBackupSnapshot(decoded);
       ref.invalidate(appearanceProvider);
       ref.invalidate(homeCountsProvider);
+      ref.invalidate(studyBookCountsProvider);
+      ref.invalidate(wordBooksProvider);
       ref.invalidate(studyControllerProvider);
       ref.invalidate(dailyPlanSettingsProvider);
       ref.invalidate(dailyPlanProgressProvider);
@@ -179,7 +181,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ),
             const SizedBox(height: 24),
-            const Center(child: Text('KoreanMemo · v0.2.0')),
+            const Center(child: Text('KoreanMemo · v0.3.0')),
             if (_busy) ...[
               const SizedBox(height: 16),
               const LinearProgressIndicator(),

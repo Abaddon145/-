@@ -1,0 +1,3550 @@
+{
+  "books": [
+    {
+      "name": "词汇1整理（有中文）",
+      "sourceFileName": "词汇1整理.xlsx#20261009-zh",
+      "words": [
+        {
+          "korean": "clamping / 클램핑",
+          "meaningZh": "夹住",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 2 行"
+        },
+        {
+          "korean": "cable duct / 케이블 덕트",
+          "meaningZh": "配线槽",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 3 行"
+        },
+        {
+          "korean": "housing / 하우징",
+          "meaningZh": "保护壳",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 4 行"
+        },
+        {
+          "korean": "bracket",
+          "meaningZh": "支架",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 5 行"
+        },
+        {
+          "korean": "ladder / 래더",
+          "meaningZh": "梯子",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 6 行"
+        },
+        {
+          "korean": "contact / 콘텍트",
+          "meaningZh": "接触",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 7 行"
+        },
+        {
+          "korean": "달기구",
+          "meaningZh": "悬挂绳",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 8 行"
+        },
+        {
+          "korean": "슬링 체인",
+          "meaningZh": "吊链",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 9 行"
+        },
+        {
+          "korean": "후크",
+          "meaningZh": "吊钩",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 10 行"
+        },
+        {
+          "korean": "우마형",
+          "meaningZh": "梯形",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 11 行"
+        },
+        {
+          "korean": "광섬유",
+          "meaningZh": "光纤",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 12 行"
+        },
+        {
+          "korean": "펜스/난간",
+          "meaningZh": "护栏",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 13 行"
+        },
+        {
+          "korean": "콘도라",
+          "meaningZh": "吊车",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 14 行"
+        },
+        {
+          "korean": "견적서",
+          "meaningZh": "报价单",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 15 行"
+        },
+        {
+          "korean": "fix / 픽스",
+          "meaningZh": "固定",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 16 行"
+        },
+        {
+          "korean": "shuttle / 셔틀",
+          "meaningZh": "班车",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 17 行"
+        },
+        {
+          "korean": "냉매",
+          "meaningZh": "制冷剂",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 18 行"
+        },
+        {
+          "korean": "내역",
+          "meaningZh": "明细",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 19 行"
+        },
+        {
+          "korean": "steel",
+          "meaningZh": "钢",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 20 行"
+        },
+        {
+          "korean": "단축",
+          "meaningZh": "短缩",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 21 行"
+        },
+        {
+          "korean": "추이도",
+          "meaningZh": "趋势图",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 22 行"
+        },
+        {
+          "korean": "fire wall / 파이어월",
+          "meaningZh": "防火墙",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 23 行"
+        },
+        {
+          "korean": "무단",
+          "meaningZh": "擅自",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 24 行"
+        },
+        {
+          "korean": "국소",
+          "meaningZh": "局部",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 25 行"
+        },
+        {
+          "korean": "첨전조",
+          "meaningZh": "沉积池",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 26 行"
+        },
+        {
+          "korean": "층고간",
+          "meaningZh": "楼层间",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 27 行"
+        },
+        {
+          "korean": "rubber corn / 라바콘",
+          "meaningZh": "路障",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 28 行"
+        },
+        {
+          "korean": "tube / 튜브",
+          "meaningZh": "软管",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 29 行"
+        },
+        {
+          "korean": "element / 소자",
+          "meaningZh": "元素",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 30 行"
+        },
+        {
+          "korean": "lead wire / 리드선",
+          "meaningZh": "导线",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 31 行"
+        },
+        {
+          "korean": "사포",
+          "meaningZh": "砂纸",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 32 行"
+        },
+        {
+          "korean": "지참 / 반출",
+          "meaningZh": "携带",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 33 行"
+        },
+        {
+          "korean": "반납품",
+          "meaningZh": "返库品",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 34 行"
+        },
+        {
+          "korean": "1리터",
+          "meaningZh": "1升",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 35 行"
+        },
+        {
+          "korean": "메뉴바",
+          "meaningZh": "菜单栏",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 36 行"
+        },
+        {
+          "korean": "drag / 드래그",
+          "meaningZh": "拖，拽",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 37 行"
+        },
+        {
+          "korean": "handle / 핸들",
+          "meaningZh": "把手/方向盘（机器）",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 38 行"
+        },
+        {
+          "korean": "tray / 트레이",
+          "meaningZh": "托盘",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 39 行"
+        },
+        {
+          "korean": "chip / 파편/칩",
+          "meaningZh": "碎片",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 40 行"
+        },
+        {
+          "korean": "conrner / 코너",
+          "meaningZh": "区/专柜/摊位",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 41 行"
+        },
+        {
+          "korean": "penalty / 패널리",
+          "meaningZh": "罚款",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 42 行"
+        },
+        {
+          "korean": "반려",
+          "meaningZh": "退回",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 43 行"
+        },
+        {
+          "korean": "들림",
+          "meaningZh": "(铝型材)翘起",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 44 行"
+        },
+        {
+          "korean": "crack",
+          "meaningZh": "裂痕",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 45 行"
+        },
+        {
+          "korean": "brower / 브라우저",
+          "meaningZh": "浏览器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 46 行"
+        },
+        {
+          "korean": "address / 어드레스",
+          "meaningZh": "地址",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 47 行"
+        },
+        {
+          "korean": "memory chip / 메모리 칩",
+          "meaningZh": "内存条",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 48 行"
+        },
+        {
+          "korean": "graphic card / 그래픽 카드",
+          "meaningZh": "显卡",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 49 行"
+        },
+        {
+          "korean": "subtract",
+          "meaningZh": "减",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 50 行"
+        },
+        {
+          "korean": "정교",
+          "meaningZh": "精密",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 51 行"
+        },
+        {
+          "korean": "analogue / 아날로그",
+          "meaningZh": "模拟",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 52 行"
+        },
+        {
+          "korean": "굴절",
+          "meaningZh": "折射",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 53 行"
+        },
+        {
+          "korean": "device / 디바이스",
+          "meaningZh": "装置",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 54 行"
+        },
+        {
+          "korean": "timer",
+          "meaningZh": "计时器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 55 行"
+        },
+        {
+          "korean": "젓다",
+          "meaningZh": "搅拌",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 56 行"
+        },
+        {
+          "korean": "router / 라우터",
+          "meaningZh": "路由器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 57 行"
+        },
+        {
+          "korean": "front / 프론트",
+          "meaningZh": "前台",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 58 行"
+        },
+        {
+          "korean": "print / 프린트",
+          "meaningZh": "打印",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 59 行"
+        },
+        {
+          "korean": "board / 보드",
+          "meaningZh": "电路板",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 60 行"
+        },
+        {
+          "korean": "steam / 스팀",
+          "meaningZh": "蒸汽",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 61 行"
+        },
+        {
+          "korean": "직급",
+          "meaningZh": "岗位",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 62 行"
+        },
+        {
+          "korean": "자판기",
+          "meaningZh": "贩卖机",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 63 行"
+        },
+        {
+          "korean": "수당",
+          "meaningZh": "津贴",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 64 行"
+        },
+        {
+          "korean": "rope / 안전 로프",
+          "meaningZh": "安全绳",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 65 行"
+        },
+        {
+          "korean": "loading / 로딩",
+          "meaningZh": "加载",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 66 行"
+        },
+        {
+          "korean": "여분",
+          "meaningZh": "余量",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 67 行"
+        },
+        {
+          "korean": "고개를 끄덕이다",
+          "meaningZh": "点头",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 68 行"
+        },
+        {
+          "korean": "분할",
+          "meaningZh": "分割",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 69 行"
+        },
+        {
+          "korean": "hub / 허브",
+          "meaningZh": "集线器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 70 行"
+        },
+        {
+          "korean": "퍼뜨리다 / 유포",
+          "meaningZh": "传播",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 71 行"
+        },
+        {
+          "korean": "과금",
+          "meaningZh": "收费",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 72 行"
+        },
+        {
+          "korean": "relay",
+          "meaningZh": "继电器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 73 行"
+        },
+        {
+          "korean": "앙카",
+          "meaningZh": "地锚",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 74 行"
+        },
+        {
+          "korean": "klaxon / 클랙슨",
+          "meaningZh": "喇叭",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 75 行"
+        },
+        {
+          "korean": "tipe clear / 테이프 크리너",
+          "meaningZh": "黏尘滚筒",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 76 行"
+        },
+        {
+          "korean": "가혹",
+          "meaningZh": "严厉",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 77 行"
+        },
+        {
+          "korean": "trend / 트렌드",
+          "meaningZh": "趋势",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 78 行"
+        },
+        {
+          "korean": "stapler / 스테이플러",
+          "meaningZh": "订书机",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 79 行"
+        },
+        {
+          "korean": "산화",
+          "meaningZh": "氧化",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 80 行"
+        },
+        {
+          "korean": "산소",
+          "meaningZh": "氧气",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 81 行"
+        },
+        {
+          "korean": "argon / 아르곤",
+          "meaningZh": "氩气",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 82 行"
+        },
+        {
+          "korean": "bias / 바이어스",
+          "meaningZh": "偏离率",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 83 行"
+        },
+        {
+          "korean": "치우치다",
+          "meaningZh": "偏向",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 84 行"
+        },
+        {
+          "korean": "쉬프트",
+          "meaningZh": "偏移",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 85 行"
+        },
+        {
+          "korean": "샤프트",
+          "meaningZh": "轴",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 86 行"
+        },
+        {
+          "korean": "slant",
+          "meaningZh": "倾斜/斜面",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 87 行"
+        },
+        {
+          "korean": "영수증",
+          "meaningZh": "发票",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 88 行"
+        },
+        {
+          "korean": "급매",
+          "meaningZh": "甩卖",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 89 行"
+        },
+        {
+          "korean": "hub / 허브",
+          "meaningZh": "集线器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 90 行"
+        },
+        {
+          "korean": "과금",
+          "meaningZh": "电话费收费",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 91 行"
+        },
+        {
+          "korean": "고지서",
+          "meaningZh": "收费通知书",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 92 行"
+        },
+        {
+          "korean": "분기점",
+          "meaningZh": "转折点",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 93 行"
+        },
+        {
+          "korean": "bridge / 브리쯔",
+          "meaningZh": "桥",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 94 行"
+        },
+        {
+          "korean": "양도",
+          "meaningZh": "移交",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 95 行"
+        },
+        {
+          "korean": "보너스",
+          "meaningZh": "奖金",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 96 行"
+        },
+        {
+          "korean": "sludge / 슬러지",
+          "meaningZh": "油污",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 97 行"
+        },
+        {
+          "korean": "silicon / 실리콘",
+          "meaningZh": "乳胶",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 98 行"
+        },
+        {
+          "korean": "urethane / 우레탄",
+          "meaningZh": "橡胶",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 99 行"
+        },
+        {
+          "korean": "platinum / 플레티너",
+          "meaningZh": "铂",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 100 行"
+        },
+        {
+          "korean": "algorithm / 알고리즘",
+          "meaningZh": "运算法则",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 101 行"
+        },
+        {
+          "korean": "agent",
+          "meaningZh": "代理人",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 102 行"
+        },
+        {
+          "korean": "air vent",
+          "meaningZh": "通气口",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 103 行"
+        },
+        {
+          "korean": "알카리 현상",
+          "meaningZh": "碱性现象",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 104 行"
+        },
+        {
+          "korean": "main board",
+          "meaningZh": "主板",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 105 行"
+        },
+        {
+          "korean": "PCB board",
+          "meaningZh": "电路板",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 106 行"
+        },
+        {
+          "korean": "동박",
+          "meaningZh": "铜箔",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 107 行"
+        },
+        {
+          "korean": "밑돌다",
+          "meaningZh": "达不到",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 108 行"
+        },
+        {
+          "korean": "산란",
+          "meaningZh": "散射",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 109 行"
+        },
+        {
+          "korean": "관통",
+          "meaningZh": "贯穿",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 110 行"
+        },
+        {
+          "korean": "user / 유저",
+          "meaningZh": "用户",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 111 行"
+        },
+        {
+          "korean": "쟁이다",
+          "meaningZh": "堆/囤",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 112 行"
+        },
+        {
+          "korean": "조리개",
+          "meaningZh": "光圈",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 113 行"
+        },
+        {
+          "korean": "받아들이는 빛",
+          "meaningZh": "进光",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 114 行"
+        },
+        {
+          "korean": "온조기",
+          "meaningZh": "冷冻机",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 115 行"
+        },
+        {
+          "korean": "kit / 키트",
+          "meaningZh": "工具包",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 116 行"
+        },
+        {
+          "korean": "수척",
+          "meaningZh": "消瘦",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 117 行"
+        },
+        {
+          "korean": "연루",
+          "meaningZh": "连累",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 118 行"
+        },
+        {
+          "korean": "tension meter / 텐션 메트",
+          "meaningZh": "张力计",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 119 行"
+        },
+        {
+          "korean": "디코드",
+          "meaningZh": "解码",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 120 行"
+        },
+        {
+          "korean": "drum pump / 드럼 펌프",
+          "meaningZh": "油桶泵",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 121 行"
+        },
+        {
+          "korean": "잔여량",
+          "meaningZh": "余量",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 122 行"
+        },
+        {
+          "korean": "count",
+          "meaningZh": "计数",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 123 行"
+        },
+        {
+          "korean": "단종",
+          "meaningZh": "停产",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 124 行"
+        },
+        {
+          "korean": "품절",
+          "meaningZh": "断货",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 125 行"
+        },
+        {
+          "korean": "series / 시리즈",
+          "meaningZh": "系列",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 126 行"
+        },
+        {
+          "korean": "pulse / 펄스",
+          "meaningZh": "脉冲",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 127 行"
+        },
+        {
+          "korean": "liquid / 리퀴드형",
+          "meaningZh": "液体型",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 128 行"
+        },
+        {
+          "korean": "앙케트 조사",
+          "meaningZh": "问卷调查",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 129 行"
+        },
+        {
+          "korean": "도매상",
+          "meaningZh": "批发商",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 130 行"
+        },
+        {
+          "korean": "중매상",
+          "meaningZh": "倒卖商",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 131 行"
+        },
+        {
+          "korean": "여비 교통비",
+          "meaningZh": "差旅交通费",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 132 行"
+        },
+        {
+          "korean": "감안하다",
+          "meaningZh": "考虑到",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 133 行"
+        },
+        {
+          "korean": "차단기",
+          "meaningZh": "电闸",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 134 行"
+        },
+        {
+          "korean": "wrap film / 랩 필름",
+          "meaningZh": "保鲜膜",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 135 行"
+        },
+        {
+          "korean": "여러 조로 나누다",
+          "meaningZh": "分批",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 136 行"
+        },
+        {
+          "korean": "차단기",
+          "meaningZh": "电闸",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 137 行"
+        },
+        {
+          "korean": "진화",
+          "meaningZh": "灭火",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 138 行"
+        },
+        {
+          "korean": "rework",
+          "meaningZh": "重做/修订",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 139 行"
+        },
+        {
+          "korean": "직렬 / 징녈",
+          "meaningZh": "串联",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 140 行"
+        },
+        {
+          "korean": "병렬",
+          "meaningZh": "并联",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 141 行"
+        },
+        {
+          "korean": "납품",
+          "meaningZh": "交货",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 142 行"
+        },
+        {
+          "korean": "불소",
+          "meaningZh": "氟",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 143 行"
+        },
+        {
+          "korean": "알곤",
+          "meaningZh": "氩",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 144 行"
+        },
+        {
+          "korean": "원상 복구",
+          "meaningZh": "恢复原状",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 145 行"
+        },
+        {
+          "korean": "와이어 타이",
+          "meaningZh": "安全绳",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 146 行"
+        },
+        {
+          "korean": "support / 서포트",
+          "meaningZh": "支撑",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 147 行"
+        },
+        {
+          "korean": "intensity",
+          "meaningZh": "（光）强",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 148 行"
+        },
+        {
+          "korean": "wafer / 웨이퍼",
+          "meaningZh": "晶片、薄片",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 149 行"
+        },
+        {
+          "korean": "regulator / 레귤레이터",
+          "meaningZh": "调节器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 150 行"
+        },
+        {
+          "korean": "울리불리",
+          "meaningZh": "波浪纹",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 151 行"
+        },
+        {
+          "korean": "sprin kler / 스프링 클러",
+          "meaningZh": "消防喷淋器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 152 行"
+        },
+        {
+          "korean": "dumper / 댐퍼",
+          "meaningZh": "缓冲垫",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 153 行"
+        },
+        {
+          "korean": "절전형",
+          "meaningZh": "节能型",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 154 行"
+        },
+        {
+          "korean": "에너지 절약",
+          "meaningZh": "节能",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 155 行"
+        },
+        {
+          "korean": "지양",
+          "meaningZh": "抑制",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 156 行"
+        },
+        {
+          "korean": "안정기",
+          "meaningZh": "镇流器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 157 行"
+        },
+        {
+          "korean": "floder",
+          "meaningZh": "文件夹",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 158 行"
+        },
+        {
+          "korean": "location / 위치 절정",
+          "meaningZh": "定位",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 159 行"
+        },
+        {
+          "korean": "sector / 섹터",
+          "meaningZh": "磁区",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 160 行"
+        },
+        {
+          "korean": "보완",
+          "meaningZh": "完善",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 161 行"
+        },
+        {
+          "korean": "이체",
+          "meaningZh": "转账",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 162 行"
+        },
+        {
+          "korean": "받이",
+          "meaningZh": "dummy 内槽",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 163 行"
+        },
+        {
+          "korean": "relay",
+          "meaningZh": "继电器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 164 行"
+        },
+        {
+          "korean": "막대기",
+          "meaningZh": "小棍子",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 165 行"
+        },
+        {
+          "korean": "sticker / 스티커",
+          "meaningZh": "标签",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 166 行"
+        },
+        {
+          "korean": "갭처",
+          "meaningZh": "截图",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 167 行"
+        },
+        {
+          "korean": "희석",
+          "meaningZh": "稀释",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 168 行"
+        },
+        {
+          "korean": "pattern / 패턴",
+          "meaningZh": "图案",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 169 行"
+        },
+        {
+          "korean": "규명",
+          "meaningZh": "查明",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 170 行"
+        },
+        {
+          "korean": "찰과상",
+          "meaningZh": "擦伤",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 171 行"
+        },
+        {
+          "korean": "침적",
+          "meaningZh": "沉积",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 172 行"
+        },
+        {
+          "korean": "증착",
+          "meaningZh": "蒸腾、蒸镀",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 173 行"
+        },
+        {
+          "korean": "높이 올림",
+          "meaningZh": "垫高",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 174 行"
+        },
+        {
+          "korean": "air knife / 에어 나이프",
+          "meaningZh": "风刀",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 175 行"
+        },
+        {
+          "korean": "앙칼지다",
+          "meaningZh": "尖锐",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 176 行"
+        },
+        {
+          "korean": "PA / 파스칼",
+          "meaningZh": "帕",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 177 行"
+        },
+        {
+          "korean": "count down / 카운트 다운",
+          "meaningZh": "倒计时",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 178 行"
+        },
+        {
+          "korean": "incentive",
+          "meaningZh": "激励",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 179 行"
+        },
+        {
+          "korean": "납품",
+          "meaningZh": "交货",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 180 行"
+        },
+        {
+          "korean": "점프하다",
+          "meaningZh": "短接",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 181 行"
+        },
+        {
+          "korean": "릴선",
+          "meaningZh": "线圈",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 182 行"
+        },
+        {
+          "korean": "cycle / 사이클",
+          "meaningZh": "循环",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 183 行"
+        },
+        {
+          "korean": "refresh / 리프레시",
+          "meaningZh": "刷新",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 184 行"
+        },
+        {
+          "korean": "intelligent / 인텔리전트",
+          "meaningZh": "智能",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 185 行"
+        },
+        {
+          "korean": "그저께",
+          "meaningZh": "前天",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 186 行"
+        },
+        {
+          "korean": "packing / 페킹",
+          "meaningZh": "填充物、密封圈",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 187 行"
+        },
+        {
+          "korean": "overlap / 오버랩",
+          "meaningZh": "重叠",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 188 行"
+        },
+        {
+          "korean": "공식석상",
+          "meaningZh": "正式场合",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 189 行"
+        },
+        {
+          "korean": "foot / 풋",
+          "meaningZh": "脚",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 190 行"
+        },
+        {
+          "korean": "수명 낮음",
+          "meaningZh": "寿命短",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 191 行"
+        },
+        {
+          "korean": "선명하게 보이다",
+          "meaningZh": "清晰可见",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 192 行"
+        },
+        {
+          "korean": "valve plug",
+          "meaningZh": "阀芯",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 193 行"
+        },
+        {
+          "korean": "육성",
+          "meaningZh": "培养",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 194 行"
+        },
+        {
+          "korean": "portion / 포션",
+          "meaningZh": "部分",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 195 行"
+        },
+        {
+          "korean": "추첨",
+          "meaningZh": "抽奖",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 196 行"
+        },
+        {
+          "korean": "스캔너",
+          "meaningZh": "扫描机",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 197 行"
+        },
+        {
+          "korean": "통원 치료",
+          "meaningZh": "门诊治疗",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 198 行"
+        },
+        {
+          "korean": "dispense",
+          "meaningZh": "分配",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 199 行"
+        },
+        {
+          "korean": "coverage / 커버리지",
+          "meaningZh": "覆盖",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 200 行"
+        },
+        {
+          "korean": "scale / 스케일",
+          "meaningZh": "规模",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 201 行"
+        },
+        {
+          "korean": "edit / 에디트",
+          "meaningZh": "编辑",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 202 行"
+        },
+        {
+          "korean": "웬만하면",
+          "meaningZh": "一般、最好",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 203 行"
+        },
+        {
+          "korean": "폴리 우레탄",
+          "meaningZh": "聚氨脂",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 204 行"
+        },
+        {
+          "korean": "spot / 스포트",
+          "meaningZh": "斑点",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 205 行"
+        },
+        {
+          "korean": "throttle valve / 스로틀 밸브",
+          "meaningZh": "节流阀",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 206 行"
+        },
+        {
+          "korean": "펀칭기",
+          "meaningZh": "打孔机",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 207 行"
+        },
+        {
+          "korean": "paradigm / 패러다임",
+          "meaningZh": "样式",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 208 行"
+        },
+        {
+          "korean": "날카롭다",
+          "meaningZh": "锋利",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 209 行"
+        },
+        {
+          "korean": "만기가 되었다",
+          "meaningZh": "到期",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 210 行"
+        },
+        {
+          "korean": "slot / 슬롯",
+          "meaningZh": "（卡）槽",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 211 行"
+        },
+        {
+          "korean": "smishing / 스미싱",
+          "meaningZh": "短信诈骗",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 212 行"
+        },
+        {
+          "korean": "맞춤 제작하다",
+          "meaningZh": "定制",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 213 行"
+        },
+        {
+          "korean": "비용 공제",
+          "meaningZh": "扣款",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 214 行"
+        },
+        {
+          "korean": "splay / 스프레이",
+          "meaningZh": "展开",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 215 行"
+        },
+        {
+          "korean": "refill / 리필",
+          "meaningZh": "替代物",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 216 行"
+        },
+        {
+          "korean": "amplifier / 앰플리파이어",
+          "meaningZh": "放大镜",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 217 行"
+        },
+        {
+          "korean": "condenser / 콘덴서",
+          "meaningZh": "电容",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 218 行"
+        },
+        {
+          "korean": "실린더 load",
+          "meaningZh": "气缸推进杆",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 219 行"
+        },
+        {
+          "korean": "clip / 클립",
+          "meaningZh": "别针",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 220 行"
+        },
+        {
+          "korean": "오존",
+          "meaningZh": "臭氧",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 221 行"
+        },
+        {
+          "korean": "rack / 렉피니언",
+          "meaningZh": "齿条",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 222 行"
+        },
+        {
+          "korean": "렉기어",
+          "meaningZh": "齿轮",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 223 行"
+        },
+        {
+          "korean": "가라앉다",
+          "meaningZh": "沉淀",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 224 行"
+        },
+        {
+          "korean": "거칠기",
+          "meaningZh": "粗糙度",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 225 行"
+        },
+        {
+          "korean": "thermal grease / 서멀 그리스",
+          "meaningZh": "冷凝胶",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 226 行"
+        },
+        {
+          "korean": "ejector / 이젝터",
+          "meaningZh": "真空发生器",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 227 行"
+        },
+        {
+          "korean": "speed corn",
+          "meaningZh": "节流阀",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 228 行"
+        },
+        {
+          "korean": "렌지",
+          "meaningZh": "树脂",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 229 行"
+        },
+        {
+          "korean": "에어리어 센서",
+          "meaningZh": "光栅",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 230 行"
+        },
+        {
+          "korean": "프린터",
+          "meaningZh": "打印机",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 231 行"
+        },
+        {
+          "korean": "크레인",
+          "meaningZh": "起重机",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 232 行"
+        },
+        {
+          "korean": "체크 밸브",
+          "meaningZh": "单向阀",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 233 行"
+        },
+        {
+          "korean": "출력",
+          "meaningZh": "功率",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 234 行"
+        },
+        {
+          "korean": "잔여 전량",
+          "meaningZh": "剩余电量",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 235 行"
+        },
+        {
+          "korean": "네이비게이션",
+          "meaningZh": "导航",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 236 行"
+        },
+        {
+          "korean": "주행거리",
+          "meaningZh": "续航",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 237 行"
+        },
+        {
+          "korean": "연료기관차",
+          "meaningZh": "燃油汽车",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 238 行"
+        },
+        {
+          "korean": "모회사",
+          "meaningZh": "母公司",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 239 行"
+        },
+        {
+          "korean": "셀러seller / 판매인",
+          "meaningZh": "销售",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 240 行"
+        },
+        {
+          "korean": "PDD",
+          "meaningZh": "테무",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 241 行"
+        },
+        {
+          "korean": "어린이",
+          "meaningZh": "儿童",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 242 行"
+        },
+        {
+          "korean": "활성",
+          "meaningZh": "活跃",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 243 行"
+        },
+        {
+          "korean": "초저가",
+          "meaningZh": "超低价",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 244 行"
+        },
+        {
+          "korean": "내놓다",
+          "meaningZh": "推出",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 245 行"
+        },
+        {
+          "korean": "어쩔때",
+          "meaningZh": "偶尔",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 246 行"
+        },
+        {
+          "korean": "슬슬",
+          "meaningZh": "渐渐",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 247 行"
+        },
+        {
+          "korean": "묵살당햇다",
+          "meaningZh": "被无视",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 248 行"
+        },
+        {
+          "korean": "되레",
+          "meaningZh": "反倒是",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 249 行"
+        },
+        {
+          "korean": "기어",
+          "meaningZh": "齿轮",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 250 行"
+        },
+        {
+          "korean": "스퍼 기어",
+          "meaningZh": "直齿轮",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 251 行"
+        },
+        {
+          "korean": "헬리컬 기어",
+          "meaningZh": "斜齿轮",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 252 行"
+        },
+        {
+          "korean": "공압",
+          "meaningZh": "气动的",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 253 行"
+        },
+        {
+          "korean": "전압",
+          "meaningZh": "电动的",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 254 行"
+        },
+        {
+          "korean": "피팅",
+          "meaningZh": "接头",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 255 行"
+        },
+        {
+          "korean": "DC",
+          "meaningZh": "直流",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 256 行"
+        },
+        {
+          "korean": "AC",
+          "meaningZh": "交流",
+          "category": "工业术语",
+          "note": "词汇1整理.xlsx · 第 257 行"
+        }
+      ]
+    },
+    {
+      "name": "词汇2整理（有中文）",
+      "sourceFileName": "词汇2整理.xlsx#20261009-zh",
+      "words": [
+        {
+          "korean": "corona",
+          "meaningZh": "处理设备的名字",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 3 行"
+        },
+        {
+          "korean": "이형 필름",
+          "meaningZh": "离型膜",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 4 行"
+        },
+        {
+          "korean": "film / 필름",
+          "meaningZh": "膜",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 5 行"
+        },
+        {
+          "korean": "silicon / 실리콘",
+          "meaningZh": "硅",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 6 行"
+        },
+        {
+          "korean": "core / 코어",
+          "meaningZh": "卷心",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 7 行"
+        },
+        {
+          "korean": "rewinder / 리와인더",
+          "meaningZh": "下料",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 9 行"
+        },
+        {
+          "korean": "unwinder / 언와인더",
+          "meaningZh": "上料",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 10 行"
+        },
+        {
+          "korean": "leading film",
+          "meaningZh": "leading 膜",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 11 行"
+        },
+        {
+          "korean": "in feed / 인피드",
+          "meaningZh": "上料",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 12 行"
+        },
+        {
+          "korean": "out feed / 리딩 필름",
+          "meaningZh": "下料",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 13 行"
+        },
+        {
+          "korean": "coating / 코팅",
+          "meaningZh": "涂覆",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 15 行"
+        },
+        {
+          "korean": "side dam / 데미지",
+          "meaningZh": "损伤",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 18 行"
+        },
+        {
+          "korean": "splicing / 스플라이싱",
+          "meaningZh": "拼接",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 20 行"
+        },
+        {
+          "korean": "plasma / 플라즈마",
+          "meaningZh": "处理设备的名字",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 21 行"
+        },
+        {
+          "korean": "grade / 가이드",
+          "meaningZh": "导轨",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 22 行"
+        },
+        {
+          "korean": "UV 경화기",
+          "meaningZh": "UV 硬化机",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 25 行"
+        },
+        {
+          "korean": "spec / 스펙",
+          "meaningZh": "标准",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 28 行"
+        },
+        {
+          "korean": "lot",
+          "meaningZh": "原料号",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 29 行"
+        },
+        {
+          "korean": "hepa filter / 해파",
+          "meaningZh": "过滤器名字（类型）",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 32 行"
+        },
+        {
+          "korean": "suction / 석션",
+          "meaningZh": "抽吸",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 35 行"
+        },
+        {
+          "korean": "primer / 프라이머",
+          "meaningZh": "基础的",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 36 行"
+        },
+        {
+          "korean": "damper / 댐퍼",
+          "meaningZh": "阀门",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 38 行"
+        },
+        {
+          "korean": "particle / 파티클",
+          "meaningZh": "颗粒",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 39 行"
+        },
+        {
+          "korean": "cunic / 큐닉",
+          "meaningZh": "不良种类",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 40 行"
+        },
+        {
+          "korean": "nurling / 너링",
+          "meaningZh": "激光压花机",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 44 行"
+        },
+        {
+          "korean": "hunting / 헌팅",
+          "meaningZh": "抖动",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 45 行"
+        },
+        {
+          "korean": "hoist / hoist",
+          "meaningZh": "电动葫芦",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 46 行"
+        },
+        {
+          "korean": "tension / 텐션",
+          "meaningZh": "张力",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 48 行"
+        },
+        {
+          "korean": "ion monitor / 이오 모니터",
+          "meaningZh": "离子监视器",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 49 行"
+        },
+        {
+          "korean": "롱노우즈 / long nose",
+          "meaningZh": "尖嘴钳",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 50 行"
+        },
+        {
+          "korean": "pallet / 바레트",
+          "meaningZh": "托盘",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 51 行"
+        },
+        {
+          "korean": "socket / 소켓",
+          "meaningZh": "插座",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 52 行"
+        },
+        {
+          "korean": "helium / 헬륨",
+          "meaningZh": "氦气",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 53 行"
+        },
+        {
+          "korean": "콘센트",
+          "meaningZh": "插座",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 54 行"
+        },
+        {
+          "korean": "멀티탭",
+          "meaningZh": "插座",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 55 行"
+        },
+        {
+          "korean": "wood pulp / 펄프",
+          "meaningZh": "拖把",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 57 行"
+        },
+        {
+          "korean": "spoiler / 스포일러",
+          "meaningZh": "滴管",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 58 行"
+        },
+        {
+          "korean": "beryllium / 베벨륨",
+          "meaningZh": "铍",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 59 行"
+        },
+        {
+          "korean": "aluminum / 알루미늄",
+          "meaningZh": "铝",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 60 行"
+        },
+        {
+          "korean": "conbination / 커비네이션",
+          "meaningZh": "结合",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 61 行"
+        },
+        {
+          "korean": "아연 합금",
+          "meaningZh": "锌合金",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 62 行"
+        },
+        {
+          "korean": "형광등",
+          "meaningZh": "荧光灯",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 63 行"
+        },
+        {
+          "korean": "상파장",
+          "meaningZh": "三波长",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 64 行"
+        },
+        {
+          "korean": "caster / 케스터",
+          "meaningZh": "轮子",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 65 行"
+        },
+        {
+          "korean": "brake / 브레이크",
+          "meaningZh": "刹车",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 66 行"
+        },
+        {
+          "korean": "IPA",
+          "meaningZh": "溶剂",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 67 行"
+        },
+        {
+          "korean": "AGV",
+          "meaningZh": "自动小车",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 68 行"
+        },
+        {
+          "korean": "RGV",
+          "meaningZh": "自动小车",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 69 行"
+        },
+        {
+          "korean": "carryboy",
+          "meaningZh": "手动小车",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 70 行"
+        },
+        {
+          "korean": "carbon / 커바",
+          "meaningZh": "碳纤维",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 71 行"
+        },
+        {
+          "korean": "layout / 레이아웃",
+          "meaningZh": "布局",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 72 行"
+        },
+        {
+          "korean": "suction roll / 석션 롤",
+          "meaningZh": "抽吸轮",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 73 行"
+        },
+        {
+          "korean": "error / 에러",
+          "meaningZh": "错误",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 75 行"
+        },
+        {
+          "korean": "tact time",
+          "meaningZh": "整个过程经历的时间",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 77 行"
+        },
+        {
+          "korean": "chamber / 챔버",
+          "meaningZh": "箱",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 79 行"
+        },
+        {
+          "korean": "fuzzing / 퍼징",
+          "meaningZh": "模糊处理",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 81 行"
+        },
+        {
+          "korean": "nietrogen / 질소",
+          "meaningZh": "氮气",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 82 行"
+        },
+        {
+          "korean": "ultrasonil / 울트라",
+          "meaningZh": "超声波",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 83 行"
+        },
+        {
+          "korean": "vent / 벤트",
+          "meaningZh": "通风口",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 85 行"
+        },
+        {
+          "korean": "blade / 브레이드",
+          "meaningZh": "刀片",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 87 行"
+        },
+        {
+          "korean": "유전기",
+          "meaningZh": "有电极",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 88 行"
+        },
+        {
+          "korean": "무전기",
+          "meaningZh": "无电极",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 89 行"
+        },
+        {
+          "korean": "찍힘",
+          "meaningZh": "击伤",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 90 行"
+        },
+        {
+          "korean": "기스",
+          "meaningZh": "划伤",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 91 行"
+        },
+        {
+          "korean": "페",
+          "meaningZh": "直径的单位",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 95 行"
+        },
+        {
+          "korean": "alcohol / 알콜",
+          "meaningZh": "酒精",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 98 行"
+        },
+        {
+          "korean": "가대",
+          "meaningZh": "架台",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 101 行"
+        },
+        {
+          "korean": "원단",
+          "meaningZh": "原料",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 102 行"
+        },
+        {
+          "korean": "특허",
+          "meaningZh": "专利",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 103 行"
+        },
+        {
+          "korean": "입자",
+          "meaningZh": "粒子",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 104 行"
+        },
+        {
+          "korean": "넓히다",
+          "meaningZh": "拓宽",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 105 行"
+        },
+        {
+          "korean": "자기판",
+          "meaningZh": "磁盘",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 106 行"
+        },
+        {
+          "korean": "전자 저울",
+          "meaningZh": "电子称重器",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 107 行"
+        },
+        {
+          "korean": "무게를 달다.",
+          "meaningZh": "称重",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 108 行"
+        },
+        {
+          "korean": "희석하다",
+          "meaningZh": "稀释",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 109 行"
+        },
+        {
+          "korean": "mixer / 믹서",
+          "meaningZh": "搅拌器",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 110 行"
+        },
+        {
+          "korean": "계량계",
+          "meaningZh": "计量器",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 111 行"
+        },
+        {
+          "korean": "점도",
+          "meaningZh": "黏度",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 112 行"
+        },
+        {
+          "korean": "접착제",
+          "meaningZh": "粘着剂",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 114 行"
+        },
+        {
+          "korean": "점착제",
+          "meaningZh": "黏着剂",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 115 行"
+        },
+        {
+          "korean": "깜박거리다",
+          "meaningZh": "闪烁",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 116 行"
+        },
+        {
+          "korean": "울퉁불퉁",
+          "meaningZh": "不平",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 117 行"
+        },
+        {
+          "korean": "평평하지 않다",
+          "meaningZh": "不平",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 118 行"
+        },
+        {
+          "korean": "회전축",
+          "meaningZh": "转轴",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 119 行"
+        },
+        {
+          "korean": "화살",
+          "meaningZh": "箭头",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 120 行"
+        },
+        {
+          "korean": "움집",
+          "meaningZh": "凹坑",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 121 行"
+        },
+        {
+          "korean": "부착",
+          "meaningZh": "附着",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 122 行"
+        },
+        {
+          "korean": "테플론 / teflon",
+          "meaningZh": "特氟龙",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 124 行"
+        },
+        {
+          "korean": "drum / 드럼",
+          "meaningZh": "桶",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 125 行"
+        },
+        {
+          "korean": "대차",
+          "meaningZh": "推车",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 126 行"
+        },
+        {
+          "korean": "급배기팬",
+          "meaningZh": "吸排气扇",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 127 行"
+        },
+        {
+          "korean": "SUS",
+          "meaningZh": "不锈钢",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 128 行"
+        },
+        {
+          "korean": "PC 제어함",
+          "meaningZh": "PC 控制柜",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 129 行"
+        },
+        {
+          "korean": "봉산",
+          "meaningZh": "硼酸",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 131 行"
+        },
+        {
+          "korean": "뿌리다",
+          "meaningZh": "洒",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 132 行"
+        },
+        {
+          "korean": "뿜어나오다",
+          "meaningZh": "洒",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 133 行"
+        },
+        {
+          "korean": "평윤",
+          "meaningZh": "澎润",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 134 行"
+        },
+        {
+          "korean": "요오드",
+          "meaningZh": "碘",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 135 行"
+        },
+        {
+          "korean": "컬러",
+          "meaningZh": "彩色",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 136 行"
+        },
+        {
+          "korean": "공조기",
+          "meaningZh": "空调",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 137 行"
+        },
+        {
+          "korean": "옷걸이",
+          "meaningZh": "衣架",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 138 行"
+        },
+        {
+          "korean": "신발장",
+          "meaningZh": "鞋柜",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 139 行"
+        },
+        {
+          "korean": "지계차",
+          "meaningZh": "液压车",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 140 行"
+        },
+        {
+          "korean": "메이커",
+          "meaningZh": "制造商",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 141 行"
+        },
+        {
+          "korean": "실링 패드",
+          "meaningZh": "密封圈",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 142 行"
+        },
+        {
+          "korean": "병따개",
+          "meaningZh": "开瓶器",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 143 行"
+        },
+        {
+          "korean": "막대기",
+          "meaningZh": "小棍子",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 144 行"
+        },
+        {
+          "korean": "나일론 / nylon",
+          "meaningZh": "尼龙",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 145 行"
+        },
+        {
+          "korean": "테프론",
+          "meaningZh": "特氟龙",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 146 行"
+        },
+        {
+          "korean": "자석",
+          "meaningZh": "磁铁",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 147 行"
+        },
+        {
+          "korean": "acetone / 아세톤",
+          "meaningZh": "丙酮",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 148 行"
+        },
+        {
+          "korean": "눈슬립 테이프",
+          "meaningZh": "防滑胶带",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 149 行"
+        },
+        {
+          "korean": "검수",
+          "meaningZh": "验收",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 150 行"
+        },
+        {
+          "korean": "비급",
+          "meaningZh": "应急",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 151 行"
+        },
+        {
+          "korean": "페인트",
+          "meaningZh": "漆",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 152 行"
+        },
+        {
+          "korean": "장판",
+          "meaningZh": "地毯",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 153 行"
+        },
+        {
+          "korean": "pulp / 펄프",
+          "meaningZh": "拖把",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 154 行"
+        },
+        {
+          "korean": "해면 / 스펀지",
+          "meaningZh": "海绵",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 155 行"
+        },
+        {
+          "korean": "빈도",
+          "meaningZh": "频率",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 156 行"
+        },
+        {
+          "korean": "재단",
+          "meaningZh": "裁断",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 157 行"
+        },
+        {
+          "korean": "하판",
+          "meaningZh": "下板",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 158 行"
+        },
+        {
+          "korean": "빗자루 마당비",
+          "meaningZh": "扫把",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 159 行"
+        },
+        {
+          "korean": "밀대",
+          "meaningZh": "拖把",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 160 行"
+        },
+        {
+          "korean": "비닐 봉지",
+          "meaningZh": "塑料袋",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 161 行"
+        },
+        {
+          "korean": "clamp / 클램프",
+          "meaningZh": "夹子",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 162 行"
+        },
+        {
+          "korean": "chuck / 척",
+          "meaningZh": "夹取",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 163 行"
+        },
+        {
+          "korean": "눌림",
+          "meaningZh": "压印",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 164 行"
+        },
+        {
+          "korean": "찍힘",
+          "meaningZh": "击伤",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 165 行"
+        },
+        {
+          "korean": "lable / 라벨",
+          "meaningZh": "标签",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 166 行"
+        },
+        {
+          "korean": "바코드",
+          "meaningZh": "条码",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 167 行"
+        },
+        {
+          "korean": "대기축",
+          "meaningZh": "等待轴",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 168 行"
+        },
+        {
+          "korean": "용매",
+          "meaningZh": "溶剂",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 169 行"
+        },
+        {
+          "korean": "출률",
+          "meaningZh": "功率",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 170 行"
+        },
+        {
+          "korean": "염착조",
+          "meaningZh": "染着槽",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 171 行"
+        },
+        {
+          "korean": "눈금",
+          "meaningZh": "刻度",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 172 行"
+        },
+        {
+          "korean": "점적량",
+          "meaningZh": "点滴量",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 173 行"
+        },
+        {
+          "korean": "수결",
+          "meaningZh": "水绝",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 174 行"
+        },
+        {
+          "korean": "말려지다",
+          "meaningZh": "卷起",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 175 行"
+        },
+        {
+          "korean": "primer / 프라이머",
+          "meaningZh": "基础的",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 176 行"
+        },
+        {
+          "korean": "티",
+          "meaningZh": "吨",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 178 行"
+        },
+        {
+          "korean": "frame / 프레임",
+          "meaningZh": "框架",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 180 行"
+        },
+        {
+          "korean": "지게차",
+          "meaningZh": "叉车",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 181 行"
+        },
+        {
+          "korean": "마킹펜",
+          "meaningZh": "快干型签字笔",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 182 行"
+        },
+        {
+          "korean": "레이저마킹기",
+          "meaningZh": "激光打标器",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 183 行"
+        },
+        {
+          "korean": "lantern / 랜턴",
+          "meaningZh": "强光灯",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 184 行"
+        },
+        {
+          "korean": "드럼통",
+          "meaningZh": "开口桶",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 185 行"
+        },
+        {
+          "korean": "일자드라이버",
+          "meaningZh": "一字起",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 186 行"
+        },
+        {
+          "korean": "십자드라이버",
+          "meaningZh": "十字起",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 187 行"
+        },
+        {
+          "korean": "우렌탄 망치",
+          "meaningZh": "橡胶锤",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 188 行"
+        },
+        {
+          "korean": "갭게이지 / gap gauge",
+          "meaningZh": "塞尺",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 189 行"
+        },
+        {
+          "korean": "드라이버 / driver",
+          "meaningZh": "螺丝刀",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 190 行"
+        },
+        {
+          "korean": "손전등",
+          "meaningZh": "手电筒",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 191 行"
+        },
+        {
+          "korean": "에어 포켓",
+          "meaningZh": "air pocke 气袋",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 192 行"
+        },
+        {
+          "korean": "spring cooler / 스프링 클러",
+          "meaningZh": "喷水器",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 193 行"
+        },
+        {
+          "korean": "event / 이벤트",
+          "meaningZh": "活动",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 194 行"
+        },
+        {
+          "korean": "cutter / 커터기",
+          "meaningZh": "裁切机",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 195 行"
+        },
+        {
+          "korean": "plog / 플로그",
+          "meaningZh": "插销",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 196 行"
+        },
+        {
+          "korean": "sliding / 스라이딩",
+          "meaningZh": "滑行",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 197 行"
+        },
+        {
+          "korean": "class / 클라스",
+          "meaningZh": "洁净度等级",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 199 行"
+        },
+        {
+          "korean": "slide door / 스라이드 도어",
+          "meaningZh": "推拉门",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 200 行"
+        },
+        {
+          "korean": "watt / 와트",
+          "meaningZh": "瓦特",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 201 行"
+        },
+        {
+          "korean": "기성품",
+          "meaningZh": "完成品",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 202 行"
+        },
+        {
+          "korean": "반제품",
+          "meaningZh": "半成品",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 203 行"
+        },
+        {
+          "korean": "가로",
+          "meaningZh": "横",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 204 行"
+        },
+        {
+          "korean": "세로",
+          "meaningZh": "纵",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 205 行"
+        },
+        {
+          "korean": "커터기",
+          "meaningZh": "裁切机",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 206 行"
+        },
+        {
+          "korean": "rail / 레일",
+          "meaningZh": "轨道",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 207 行"
+        },
+        {
+          "korean": "span / 스판",
+          "meaningZh": "弹性",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 208 行"
+        },
+        {
+          "korean": "딲다",
+          "meaningZh": "修（路）",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 209 行"
+        },
+        {
+          "korean": "profile / 프로파일",
+          "meaningZh": "铝型材",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 210 行"
+        },
+        {
+          "korean": "맞히다",
+          "meaningZh": "使对",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 211 行"
+        },
+        {
+          "korean": "sliding door / 스라딩 도어",
+          "meaningZh": "滑动门",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 212 行"
+        },
+        {
+          "korean": "magnetic / 마그네틱",
+          "meaningZh": "磁性的",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 213 行"
+        },
+        {
+          "korean": "사각",
+          "meaningZh": "斜角",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 214 行"
+        },
+        {
+          "korean": "직각",
+          "meaningZh": "直角",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 215 行"
+        },
+        {
+          "korean": "coupling / 거플링",
+          "meaningZh": "接头",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 216 行"
+        },
+        {
+          "korean": "걸리다",
+          "meaningZh": "被卡住，被挂住",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 217 行"
+        },
+        {
+          "korean": "걸다 / 달다",
+          "meaningZh": "挂、浓稠",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 218 行"
+        },
+        {
+          "korean": "걸치다",
+          "meaningZh": "经过",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 219 行"
+        },
+        {
+          "korean": "떼다",
+          "meaningZh": "揭开",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 220 行"
+        },
+        {
+          "korean": "치우다",
+          "meaningZh": "清理",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 221 行"
+        },
+        {
+          "korean": "짙다/진하다",
+          "meaningZh": "浓",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 222 行"
+        },
+        {
+          "korean": "싱겁다",
+          "meaningZh": "淡",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 223 行"
+        },
+        {
+          "korean": "조제하다",
+          "meaningZh": "调制",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 224 行"
+        },
+        {
+          "korean": "핸드",
+          "meaningZh": "手持式",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 225 行"
+        },
+        {
+          "korean": "채우다",
+          "meaningZh": "填满",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 226 行"
+        },
+        {
+          "korean": "캐스팅 / casting",
+          "meaningZh": "铸造",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 228 行"
+        },
+        {
+          "korean": "경식",
+          "meaningZh": "硬质变化",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 229 行"
+        },
+        {
+          "korean": "발화점",
+          "meaningZh": "燃点",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 230 行"
+        },
+        {
+          "korean": "불이 나다",
+          "meaningZh": "起火",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 231 行"
+        },
+        {
+          "korean": "사선/빗금",
+          "meaningZh": "斜线",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 232 行"
+        },
+        {
+          "korean": "내역",
+          "meaningZh": "明细",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 233 行"
+        },
+        {
+          "korean": "이산화탄소.",
+          "meaningZh": "二氧化碳",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 234 行"
+        },
+        {
+          "korean": "이산화규소.",
+          "meaningZh": "二氧化硅",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 235 行"
+        },
+        {
+          "korean": "rotor",
+          "meaningZh": "转子",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 237 行"
+        },
+        {
+          "korean": "흐트어지다",
+          "meaningZh": "变松",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 238 行"
+        },
+        {
+          "korean": "임펠러",
+          "meaningZh": "叶轮",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 239 行"
+        },
+        {
+          "korean": "옵션 / option",
+          "meaningZh": "选项",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 241 行"
+        },
+        {
+          "korean": "조이다",
+          "meaningZh": "拧紧",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 242 行"
+        },
+        {
+          "korean": "마력",
+          "meaningZh": "马力",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 243 行"
+        },
+        {
+          "korean": "전동기",
+          "meaningZh": "电机",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 244 行"
+        },
+        {
+          "korean": "인터벌 / interval",
+          "meaningZh": "间隔",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 245 行"
+        },
+        {
+          "korean": "추",
+          "meaningZh": "砝码",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 246 行"
+        },
+        {
+          "korean": "끈",
+          "meaningZh": "绳子",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 247 行"
+        },
+        {
+          "korean": "쿠션 / cushion",
+          "meaningZh": "垫子",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 248 行"
+        },
+        {
+          "korean": "의자등",
+          "meaningZh": "椅子背",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 249 行"
+        },
+        {
+          "korean": "가죽",
+          "meaningZh": "皮质",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 250 行"
+        },
+        {
+          "korean": "덮개",
+          "meaningZh": "罩子",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 251 行"
+        },
+        {
+          "korean": "튀어나오다 / 볼록하다",
+          "meaningZh": "凸出",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 253 行"
+        },
+        {
+          "korean": "움집 / 오목구멍",
+          "meaningZh": "凹坑",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 254 行"
+        },
+        {
+          "korean": "아까즈롤",
+          "meaningZh": "螺纹roll",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 255 行"
+        },
+        {
+          "korean": "증폭기",
+          "meaningZh": "放大器",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 256 行"
+        },
+        {
+          "korean": "라드",
+          "meaningZh": "生产日期",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 257 行"
+        },
+        {
+          "korean": "입도",
+          "meaningZh": "粒子大小",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 258 行"
+        },
+        {
+          "korean": "암호",
+          "meaningZh": "加密",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 260 行"
+        },
+        {
+          "korean": "복호",
+          "meaningZh": "解密",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 261 行"
+        },
+        {
+          "korean": "차폐/차단",
+          "meaningZh": "屏蔽",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 262 行"
+        },
+        {
+          "korean": "회로",
+          "meaningZh": "电路",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 263 行"
+        },
+        {
+          "korean": "도금",
+          "meaningZh": "电镀",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 264 行"
+        },
+        {
+          "korean": "증착",
+          "meaningZh": "沉积",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 265 行"
+        },
+        {
+          "korean": "케리어",
+          "meaningZh": "载体",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 266 行"
+        },
+        {
+          "korean": "항산화",
+          "meaningZh": "抗氧化",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 267 行"
+        },
+        {
+          "korean": "단락",
+          "meaningZh": "短路",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 268 行"
+        },
+        {
+          "korean": "임계",
+          "meaningZh": "临界",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 269 行"
+        },
+        {
+          "korean": "느슨하다",
+          "meaningZh": "松动",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 270 行"
+        },
+        {
+          "korean": "포커스",
+          "meaningZh": "焦距",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 271 行"
+        },
+        {
+          "korean": "수율",
+          "meaningZh": "良率",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 272 行"
+        },
+        {
+          "korean": "추적",
+          "meaningZh": "追溯",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 273 行"
+        },
+        {
+          "korean": "산화아연",
+          "meaningZh": "氧化锌",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 274 行"
+        },
+        {
+          "korean": "버퍼",
+          "meaningZh": "缓冲",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 275 行"
+        },
+        {
+          "korean": "노치",
+          "meaningZh": "切口",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 276 行"
+        },
+        {
+          "korean": "단열제",
+          "meaningZh": "保温材料",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 277 行"
+        },
+        {
+          "korean": "스핀들",
+          "meaningZh": "主轴",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 278 行"
+        },
+        {
+          "korean": "후크",
+          "meaningZh": "吊钩",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 279 行"
+        },
+        {
+          "korean": "하중",
+          "meaningZh": "承重",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 280 行"
+        },
+        {
+          "korean": "포토마스크",
+          "meaningZh": "掩膜板",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 281 行"
+        },
+        {
+          "korean": "항온항습",
+          "meaningZh": "恒温恒湿",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 282 行"
+        },
+        {
+          "korean": "히트싱크",
+          "meaningZh": "散热片",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 283 行"
+        },
+        {
+          "korean": "플라즈마",
+          "meaningZh": "等离子",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 284 行"
+        },
+        {
+          "korean": "러터리",
+          "meaningZh": "旋转",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 285 行"
+        },
+        {
+          "korean": "X선",
+          "meaningZh": "X射线",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 286 行"
+        },
+        {
+          "korean": "로트",
+          "meaningZh": "批次",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 287 行"
+        },
+        {
+          "korean": "최소 분해능",
+          "meaningZh": "最小精度",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 288 行"
+        },
+        {
+          "korean": "에지",
+          "meaningZh": "边缘",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 289 行"
+        },
+        {
+          "korean": "디포밍",
+          "meaningZh": "变形",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 290 行"
+        },
+        {
+          "korean": "레진",
+          "meaningZh": "树脂",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 291 行"
+        },
+        {
+          "korean": "보강",
+          "meaningZh": "加固",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 292 行"
+        },
+        {
+          "korean": "튜브",
+          "meaningZh": "细管道",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 293 行"
+        },
+        {
+          "korean": "인가",
+          "meaningZh": "电源接入",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 294 行"
+        },
+        {
+          "korean": "헐거워지다",
+          "meaningZh": "松动",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 295 行"
+        },
+        {
+          "korean": "자바라",
+          "meaningZh": "伸缩帘",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 296 行"
+        },
+        {
+          "korean": "미러",
+          "meaningZh": "三菱镜",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 297 行"
+        },
+        {
+          "korean": "깔때기",
+          "meaningZh": "漏斗",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 298 行"
+        },
+        {
+          "korean": "inverter / 인버터",
+          "meaningZh": "变频器",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 299 行"
+        },
+        {
+          "korean": "전기쇼크",
+          "meaningZh": "电击",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 300 行"
+        },
+        {
+          "korean": "미흡",
+          "meaningZh": "欠佳",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 301 行"
+        },
+        {
+          "korean": "수령",
+          "meaningZh": "领取",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 302 行"
+        },
+        {
+          "korean": "별도",
+          "meaningZh": "另行",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 303 行"
+        },
+        {
+          "korean": "포크레인 / 채굴기",
+          "meaningZh": "挖掘机",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 304 行"
+        },
+        {
+          "korean": "충진",
+          "meaningZh": "填充",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 305 行"
+        },
+        {
+          "korean": "연차",
+          "meaningZh": "工龄",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 306 行"
+        },
+        {
+          "korean": "리트머스",
+          "meaningZh": "石蕊试纸",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 307 行"
+        },
+        {
+          "korean": "상신",
+          "meaningZh": "申报",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 308 行"
+        },
+        {
+          "korean": "지참",
+          "meaningZh": "携带",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 309 行"
+        },
+        {
+          "korean": "speaker",
+          "meaningZh": "扬声器",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 310 行"
+        },
+        {
+          "korean": "scroll / 스크롤",
+          "meaningZh": "滚动条",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 311 行"
+        },
+        {
+          "korean": "cursor / 커서",
+          "meaningZh": "光标",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 312 行"
+        },
+        {
+          "korean": "기어풀러",
+          "meaningZh": "拉码",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 313 行"
+        },
+        {
+          "korean": "반려",
+          "meaningZh": "返还",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 314 行"
+        },
+        {
+          "korean": "만회",
+          "meaningZh": "挽回",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 315 行"
+        },
+        {
+          "korean": "scrap",
+          "meaningZh": "废弃",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 316 行"
+        },
+        {
+          "korean": "트로피",
+          "meaningZh": "奖杯",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 317 行"
+        },
+        {
+          "korean": "정교",
+          "meaningZh": "精密",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 318 行"
+        },
+        {
+          "korean": "픽셀",
+          "meaningZh": "像素",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 319 行"
+        },
+        {
+          "korean": "클릭",
+          "meaningZh": "点击",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 320 行"
+        },
+        {
+          "korean": "최적",
+          "meaningZh": "最佳",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 321 行"
+        },
+        {
+          "korean": "진열대",
+          "meaningZh": "货架",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 322 行"
+        },
+        {
+          "korean": "페달",
+          "meaningZh": "脚踏板",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 323 行"
+        },
+        {
+          "korean": "Express pipe",
+          "meaningZh": "快接管道",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 324 行"
+        },
+        {
+          "korean": "캐비닛",
+          "meaningZh": "柜子",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 325 行"
+        },
+        {
+          "korean": "둘레",
+          "meaningZh": "周围",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 326 行"
+        },
+        {
+          "korean": "질산은",
+          "meaningZh": "硝酸银",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 327 行"
+        },
+        {
+          "korean": "밀리",
+          "meaningZh": "毫升",
+          "category": "工业术语",
+          "note": "词汇2整理.xlsx · 第 328 行"
+        }
+      ]
+    },
+    {
+      "name": "英文/韩文专项（无中文）",
+      "sourceFileName": "technical-untranslated#20261009",
+      "words": [
+        {
+          "korean": "clrculation",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 2 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "curl",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 8 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "lami / 라미",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 14 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "nip",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 16 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "lip",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 17 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "accum / 아큄",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 19 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "steel roll / 스틸 롤",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 23 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "oven / 오븐",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 24 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "booth / 부스",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 30 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "Rubber roll / 러버 롤",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 31 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "grade / 그레이드",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 33 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "action roll / 엑션",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 34 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "filter housing / 필터 호징",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 37 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "load cell / 로드 셀",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 41 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "epc",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 42 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "MCD roll gap",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 43 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "ova",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 47 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "refill / 리필",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 56 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "blower / 불로울",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 74 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "acuum / 아큐움",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 76 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "annealing / 어닐링",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 78 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "induction roll / 인덕션 롤",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 80 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "doctor knife",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 84 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "holder / 홀더",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 86 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "nip roll",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 92 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "in-line gate",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 93 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "touch roll / 터칭 롤",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 94 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "air floating",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 96 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "noise",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 97 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "holder",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 99 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "plate",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅英文",
+          "note": "词汇2整理.xlsx · 第 100 行 · 仅英文 · 原表中文栏为空"
+        },
+        {
+          "korean": "탱크",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅韩文",
+          "note": "词汇2整理.xlsx · 第 113 行 · 仅韩文 · 原表中文栏为空"
+        },
+        {
+          "korean": "얇다",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅韩文",
+          "note": "词汇2整理.xlsx · 第 123 行 · 仅韩文 · 原表中文栏为空"
+        },
+        {
+          "korean": "코어 크레이트",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅韩文",
+          "note": "词汇2整理.xlsx · 第 130 行 · 仅韩文 · 原表中文栏为空"
+        },
+        {
+          "korean": "mesh roll / 메쉬 롤",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 177 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "feeding / 피딩",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 179 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "LED / 엘리디",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 198 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "ultra / 울트라",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 227 行 · 英韩配对 · 原表中文栏为空"
+        },
+        {
+          "korean": "막대",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅韩文",
+          "note": "词汇2整理.xlsx · 第 236 行 · 仅韩文 · 原表中文栏为空"
+        },
+        {
+          "korean": "상이하다",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅韩文",
+          "note": "词汇2整理.xlsx · 第 240 行 · 仅韩文 · 原表中文栏为空"
+        },
+        {
+          "korean": "찍찍이",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "仅韩文",
+          "note": "词汇2整理.xlsx · 第 252 行 · 仅韩文 · 原表中文栏为空"
+        },
+        {
+          "korean": "카플링 / coupling",
+          "meaningZh": "原表未提供中文释义",
+          "category": "工业术语·待补中文",
+          "tags": "英韩配对",
+          "note": "词汇2整理.xlsx · 第 259 行 · 英韩配对 · 原表中文栏为空"
+        }
+      ]
+    }
+  ]
+}

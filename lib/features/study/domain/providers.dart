@@ -21,10 +21,13 @@ final ttsServiceProvider = Provider<TtsService>((ref) {
   return service;
 });
 
+final studyBookProvider = StateProvider<int?>((ref) => null);
+
 final studyRepositoryProvider = Provider<StudyRepository>((ref) {
   return StudyRepository(
     ref.watch(databaseProvider),
     ref.watch(fsrsServiceProvider),
+    bookId: ref.watch(studyBookProvider),
   );
 });
 
@@ -56,4 +59,18 @@ final studyRoundProgressProvider =
   final database = ref.watch(databaseProvider);
   await ref.watch(bundledWordSeedProvider.future);
   return database.loadStudyRoundProgress(DateTime.now());
+});
+
+final studyBookCountsProvider = FutureProvider.autoDispose<HomeCounts>((ref) async {
+  ref.watch(localDayProvider);
+  final bookId = ref.watch(studyBookProvider);
+  final db = ref.watch(databaseProvider);
+  await ref.watch(bundledWordSeedProvider.future);
+  return db.loadScopedStudyCounts(bookId);
+});
+
+final wordBooksProvider = FutureProvider.autoDispose<List<WordBook>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  await ref.watch(bundledWordSeedProvider.future);
+  return db.loadWordBooks();
 });

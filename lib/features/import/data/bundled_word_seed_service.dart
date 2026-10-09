@@ -8,10 +8,11 @@ class BundledWordSeedService {
   const BundledWordSeedService();
 
   static const assetPath = 'assets/data/default_word_books.json';
+  static const technicalAssetPath = 'assets/data/technical_word_books.json';
 
   Future<BundledSeedResult> seed(AppDatabase database) async {
     final raw = await rootBundle.loadString(assetPath);
-    final books = decode(raw);
+    final books = [...decode(raw), ...decode(await rootBundle.loadString(technicalAssetPath))];
     var inserted = 0;
     var reused = 0;
     var importedBooks = 0;
@@ -71,7 +72,13 @@ class BundledWordSeedService {
         if (korean.isEmpty || meaningZh.isEmpty) {
           throw const FormatException('内置词库包含空白韩语或中文释义。');
         }
-        return WordDraft(korean: korean, meaningZh: meaningZh);
+        return WordDraft(
+          korean: korean,
+          meaningZh: meaningZh,
+          category: rawWord['category']?.toString(),
+          tags: rawWord['tags']?.toString(),
+          note: rawWord['note']?.toString(),
+        );
       }).toList(growable: false);
       return BundledWordBook(
         name: name,

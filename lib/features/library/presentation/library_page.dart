@@ -17,8 +17,10 @@ class LibraryPage extends ConsumerWidget {
     if (saved != true) return;
     ref.invalidate(libraryWordsProvider);
     ref.invalidate(homeCountsProvider);
+      ref.invalidate(wordBooksProvider);
+    ref.invalidate(studyBookCountsProvider);
     ref.invalidate(dailyPlanProgressProvider);
-      ref.invalidate(studyRoundProgressProvider);
+    ref.invalidate(studyRoundProgressProvider);
     ref.invalidate(studyControllerProvider);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -54,6 +56,8 @@ class LibraryPage extends ConsumerWidget {
       await ref.read(databaseProvider).deleteWord(item.word.id);
       ref.invalidate(libraryWordsProvider);
       ref.invalidate(homeCountsProvider);
+      ref.invalidate(wordBooksProvider);
+    ref.invalidate(studyBookCountsProvider);
       ref.invalidate(dailyPlanProgressProvider);
       ref.invalidate(studyRoundProgressProvider);
       ref.invalidate(recentStatisticsProvider);
@@ -72,11 +76,31 @@ class LibraryPage extends ConsumerWidget {
     }
   }
 
+  Future<void> _studyBook(BuildContext context, WidgetRef ref, int bookId) async {
+    try {
+      final db = ref.read(databaseProvider);
+      final settings = await db.loadDailyPlanSettings();
+      await db.startExtraStudyRound(DateTime.now(), settings.newWordsPerDay);
+      if (!context.mounted) return;
+      ref.invalidate(studyRoundProgressProvider);
+      ref.invalidate(dailyPlanProgressProvider);
+      ref.read(studyBookProvider.notifier).state = bookId;
+      ref.invalidate(studyControllerProvider);
+      context.go('/study');
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('开始学习失败：$error')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final words = ref.watch(libraryWordsProvider);
     final filter = ref.watch(libraryFilterProvider);
     final colors = Theme.of(context).colorScheme;
+    final books = ref.watch(wordBooksProvider);
+    final bookId = ref.watch(libraryBookProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('我的词库'),
@@ -102,13 +126,49 @@ class LibraryPage extends ConsumerWidget {
         child: Column(
           children: [
             Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+              child: books.when(
+                loading: () => const LinearProgressIndicator(),
+                error: (_, _) => TextButton(
+                  onPressed: () => ref.invalidate(wordBooksProvider),
+                  child: const Text('重试读取词库分组'),
+                ),
+                data: (items) => Column(children: [
+                  DropdownButtonFormField<int>(
+                    key: ValueKey(bookId),
+                    initialValue: bookId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: '选择词库'),
+                    items: [
+                      const DropdownMenuItem<int>(value: null, child: Text('全部词库')),
+                      for (final book in items)
+                        DropdownMenuItem(value: book.id,
+                          child: Text(book.name, overflow: TextOverflow.ellipsis)),
+                    ],
+                    onChanged: (value) => ref.read(libraryBookProvider.notifier).state = value,
+                  ),
+                  if (bookId != null) ...[
+                    const SizedBox(height: 8),
+                    if (items.any((book) => book.id == bookId &&
+                        book.sourceFileName == 'technical-untranslated#20261009'))
+                      const Text('原表未提供中文释义；按英韩配对、仅英文、仅韩文标注。已有同词释义保留。'),
+                    FilledButton.icon(
+                      onPressed: () => _studyBook(context, ref, bookId),
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      label: const Text('单独学习本词库'),
+                    ),
+                  ],
+                ]),
+              ),
+            ),
+            Padding(
               padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
               child: TextField(
                 onChanged: (value) =>
                     ref.read(librarySearchProvider.notifier).state = value,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.search_rounded),
-                  hintText: '搜索韩语、中文或原形',
+                  hintText: '搜索英文、韩语、中文或原形',
                 ),
               ),
             ),
@@ -176,6 +236,8 @@ class LibraryPage extends ConsumerWidget {
                                 children: [
                                   const SizedBox(height: 3),
                                   Text(item.word.meaningZh),
+                                  if (item.word.tags?.isNotEmpty == true)
+                                    Text(item.word.tags!, style: TextStyle(color: colors.primary, fontSize: 12)),
                                   const SizedBox(height: 6),
                                   Wrap(
                                     spacing: 6,

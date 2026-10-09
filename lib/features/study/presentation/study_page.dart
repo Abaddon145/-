@@ -15,7 +15,14 @@ class StudyPage extends ConsumerWidget {
     final state = ref.watch(studyControllerProvider);
     final controller = ref.read(studyControllerProvider.notifier);
     return Scaffold(
-      appBar: AppBar(title: const Text('今日学习')),
+      appBar: AppBar(
+        title: Text(ref.watch(studyBookProvider) == null ? '今日学习' : '词库专项学习'),
+        actions: [
+          if (ref.watch(studyBookProvider) != null)
+            TextButton(onPressed: () => ref.read(studyBookProvider.notifier).state = null,
+              child: const Text('返回日常')),
+        ],
+      ),
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
@@ -53,6 +60,12 @@ class StudyPage extends ConsumerWidget {
     if (word == null) {
       return const _StudyCompletion();
     }
+    final parts = word.korean.split('/').map((part) => part.trim()).toList();
+    final koreanParts = parts.where((part) => RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(part)).toList();
+    final englishParts = parts.where((part) => RegExp(r'[A-Za-z]').hasMatch(part) &&
+        !RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(part)).toList();
+    final paired = ref.watch(studyBookProvider) != null &&
+        koreanParts.isNotEmpty && englishParts.isNotEmpty;
     return Padding(
       key: ValueKey(word.id),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -84,17 +97,21 @@ class StudyPage extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      word.korean,
+                      paired ? englishParts.join(" / ") : word.korean,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.displayMedium,
                     ),
+                    if (word.tags?.isNotEmpty == true) ...[
+                      const SizedBox(height: 8),
+                      Text(word.tags!),
+                    ],
                     if (word.baseForm.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text('原形：${word.baseForm}'),
                     ],
                     const SizedBox(height: 12),
                     IconButton.filledTonal(
-                      tooltip: '播放韩语发音',
+                      tooltip: '播放发音',
                       onPressed: () => ref
                           .read(ttsServiceProvider)
                           .speakKorean(word.korean),
@@ -107,6 +124,12 @@ class StudyPage extends ConsumerWidget {
                               padding: const EdgeInsets.only(top: 28),
                               child: Column(
                                 children: [
+                                  if (paired) ...[
+                                    Text(koreanParts.join(' / '),
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context).textTheme.headlineMedium),
+                                    const SizedBox(height: 12),
+                                  ],
                                   Text(
                                     word.meaningZh,
                                     textAlign: TextAlign.center,
@@ -141,7 +164,7 @@ class StudyPage extends ConsumerWidget {
           if (!state.isRevealed)
             FilledButton(
               onPressed: controller.reveal,
-              child: const Text('查看释义'),
+              child: Text(paired ? '查看韩文对应词' : '查看释义'),
             )
           else
             _RatingBar(
@@ -171,7 +194,7 @@ class _StudyCompletion extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final counts = ref.watch(homeCountsProvider);
+    final counts = ref.watch(studyBookCountsProvider);
     final round = ref.watch(studyRoundProgressProvider).valueOrNull;
     final plan = ref.watch(dailyPlanProgressProvider).valueOrNull;
     return Center(
@@ -215,7 +238,7 @@ class _StudyCompletion extends ConsumerWidget {
                     ),
               loading: () => const CircularProgressIndicator(),
               error: (_, _) => TextButton(
-                onPressed: () => ref.invalidate(homeCountsProvider),
+                onPressed: () => ref.invalidate(studyBookCountsProvider),
                 child: const Text('重新读取词库'),
               ),
             ),

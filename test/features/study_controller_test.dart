@@ -7,6 +7,9 @@ import 'package:korean_memo/features/study/presentation/study_controller.dart';
 import 'package:korean_memo/services/fsrs_service.dart';
 
 class _Repository implements StudyRepository {
+  @override
+  int? get bookId => null;
+
   final requests = <Completer<Word?>>[];
 
   @override
