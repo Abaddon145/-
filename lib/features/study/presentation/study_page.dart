@@ -60,6 +60,12 @@ class StudyPage extends ConsumerWidget {
     if (word == null) {
       return const _StudyCompletion();
     }
+    final parts = word.korean.split('/').map((part) => part.trim()).toList();
+    final koreanParts = parts.where((part) => RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(part)).toList();
+    final englishParts = parts.where((part) => RegExp(r'[A-Za-z]').hasMatch(part) &&
+        !RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(part)).toList();
+    final paired = ref.watch(studyBookProvider) != null &&
+        koreanParts.isNotEmpty && englishParts.isNotEmpty;
     return Padding(
       key: ValueKey(word.id),
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
@@ -91,7 +97,7 @@ class StudyPage extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      word.korean,
+                      paired ? englishParts.join(" / ") : word.korean,
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.displayMedium,
                     ),
@@ -118,6 +124,12 @@ class StudyPage extends ConsumerWidget {
                               padding: const EdgeInsets.only(top: 28),
                               child: Column(
                                 children: [
+                                  if (paired) ...[
+                                    Text(koreanParts.join(' / '),
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context).textTheme.headlineMedium),
+                                    const SizedBox(height: 12),
+                                  ],
                                   Text(
                                     word.meaningZh,
                                     textAlign: TextAlign.center,
@@ -152,7 +164,7 @@ class StudyPage extends ConsumerWidget {
           if (!state.isRevealed)
             FilledButton(
               onPressed: controller.reveal,
-              child: const Text('查看释义'),
+              child: Text(paired ? '查看韩文对应词' : '查看释义'),
             )
           else
             _RatingBar(
