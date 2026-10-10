@@ -7,7 +7,9 @@ class StatisticsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats=ref.watch(recentStatisticsProvider);
-    return Scaffold(appBar:AppBar(title:const Text('学习统计')),body:stats.when(
+    return Scaffold(appBar:AppBar(title:const Text('学习统计'), actions:[
+      IconButton(tooltip:'刷新统计', onPressed:()=>ref.invalidate(recentStatisticsProvider), icon:const Icon(Icons.refresh_rounded)),
+    ]),body:stats.when(
       loading:()=>const Center(child:CircularProgressIndicator()),
       error:(e,_)=>Center(child:Text('读取统计失败：$e')),
       data:(days){
@@ -17,7 +19,12 @@ class StatisticsPage extends ConsumerWidget {
         final wrong=days.fold<int>(0,(sum,d)=>sum+d.wrong);
         final accuracy=correct+wrong==0?0:(correct*100/(correct+wrong)).round();
         final mins=days.fold<int>(0,(sum,d)=>sum+d.durationMs)~/60000;
-        return ListView(padding:const EdgeInsets.all(16),children:[
+        return RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(recentStatisticsProvider);
+            await ref.read(recentStatisticsProvider.future);
+          },
+          child: ListView(physics:const AlwaysScrollableScrollPhysics(), padding:const EdgeInsets.all(16),children:[
           Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text('今日',style:Theme.of(context).textTheme.titleLarge),
             const SizedBox(height:12),
@@ -33,7 +40,7 @@ class StatisticsPage extends ConsumerWidget {
             subtitle:Text('新词 ${day.newWords} · 复习 ${day.reviews}'),
             trailing:Text('${day.correct} 对 / ${day.wrong} 错'),
           ),
-        ]);
+        ]));
       }));
   }
 }

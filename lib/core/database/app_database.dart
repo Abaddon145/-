@@ -636,8 +636,11 @@ class AppDatabase extends _$AppDatabase {
     final today = DateTime.utc(now.year, now.month, now.day), start = DateTime.utc(now.year, now.month, now.day).subtract(const Duration(days: 6));
     final rows = await (select(dailyStatistics)..where((r) => r.date.isBiggerOrEqualValue(start) & r.date.isSmallerOrEqualValue(today))
       ..orderBy([(r) => OrderingTerm.asc(r.date)])).get();
-    final values = {for (final r in rows) r.date: r};
-    return List.generate(7, (i) { final d = start.add(Duration(days:i)), r = values[d];
+    // Drift decodes SQLite timestamps as local DateTime objects. DateTime
+    // equality distinguishes UTC and local objects even for the same instant.
+    // Use the stored instant as the key so existing rows match in every timezone.
+    final values = {for (final r in rows) r.date.millisecondsSinceEpoch: r};
+    return List.generate(7, (i) { final d = start.add(Duration(days:i)), r = values[d.millisecondsSinceEpoch];
       return DailyStatisticsSummary(date:d,newWords:r?.newWords??0,reviews:r?.reviewWords??0,
         correct:r?.correctCount??0,wrong:r?.wrongCount??0,durationMs:r?.studyDurationMs??0); });
   }

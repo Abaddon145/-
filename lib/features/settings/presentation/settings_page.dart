@@ -181,7 +181,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ),
             const SizedBox(height: 24),
-            const Center(child: Text('KoreanMemo · v0.3.0')),
+            const Center(child: Text('KoreanMemo · v0.3.1')),
             if (_busy) ...[
               const SizedBox(height: 16),
               const LinearProgressIndicator(),

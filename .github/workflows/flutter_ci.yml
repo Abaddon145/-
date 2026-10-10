@@ -23,6 +23,10 @@ jobs:
       - run: dart format lib test
       - run: flutter analyze
       - run: flutter test
+      - name: Statistics regression in non-UTC timezones
+        run: |
+          TZ=Asia/Shanghai flutter test test/core/database/statistics_persistence_test.dart
+          TZ=America/Los_Angeles flutter test test/core/database/statistics_persistence_test.dart
 
   ios-simulator-build:
     runs-on: macos-latest
