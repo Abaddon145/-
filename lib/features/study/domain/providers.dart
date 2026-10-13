@@ -36,14 +36,17 @@ class SessionOptionsController extends StateNotifier<SessionOptions> {
     try {
       final data = jsonDecode(raw) as Map<String, dynamic>;
       if (data['day'] == dayKey(DateTime.now())) { state = SessionOptions.fromJson(data); }
-    } on FormatException { /* Invalid preferences fall back to the daily queue. */ }
+    } catch (_) { /* Invalid preferences fall back to the daily queue. */ }
   }
   Future<void> start(SessionOptions options) async {
     _version++;
     await database.startSession(options, DateTime.now());
     if (mounted) state = options;
   }
-  void daily() { _version++; state = const SessionOptions(); }
+  Future<void> daily() async {
+    _version++; state = const SessionOptions();
+    await database.saveSetting('selected_learning_session',null);
+  }
 }
 
 final sessionOptionsProvider = StateNotifierProvider<SessionOptionsController, SessionOptions>((ref) {

@@ -707,6 +707,9 @@ class AppDatabase extends _$AppDatabase {
       for(final t in ['review_logs','study_cards','word_book_words','user_words','daily_statistics','app_settings','words','word_books']) await customStatement('DELETE FROM $t');
       for(final t in columns.keys){for(final raw in payload[t] as List){final row=Map<String,Object?>.from(raw as Map), names=columns[t]!;
         await customStatement('INSERT INTO $t (${names.join(',')}) VALUES (${List.filled(names.length,'?').join(',')})',[for(final n in names) row[n]]);}}
+      // An undo snapshot is valid only for the transaction that produced it on
+      // this device; imported files must never provide executable row snapshots.
+      await saveSetting('last_review_undo',null);
     });
   }
 

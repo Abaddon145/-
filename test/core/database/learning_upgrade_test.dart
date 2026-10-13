@@ -75,6 +75,13 @@ void main(){
     await db.undoLastReview(day);
     expect(await db.loadSetting('objective:${dayKey(day)}'),isNull);
   });
+  test('restoring a backup cannot import a stale undo transaction',()async{
+    final id=await add('하늘');await rate(id,3);
+    final snapshot=await db.createBackupSnapshot();
+    await db.restoreBackupSnapshot(snapshot);
+    expect(await db.undoLastReview(day),isNull);
+    expect((await db.loadDailyPlanProgress(day)).newWordsDone,1);
+  });
   test('import accepts Korean English pairs and skips Chinese-only rows',(){
     final book=Excel.createExcel();final sheet=book['Sheet1'];
     sheet.appendRow([TextCellValue('韩语'),TextCellValue('英文'),TextCellValue('中文')]);
