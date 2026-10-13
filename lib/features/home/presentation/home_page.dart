@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../study/domain/providers.dart';
+import '../../sync/presentation/cloud_sync_shortcut.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -41,6 +42,7 @@ class HomePage extends ConsumerWidget {
               Text('每天一点点，让韩语更熟悉。',
                   style: Theme.of(context).textTheme.bodyLarge),
               const SizedBox(height: 16),
+              const CloudSyncShortcut(),
               Card(child: ListTile(leading:const Icon(Icons.local_fire_department_rounded),title:ref.watch(checkinsProvider).when(data:(c)=>Text('连续打卡 ${c.streak} 天 · 累计 ${c.days.length} 天'),loading:()=>const Text('学习打卡'),error:(_,_)=>const Text('学习打卡')),trailing:const Icon(Icons.chevron_right),onTap:()=>context.push('/checkin'))),
               const SizedBox(height: 24),
               Card(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/cloud_client.dart';
 import 'cloud_sync_controller.dart';
+import 'cloud_sync_shortcut.dart';
 
 class CloudSyncPage extends ConsumerStatefulWidget {
   const CloudSyncPage({super.key});
@@ -95,25 +96,39 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
             child: Text(state.busy ? '正在处理…' : _register ? '注册账户' : '登录'))),
           const SizedBox(height: 12),
           const Text('首次注册需到邮箱确认，确认后返回此处登录。登录不会自动替换本机数据。'),
+          TextButton.icon(onPressed: state.busy ? null : () async {
+            _message(await ref.read(cloudSyncProvider.notifier).resendConfirmation(_email.text));
+          }, icon: const Icon(Icons.mark_email_unread_outlined),
+            label: const Text('没收到确认邮件？重新发送')),
         ])) else ...[
           ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.person_outline),
             title: Text(state.email ?? '已登录'), subtitle: const Text('同一邮箱用于其他设备')),
           Card(child: Padding(padding: const EdgeInsets.all(18), child: Column(
             crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(state.status, style: Theme.of(context).textTheme.titleMedium),
+              Text(state.label, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(state.status),
+              if (state.lastSavedAt != null) ...[
+                const SizedBox(height: 8),
+                Text('云端保存：${displaySyncTime(state.lastSavedAt)}'),
+              ],
               if (state.lastSynced != null) ...[
                 const SizedBox(height: 8),
-                Text('最近检查：${DateTime.tryParse(state.lastSynced!)?.toLocal().toString().split('.').first ?? state.lastSynced}'),
+                Text('最近检查：${displaySyncTime(state.lastSynced)}'),
               ],
               if (state.needsChoice) ...[
                 const SizedBox(height: 10),
                 const Text('请选择本机或云端作为起点。两份数据不会自动合并。'),
               ],
+              if (state.pendingLocal) ...[
+                const SizedBox(height: 10),
+                const Text('本机有待检查保存的记录。换设备前，点“现在同步”并确认保存成功。'),
+              ],
               if (state.busy) ...[const SizedBox(height: 12), const LinearProgressIndicator()],
             ],
           ))),
           SwitchListTile.adaptive(contentPadding: EdgeInsets.zero, title: const Text('自动同步'),
-            subtitle: const Text('打开期间每 30 秒保存；云端有新进度时提示接续'),
+            subtitle: const Text('修改后自动保存；打开期间每 30 秒检查云端更新'),
             value: state.enabled, onChanged: state.busy ? null
               : (value) => ref.read(cloudSyncProvider.notifier).setEnabled(value)),
           FilledButton.icon(onPressed: state.busy ? null

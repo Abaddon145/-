@@ -19,6 +19,10 @@ void main() {
   int writes = 0;
   Completer<void>? downloadGate;
   Completer<void>? downloadStarted;
+  Completer<void>? uploadGate;
+  Completer<void>? uploadStarted;
+  bool unavailable = false;
+  int confirmationRequests = 0;
 
   http.Response response(Object data, {int status = 200, required http.Request request}) =>
     http.Response(jsonEncode(data), status, request: request,
@@ -36,12 +40,20 @@ void main() {
     writes = 0;
     downloadGate = null;
     downloadStarted = null;
+    uploadGate = null;
+    uploadStarted = null;
+    unavailable = false;
+    confirmationRequests = 0;
     db = AppDatabase(NativeDatabase.memory());
     await db.saveSetting('test_note', 'local');
     final snapshot = portableSnapshot(await db.createBackupSnapshot());
     remote = {'user_id': uid, 'revision': 3, 'digest': snapshotDigest(snapshot),
       'updated_at': DateTime.now().toUtc().toIso8601String(), 'payload': snapshot};
     final transport = MockClient((request) async {
+      if (request.url.path == '/auth/v1/resend') {
+        confirmationRequests++;
+        return response({'message_id': 'test-confirmation'}, request: request);
+      }
       if (request.url.path == '/auth/v1/token') {
         final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
         final jwt = '${base64Url.encode(utf8.encode('{"alg":"HS256"}'))}.'
@@ -54,6 +66,8 @@ void main() {
       }
       if (request.url.path.endsWith('/rpc/save_korean_memo_snapshot')) {
         final body = jsonDecode(request.body) as Map<String, dynamic>;
+        if (uploadStarted?.isCompleted == false) uploadStarted!.complete();
+        await uploadGate?.future;
         if (body['p_expected_revision'] != remote['revision']) {
           return response({'code': '40001', 'message': 'SYNC_CONFLICT'}, status: 409, request: request);
         }
@@ -64,6 +78,10 @@ void main() {
           'updated_at': remote['updated_at']}, request: request);
       }
       if (request.url.path.endsWith('/korean_memo_snapshots')) {
+        if (unavailable) {
+          return response({'code': 'TEST_UNAVAILABLE', 'message': 'connection unavailable'},
+            status: 400, request: request);
+        }
         if (request.url.queryParameters['select'] == '*') {
           downloadStarted?.complete();
           await downloadGate?.future;
@@ -130,5 +148,73 @@ void main() {
     expect(controller.state.enabled, isFalse);
     expect(controller.state.needsChoice, isTrue);
     expect(writes, 1, reason: '${controller.lastError}');
+  });
+
+  test('records saved during upload remain pending until the next snapshot', () async {
+    await controller.authenticate('test@example.invalid', 'password');
+    await settle();
+    await controller.sync(resolveLocal: true);
+    await db.saveSetting('test_note', 'captured-for-upload');
+    uploadGate = Completer<void>(); uploadStarted = Completer<void>();
+    final operation = controller.sync();
+    await uploadStarted!.future;
+    await db.saveSetting('test_note', 'saved-during-upload');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    uploadGate!.complete();
+    await operation;
+    expect(controller.state.pendingLocal, isTrue);
+    expect(controller.state.label, '本机记录待保存');
+    final rows = ((remote['payload'] as Map)['tables'] as Map)['app_settings'] as List;
+    expect(rows.singleWhere((row) => (row as Map)['key'] == 'test_note')['value'], 'captured-for-upload');
+    uploadGate = null; uploadStarted = null;
+    await controller.sync();
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    expect(controller.state.pendingLocal, isFalse);
+    expect(controller.state.label, '已与云端一致');
+  });
+
+  test('device-only metadata never causes pending-save notifications', () async {
+    await controller.authenticate('test@example.invalid', 'password');
+    await settle();
+    await controller.sync(resolveLocal: true);
+    await db.saveSetting('last_backup_at', 'device-backup');
+    await db.saveSetting('last_review_undo', 'device-undo');
+    await db.saveSetting('cloud_last_check', 'device-clock');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    expect(controller.state.pendingLocal, isFalse);
+    expect(writes, 1);
+    await db.saveSetting('checkin:2026-10-13', '1');
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    expect(controller.state.pendingLocal, isTrue);
+  });
+
+  test('failed sync keeps local records pending and can recover without a new choice', () async {
+    await controller.authenticate('test@example.invalid', 'password');
+    await settle();
+    await controller.sync(resolveLocal: true);
+    await db.saveSetting('test_note', 'offline-record');
+    unavailable = true;
+    await controller.sync();
+    expect(controller.state.pendingLocal, isTrue);
+    expect(controller.state.failed, isTrue);
+    expect(controller.state.label, '同步待重试');
+    expect(await db.loadSetting('test_note'), 'offline-record');
+    expect(writes, 1);
+    unavailable = false;
+    await controller.sync();
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    expect(controller.state.failed, isFalse);
+    expect(controller.state.pendingLocal, isFalse);
+    expect(writes, 2);
+  });
+
+  test('confirmation resend validates email and prevents duplicate sends', () async {
+    expect(await controller.resendConfirmation('invalid-email'), contains('输入'));
+    expect(confirmationRequests, 0);
+    expect(await controller.resendConfirmation('test@example.invalid'), contains('重新发送'));
+    expect(confirmationRequests, 1);
+    expect(await controller.resendConfirmation('test@example.invalid'), contains('稍后'));
+    expect(confirmationRequests, 1);
+    expect(controller.state.userId, isNull);
   });
 }

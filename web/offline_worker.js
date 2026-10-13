@@ -1,12 +1,13 @@
 // Own the app cache explicitly instead of relying on Flutter's deprecated worker.
-const CACHE = 'korean-memo-0.5.0';
+const CACHE = 'korean-memo-0.5.1';
 const CORE = ['./', 'index.html', 'flutter_bootstrap.js', 'main.dart.js',
   'sqlite3.wasm', 'drift_worker.js', 'manifest.json',
   'assets/FontManifest.json', 'assets/AssetManifest.bin.json',
   'assets/assets/data/default_word_books.json',
   'assets/assets/data/technical_word_books.json'];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)));
+  event.waitUntil(caches.open(CACHE).then(cache =>
+    cache.addAll(CORE.map(path => new Request(path, {cache: 'reload'})))));
 });
 self.addEventListener('message', event => {
   if (event.data === 'ACTIVATE_UPDATE') self.skipWaiting();
