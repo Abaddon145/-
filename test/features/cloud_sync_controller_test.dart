@@ -20,8 +20,9 @@ void main() {
   Completer<void>? downloadGate;
   Completer<void>? downloadStarted;
 
-  http.Response response(Object data, {int status = 200}) =>
-    http.Response(jsonEncode(data), status, headers: {'content-type': 'application/json'});
+  http.Response response(Object data, {int status = 200, required http.Request request}) =>
+    http.Response(jsonEncode(data), status, request: request,
+      headers: {'content-type': 'application/json'});
 
   Future<void> settle() async {
     await Future<void>.delayed(Duration.zero);
@@ -49,18 +50,18 @@ void main() {
           'token_type': 'bearer', 'expires_in': 3600, 'expires_at': now + 3600,
           'user': {'id': uid, 'email': 'test@example.invalid', 'aud': 'authenticated',
             'app_metadata': <String, dynamic>{}, 'user_metadata': <String, dynamic>{},
-            'created_at': DateTime.now().toUtc().toIso8601String()}});
+            'created_at': DateTime.now().toUtc().toIso8601String()}}, request: request);
       }
       if (request.url.path.endsWith('/rpc/save_korean_memo_snapshot')) {
         final body = jsonDecode(request.body) as Map<String, dynamic>;
         if (body['p_expected_revision'] != remote['revision']) {
-          return response({'code': '40001', 'message': 'SYNC_CONFLICT'}, status: 409);
+          return response({'code': '40001', 'message': 'SYNC_CONFLICT'}, status: 409, request: request);
         }
         writes++;
         remote = {...remote, 'revision': (remote['revision'] as int) + 1,
           'digest': body['p_digest'], 'payload': body['p_payload']};
         return response({'revision': remote['revision'], 'digest': remote['digest'],
-          'updated_at': remote['updated_at']});
+          'updated_at': remote['updated_at']}, request: request);
       }
       if (request.url.path.endsWith('/korean_memo_snapshots')) {
         if (request.url.queryParameters['select'] == '*') {
@@ -68,9 +69,9 @@ void main() {
           await downloadGate?.future;
         }
         // maybeSingle uses a normal JSON array for GET and checks its length.
-        return response([remote]);
+        return response([remote], request: request);
       }
-      return response({'message': 'unexpected request'}, status: 500);
+      return response({'message': 'unexpected request'}, status: 500, request: request);
     });
     client = SupabaseClient('https://example.invalid', 'test-publishable', httpClient: transport);
     controller = CloudSyncController(db, client, () {});
@@ -87,7 +88,7 @@ void main() {
     await settle();
     expect(writes, 0);
     expect(controller.state.enabled, isFalse);
-    expect(controller.state.needsChoice, isTrue);
+    expect(controller.state.needsChoice, isTrue, reason: '${controller.lastError}');
     expect(await db.loadSetting('test_note'), 'local');
     await controller.sync(resolveLocal: true);
     expect(writes, 1);
@@ -114,7 +115,7 @@ void main() {
     downloadGate!.complete();
     await operation;
     expect(await db.loadSetting('test_note'), 'saved-during-download');
-    expect(controller.state.status, contains('下载期间'));
+    expect(controller.state.status, contains('下载期间'), reason: '${controller.lastError}');
     expect(controller.state.enabled, isFalse);
     expect(writes, 0);
   });
@@ -128,6 +129,6 @@ void main() {
     await controller.sync(automatic: true);
     expect(controller.state.enabled, isFalse);
     expect(controller.state.needsChoice, isTrue);
-    expect(writes, 1);
+    expect(writes, 1, reason: '${controller.lastError}');
   });
 }

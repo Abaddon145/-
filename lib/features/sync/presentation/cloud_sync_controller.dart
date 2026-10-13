@@ -60,6 +60,7 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
   int? _baselineRevision;
   String? _baselineDigest;
   bool _foreground = true;
+  Object? lastError;
 
   bool _valid(int epoch, String user) => mounted && _epoch == epoch &&
       client?.auth.currentUser?.id == user;
@@ -91,7 +92,8 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
           ? (remote == null ? '首次使用：先上传本机数据' : '发现云端进度，请选择保留哪份数据')
           : '已连接，可检查最新进度');
       if (state.enabled) unawaited(sync(automatic: true));
-    } catch (_) {
+    } catch (error) {
+      lastError = error;
       if (_valid(epoch, user.id)) {
         state = state.copyWith(busy: false,
           status: '无法连接云端，本机学习可继续；联网后再试');
@@ -243,6 +245,7 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
   }
 
   void _showError(Object error) {
+    lastError = error;
     final conflict = error is PostgrestException && error.code == '40001';
     state = state.copyWith(needsChoice: conflict || state.needsChoice,
       status: conflict ? '另一台设备刚更新了进度，请重新检查并选择'
