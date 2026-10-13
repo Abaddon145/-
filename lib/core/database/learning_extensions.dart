@@ -24,7 +24,7 @@ class SessionOptions {
     'queue': queue.index, 'filter': filter.index, 'mode': mode.index,
     'direction': direction.index, 'pos': partOfSpeech, 'tag': tag};
   factory SessionOptions.fromJson(Map<String, dynamic> data) => SessionOptions(
-    daily: data['daily'] == true, target: (data['target'] as int? ?? 20).clamp(1, 1000000),
+    daily: data['daily'] == true, target: (data['target'] as int? ?? 20)<1 ? 20 : (data['target'] as int? ?? 20),
     queue: QueueKind.values[(data['queue'] as int? ?? 0).clamp(0, QueueKind.values.length - 1)],
     filter: LibraryFilter.values[(data['filter'] as int? ?? 0).clamp(0, LibraryFilter.values.length - 1)],
     mode: PracticeMode.values[(data['mode'] as int? ?? 0).clamp(0, PracticeMode.values.length - 1)],
@@ -180,6 +180,8 @@ extension LearningDatabase on AppDatabase {
     await (delete(dailyStatistics)..where((r) => r.date.equals(_dailyStatKey(now)))).go();
     if (undo['statistics'] != null) await _insertSnapshotRow('daily_statistics', undo['statistics'] as Map);
     for (final entry in (undo['settings'] as Map).entries) {
+      if((entry.key as String).startsWith('checkin:')&&entry.value==null&&
+          (await loadDailyPlanProgress(now)).totalDone>0) continue;
       await saveSetting(entry.key as String, entry.value as String?);
     }
     await saveSetting('last_review_undo', null);

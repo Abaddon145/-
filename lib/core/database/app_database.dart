@@ -607,7 +607,7 @@ class AppDatabase extends _$AppDatabase {
     ])
       ..where(search & filterExpression)
       ..orderBy([OrderingTerm.asc(words.korean)])
-      ..limit(5000);
+      ;
     final rows = await queryBuilder.get();
     return rows.map((row) {
       final userWord = row.readTableOrNull(userWords);
@@ -656,6 +656,9 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> deleteWord(int id) => transaction(() async {
+    await (delete(appSettings)..where((r)=>r.key.isIn(['word_status:$id','word_forms:$id','correct_streak:$id']))).go();
+    final undo=await loadSetting('last_review_undo');
+    if(undo!=null&&(jsonDecode(undo) as Map)['wordId']==id)await saveSetting('last_review_undo',null);
     await (delete(reviewLogs)..where((r) => r.wordId.equals(id))).go();
     await (delete(studyCards)..where((r) => r.wordId.equals(id))).go();
     await (delete(userWords)..where((r) => r.wordId.equals(id))).go();

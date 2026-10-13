@@ -113,7 +113,7 @@ class _StudyPageState extends ConsumerState<StudyPage> with WidgetsBindingObserv
                     if (word.exampleZh != null) Text(word.exampleZh!, textAlign: TextAlign.center),
                   ],
                 ]);
-              }))),
+              })))),
           const SizedBox(height: 12),
           if (options.mode != PracticeMode.cards) FilledButton(onPressed: _correct == null || state.isSubmitting ? null : () {
             controller.reveal(); controller.rate(_correct! ? StudyRating.good : StudyRating.again);

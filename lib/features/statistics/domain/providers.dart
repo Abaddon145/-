@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
@@ -29,4 +30,3 @@ final objectiveStatisticsProvider=FutureProvider.autoDispose<Map<String,Map<Stri
   return {for(final row in rows) row.key.substring(10): Map<String,int>.from(jsonDecode(row.value) as Map)};
 });
 
-import 'dart:convert';
