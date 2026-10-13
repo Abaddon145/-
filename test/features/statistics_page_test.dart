@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:drift/native.dart';
+import 'package:korean_memo/features/study/domain/providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:korean_memo/core/database/app_database.dart';
@@ -7,8 +9,10 @@ import 'package:korean_memo/features/statistics/domain/providers.dart';
 
 void main() {
   testWidgets('today metrics do not include earlier days', (tester) async {
+    final db=AppDatabase(NativeDatabase.memory());addTearDown(db.close);
     await tester.pumpWidget(ProviderScope(
       overrides: [
+        databaseProvider.overrideWithValue(db),
         recentStatisticsProvider.overrideWith((ref) async => [
           DailyStatisticsSummary(
             date: DateTime.utc(2026, 10, 6),
@@ -25,8 +29,8 @@ void main() {
       child: const MaterialApp(home: StatisticsPage()),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('正确率  50%'), findsOneWidget);
+    expect(find.text('自评记忆率  50%'), findsOneWidget);
     expect(find.text('学习时长  1 分钟'), findsOneWidget);
-    expect(find.textContaining('正确率 83% · 11 分钟'), findsOneWidget);
+    expect(find.textContaining('自评记忆率 83% · 11 分钟'), findsOneWidget);
   });
 }

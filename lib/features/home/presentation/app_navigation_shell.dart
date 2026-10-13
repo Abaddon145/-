@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/theme/reading_preferences.dart';
+import '../../study/domain/providers.dart';
 
-class AppNavigationShell extends StatelessWidget {
+class AppNavigationShell extends ConsumerWidget {
   const AppNavigationShell({super.key, required this.navigationShell});
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active=navigationShell.currentIndex==2;
+    WidgetsBinding.instance.addPostFrameCallback((_){if(context.mounted&&ref.read(studyVisibleProvider)!=active)ref.read(studyVisibleProvider.notifier).state=active;});
+    return Scaffold(
     body: navigationShell,
-    bottomNavigationBar: NavigationBar(
+    bottomNavigationBar: active&&ref.watch(readingProvider).valueOrNull?.focus==true?null:NavigationBar(
       selectedIndex: navigationShell.currentIndex,
       onDestinationSelected: (index) => navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex),
       destinations: const [
@@ -20,4 +26,5 @@ class AppNavigationShell extends StatelessWidget {
       ],
     ),
   );
+  }
 }

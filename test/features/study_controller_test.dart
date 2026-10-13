@@ -7,6 +7,8 @@ import 'package:korean_memo/features/study/presentation/study_controller.dart';
 import 'package:korean_memo/services/fsrs_service.dart';
 
 class _Repository implements StudyRepository {
+  @override SessionOptions get options => const SessionOptions();
+  @override Future<Word?> undo() async => null;
   @override
   int? get bookId => null;
 

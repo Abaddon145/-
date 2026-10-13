@@ -8,6 +8,7 @@ import '../domain/import_models.dart';
 class ExcelImportService {
   static const _aliases = <ImportField, Set<String>>{
     ImportField.korean: {'韩语单词', '韩语', '单词', '단어', 'word', 'korean'},
+    ImportField.english: {'英文','英语','영어','english','englishword'},
     ImportField.meaningZh: {
       '中文释义',
       '中文',
@@ -29,37 +30,48 @@ class ExcelImportService {
     ImportField.etymology: {'词源', '어원', 'etymology'},
   };
 
-  ParsedWorkbook parseFirstSheet(Uint8List bytes) {
+  List<String> sheetNames(Uint8List bytes) => Excel.decodeBytes(bytes).tables.keys.toList();
+  List<String> sheetHeaders(Uint8List bytes, String name) => Excel.decodeBytes(bytes).tables[name]!.rows.first.map(_cellText).toList();
+
+  ParsedWorkbook parseFirstSheet(Uint8List bytes, {String? sheetName, Map<ImportField,int>? mappingOverride, bool allSheets=false}) {
     final workbook = Excel.decodeBytes(bytes);
     if (workbook.tables.isEmpty) {
       throw const FormatException('Excel 中没有可读取的工作表。');
     }
-    final entry = workbook.tables.entries.first;
+    if(allSheets) {
+      final drafts=<WordDraft>[];var invalid=0;
+      for(final name in workbook.tables.keys) {
+        try { final sheet=parseFirstSheet(bytes,sheetName:name);drafts.addAll(sheet.drafts);invalid+=sheet.invalidRows; }
+        on FormatException { invalid+=workbook.tables[name]!.rows.length; }
+      }
+      return ParsedWorkbook(sheetName:'全部工作表',headers:const [],mapping:const {},drafts:drafts,invalidRows:invalid);
+    }
+    final entry = sheetName==null ? workbook.tables.entries.first : workbook.tables.entries.firstWhere((s)=>s.key==sheetName);
     final rows = entry.value.rows;
     if (rows.isEmpty) {
       throw const FormatException('工作表为空。');
     }
     final headers = rows.first.map(_cellText).toList(growable: false);
-    final mapping = guessMapping(headers);
-    if (!mapping.containsKey(ImportField.korean) ||
-        !mapping.containsKey(ImportField.meaningZh)) {
-      throw const FormatException('未找到“韩语单词”和“中文释义”两列，请检查表头。');
+    final mapping = mappingOverride ?? guessMapping(headers);
+    if (!mapping.containsKey(ImportField.korean) && !mapping.containsKey(ImportField.english)) {
+      throw const FormatException('请手动选择韩语或英文单词列。');
     }
 
     final drafts = <WordDraft>[];
     var invalidRows = 0;
     for (final row in rows.skip(1)) {
       final korean = _value(row, mapping[ImportField.korean]);
+      final english = _value(row, mapping[ImportField.english]);
       final meaning = _value(row, mapping[ImportField.meaningZh]);
-      if (korean.isEmpty && meaning.isEmpty) continue;
-      if (korean.isEmpty || meaning.isEmpty) {
+      if (korean.isEmpty && english.isEmpty && meaning.isEmpty) continue;
+      if (korean.isEmpty && english.isEmpty) {
         invalidRows++;
         continue;
       }
       drafts.add(
         WordDraft(
-          korean: korean,
-          meaningZh: meaning,
+          korean: korean.isNotEmpty && english.isNotEmpty && korean != english ? '$english / $korean' : korean.isNotEmpty ? korean : english,
+          meaningZh: meaning.isEmpty ? '原表未提供中文释义' : meaning,
           baseForm: _value(row, mapping[ImportField.baseForm]),
           pronunciation: _optional(row, mapping[ImportField.pronunciation]),
           partOfSpeech: _optional(row, mapping[ImportField.partOfSpeech]),
@@ -67,7 +79,8 @@ class ExcelImportService {
           exampleZh: _optional(row, mapping[ImportField.exampleZh]),
           topikLevel: _optional(row, mapping[ImportField.topikLevel]),
           category: _optional(row, mapping[ImportField.category]),
-          tags: _optional(row, mapping[ImportField.tags]),
+          tags: [if(_optional(row,mapping[ImportField.tags])!=null)_optional(row,mapping[ImportField.tags])!,
+            if(meaning.isEmpty)korean.isNotEmpty&&english.isNotEmpty?'英韩配对':korean.isNotEmpty?'仅韩文':'仅英文'].join(', '),
           note: _optional(row, mapping[ImportField.note]),
           hanja: _optional(row, mapping[ImportField.hanja]),
           etymology: _optional(row, mapping[ImportField.etymology]),

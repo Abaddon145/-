@@ -2,6 +2,7 @@ import '../../../core/database/app_database.dart';
 
 enum ImportField {
   korean('韩语单词'),
+  english('英文单词'),
   meaningZh('中文释义'),
   baseForm('原形'),
   pronunciation('发音'),

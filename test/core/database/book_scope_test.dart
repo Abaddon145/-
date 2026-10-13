@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:korean_memo/core/database/app_database.dart';
 
 void main() {
-  test('special books are isolated from daily learning and searchable by book', () async {
+  test('all source books enter the unified daily queue without changing words', () async {
     final db = AppDatabase(NativeDatabase.memory());
     addTearDown(db.close);
     await db.importWordBookIfMissing(name: '专项', sourceFileName: 'special', drafts: [
@@ -16,11 +16,11 @@ void main() {
     final books = await db.loadWordBooks();
     final special = books.first.id;
     final now = DateTime(2026, 10, 9, 12);
-    expect((await db.nextStudyWord(now.toUtc(), localNow: now))?.korean, '하늘');
+    expect((await db.nextStudyWord(now.toUtc(), localNow: now))?.korean, 'curl');
     expect((await db.nextStudyWord(now.toUtc(), localNow: now, bookId: special))?.korean, 'curl');
     expect((await db.searchLibraryWords(query: '', filter: LibraryFilter.all, bookId: special)).map((e) => e.word.korean), ['curl']);
     expect((await db.searchLibraryWords(bookId: special, query: '天空', filter: LibraryFilter.all)), isEmpty);
-    expect((await db.loadScopedStudyCounts(null)).newWords, 1);
+    expect((await db.loadScopedStudyCounts(null)).newWords, 2);
     expect((await db.loadScopedStudyCounts(special)).newWords, 1);
   });
 

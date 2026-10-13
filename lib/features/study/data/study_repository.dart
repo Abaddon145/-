@@ -4,9 +4,10 @@ import '../../../core/database/app_database.dart';
 import '../../../services/fsrs_service.dart';
 
 class StudyRepository {
-  StudyRepository(this._database, this._fsrsService, {this.bookId});
+  StudyRepository(this._database, this._fsrsService, {this.bookId, this.options = const SessionOptions()});
 
   final int? bookId;
+  final SessionOptions options;
   final AppDatabase _database;
   final FsrsService _fsrsService;
   final Uuid _uuid = const Uuid();
@@ -17,8 +18,10 @@ class StudyRepository {
 
   Future<Word?> nextWord() {
     final now = DateTime.now();
-    return _database.nextStudyWord(now.toUtc(), localNow: now, bookId: bookId);
+    return _database.nextTrainingWord(options, now);
   }
+
+  Future<Word?> undo() => _database.undoLastReview(DateTime.now());
 
   Future<void> submitRating({
     required Word word,
@@ -41,6 +44,7 @@ class StudyRepository {
       localDay: now,
       cardMap: result.card,
       reviewLogMap: result.reviewLog,
+      session: options,
     );
   }
 }

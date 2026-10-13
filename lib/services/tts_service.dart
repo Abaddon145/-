@@ -5,14 +5,14 @@ class TtsService {
 
   final FlutterTts _tts;
 
-  Future<void> speakKorean(String text) async {
+  Future<void> speakKorean(String text, {double rate = .45}) async {
     await _tts.stop();
     final hasKorean = RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(text);
     final spoken = hasKorean
         ? text.split('/').where((part) => RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(part)).join(' ').trim()
         : text;
     await _tts.setLanguage(hasKorean ? 'ko-KR' : 'en-US');
-    await _tts.setSpeechRate(0.45);
+    await _tts.setSpeechRate(rate.clamp(.2,.8));
     await _tts.awaitSpeakCompletion(true);
     await _tts.speak(spoken);
   }
