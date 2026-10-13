@@ -17,6 +17,35 @@
   <title>韩语记忆</title>
 </head>
 <body>
+  <script>
+    // Existing learning data lives in IndexedDB and is not touched by app updates.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('offline_worker.js');
+          const offerUpdate = () => {
+            if (!registration.waiting || document.getElementById('app-update')) return;
+            const button = document.createElement('button');
+            button.id = 'app-update';
+            button.textContent = '新版已就绪，点击更新';
+            button.style.cssText = 'position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:99999;padding:12px 20px;border:0;border-radius:18px;background:#34395f;color:white;font:15px system-ui;box-shadow:0 4px 20px #0003';
+            button.onclick = () => {
+              navigator.serviceWorker.addEventListener('controllerchange', () => location.reload(), {once:true});
+              registration.waiting.postMessage('ACTIVATE_UPDATE');
+            };
+            document.body.appendChild(button);
+          };
+          offerUpdate();
+          registration.addEventListener('updatefound', () => {
+            registration.installing?.addEventListener('statechange', () => {
+              if (navigator.serviceWorker.controller) offerUpdate();
+            });
+          });
+          await registration.update();
+        } catch (error) { console.warn('Offline cache is unavailable', error); }
+      });
+    }
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

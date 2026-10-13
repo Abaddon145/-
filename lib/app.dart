@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
@@ -33,15 +34,17 @@ class KoreanMemoApp extends ConsumerWidget {
             ),
           ),
           if (background != null) ...[
-            Image.memory(
+            ClipRect(child:Transform.scale(scale:appearance?.zoom??1,child:ImageFiltered(
+              imageFilter:ui.ImageFilter.blur(sigmaX:appearance?.blur??0,sigmaY:appearance?.blur??0),child:Image.memory(
               background,
               fit: BoxFit.cover,
+              alignment:Alignment(appearance?.x??0,appearance?.y??0),
               errorBuilder: (_, _, _) => const SizedBox.shrink(),
-            ),
+            )))),
             ColoredBox(
               color: preset.dark
-                  ? Colors.black.withValues(alpha: 0.68)
-                  : Colors.white.withValues(alpha: 0.72),
+                  ? Colors.black.withValues(alpha: appearance?.opacity??.68)
+                  : Colors.white.withValues(alpha: appearance?.opacity??.72),
             ),
           ],
           child ?? const SizedBox.shrink(),

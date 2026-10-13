@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 part 'app_database.g.dart';
+part 'learning_extensions.dart';
 
 class Words extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -116,6 +117,13 @@ class AppSettings extends Table {
   Set<Column<Object>> get primaryKey => {key};
 }
 
+class RecoverySnapshots extends Table {
+  IntColumn get id => integer()();
+  TextColumn get payload => text()();
+  DateTimeColumn get createdAt => dateTime()();
+  @override Set<Column<Object>> get primaryKey => {id};
+}
+
 @DriftDatabase(
   tables: [
     Words,
@@ -126,6 +134,7 @@ class AppSettings extends Table {
     UserWords,
     DailyStatistics,
     AppSettings,
+    RecoverySnapshots,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -142,7 +151,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -151,6 +160,7 @@ class AppDatabase extends _$AppDatabase {
           if (from < 2) {
             await migrator.createTable(appSettings);
           }
+          if (from < 3) await migrator.createTable(recoverySnapshots);
         },
       );
 
@@ -298,7 +308,7 @@ class AppDatabase extends _$AppDatabase {
           innerJoin(wordBookWords, wordBookWords.wordId.equalsExp(words.id) & wordBookWords.wordBookId.equals(bookId)),
       ])
         ..where(studyCards.due.isSmallerOrEqualValue(nowUtc) &
-            (bookId != null ? const Constant<bool>(true) : words.category.isNull() | words.category.equals('工业术语·待补中文').not()))
+            const Constant<bool>(true))
         ..orderBy([OrderingTerm.asc(studyCards.due)])
         ..limit(1);
       final dueRow = await dueQuery.getSingleOrNull();
@@ -314,7 +324,7 @@ class AppDatabase extends _$AppDatabase {
         innerJoin(wordBookWords, wordBookWords.wordId.equalsExp(words.id) & wordBookWords.wordBookId.equals(bookId)),
     ])
       ..where(studyCards.id.isNull() &
-          (bookId != null ? const Constant<bool>(true) : words.category.isNull() | words.category.equals('工业术语·待补中文').not()))
+          const Constant<bool>(true))
       ..orderBy([OrderingTerm.asc(words.id)])
       ..limit(1);
     final newRow = await newQuery.getSingleOrNull();
@@ -326,7 +336,7 @@ class AppDatabase extends _$AppDatabase {
 
   Future<HomeCounts> loadScopedStudyCounts(int? bookId) async {
     final scope = bookId == null
-        ? "COALESCE(w.category, '') != '工业术语·待补中文'"
+        ? '1=1'
         : 'EXISTS (SELECT 1 FROM word_book_words b WHERE b.word_id=w.id AND b.word_book_id=?)';
     final variables = bookId == null ? <Variable>[] : <Variable>[Variable<int>(bookId)];
     final fresh = await customSelect(
@@ -361,12 +371,14 @@ class AppDatabase extends _$AppDatabase {
     required int wordBookId,
     required List<WordDraft> drafts,
     required String source,
+    bool enrichExisting = false,
   }) {
     return transaction(
       () => _writeWords(
         wordBookId: wordBookId,
         drafts: drafts,
         source: source,
+        enrichExisting: enrichExisting,
       ),
     );
   }
@@ -401,7 +413,6 @@ class AppDatabase extends _$AppDatabase {
 
   Future<int> addManualWord(WordDraft draft) => transaction(() async {
     if (draft.korean.trim().isEmpty ||
-        draft.meaningZh.trim().isEmpty ||
         (draft.partOfSpeech?.trim().isEmpty ?? true)) {
       throw const FormatException('请填写韩语、中文释义和词性');
     }
@@ -444,6 +455,7 @@ class AppDatabase extends _$AppDatabase {
     required int wordBookId,
     required List<WordDraft> drafts,
     required String source,
+    bool enrichExisting = false,
   }) async {
     var inserted = 0;
     var reused = 0;
@@ -462,6 +474,13 @@ class AppDatabase extends _$AppDatabase {
         inserted++;
       } else {
         reused++;
+        if(enrichExisting) await (update(words)..where((w)=>w.id.equals(wordId))).write(WordsCompanion(
+          meaningZh: existing.meaningZh.isEmpty||existing.meaningZh.contains('未提供中文')||existing.meaningZh.contains('暂无中文') ? Value(draft.meaningZh) : const Value.absent(),
+          partOfSpeech:existing.partOfSpeech==null?Value(_nullable(draft.partOfSpeech)):const Value.absent(),
+          exampleKo:existing.exampleKo==null?Value(_nullable(draft.exampleKo)):const Value.absent(),
+          exampleZh:existing.exampleZh==null?Value(_nullable(draft.exampleZh)):const Value.absent(),
+          tags:existing.tags==null?Value(_nullable(draft.tags)):const Value.absent(),
+          updatedAt:Value(DateTime.now().toUtc())));
       }
       await into(wordBookWords).insertOnConflictUpdate(
         WordBookWordsCompanion.insert(
@@ -483,8 +502,10 @@ class AppDatabase extends _$AppDatabase {
     required DateTime localDay,
     required Map<String, Object?> cardMap,
     required Map<String, Object?> reviewLogMap,
+    SessionOptions? session,
   }) {
     return transaction(() async {
+      final undo = await captureReviewUndo(wordId, localDay, session);
       final previous = await cardForWord(wordId);
       final now = reviewedAt.toUtc();
       final due = _dateTime(cardMap['due']) ?? now;
@@ -558,7 +579,8 @@ class AppDatabase extends _$AppDatabase {
       await customStatement('INSERT INTO user_words (word_id,is_favorite,is_difficult,correct_count,wrong_count,last_seen_at) VALUES (?,0,?,?,?,?) '
         'ON CONFLICT(word_id) DO UPDATE SET is_difficult=CASE WHEN excluded.is_difficult=1 THEN 1 ELSE user_words.is_difficult END, '
         'correct_count=user_words.correct_count+excluded.correct_count, wrong_count=user_words.wrong_count+excluded.wrong_count, last_seen_at=excluded.last_seen_at',
-        [wordId,isWrong?1:0,isWrong?0:1,isWrong?1:0,now.millisecondsSinceEpoch]);
+        [wordId,isWrong?1:0,isWrong?0:1,isWrong?1:0,now.millisecondsSinceEpoch ~/ 1000]);
+      await finishLearningReview(wordId, rating, localDay, submissionToken, undo, session);
     });
   }
   Future<List<LibraryWordEntry>> searchLibraryWords({
@@ -571,11 +593,12 @@ class AppDatabase extends _$AppDatabase {
         ? const Constant<bool>(true)
         : words.korean.lower().like('%$normalized%') |
             words.meaningZh.lower().like('%$normalized%') |
-            words.baseForm.lower().like('%$normalized%');
+            words.baseForm.lower().like('%$normalized%') |
+            words.tags.lower().like('%$normalized%') | words.partOfSpeech.lower().like('%$normalized%');
     final filterExpression = switch (filter) {
       LibraryFilter.all => const Constant<bool>(true),
       LibraryFilter.favorites => userWords.isFavorite.equals(true),
-      LibraryFilter.wrong => userWords.wrongCount.isBiggerThanValue(0),
+      LibraryFilter.wrong => userWords.isDifficult.equals(true),
     };
     final queryBuilder = select(words).join([
       leftOuterJoin(userWords, userWords.wordId.equalsExp(words.id)),
@@ -584,7 +607,7 @@ class AppDatabase extends _$AppDatabase {
     ])
       ..where(search & filterExpression)
       ..orderBy([OrderingTerm.asc(words.korean)])
-      ..limit(5000);
+      ;
     final rows = await queryBuilder.get();
     return rows.map((row) {
       final userWord = row.readTableOrNull(userWords);
@@ -605,6 +628,10 @@ class AppDatabase extends _$AppDatabase {
     required String korean,
     required String meaningZh,
     String? partOfSpeech,
+    String? exampleKo,
+    String? exampleZh,
+    String? tags,
+    String? note,
   }) async {
     final term = korean.trim();
     final meaning = meaningZh.trim();
@@ -619,12 +646,19 @@ class AppDatabase extends _$AppDatabase {
         partOfSpeech: partOfSpeech == null
             ? const Value.absent()
             : Value(_nullable(partOfSpeech)),
+        exampleKo: exampleKo == null ? const Value.absent() : Value(_nullable(exampleKo)),
+        exampleZh: exampleZh == null ? const Value.absent() : Value(_nullable(exampleZh)),
+        tags: tags == null ? const Value.absent() : Value(_nullable(tags)),
+        note: note == null ? const Value.absent() : Value(_nullable(note)),
         updatedAt: Value(DateTime.now().toUtc()),
       ),
     );
   }
 
   Future<void> deleteWord(int id) => transaction(() async {
+    await (delete(appSettings)..where((r)=>r.key.isIn(['word_status:$id','word_forms:$id','correct_streak:$id']))).go();
+    final undo=await loadSetting('last_review_undo');
+    if(undo!=null&&(jsonDecode(undo) as Map)['wordId']==id)await saveSetting('last_review_undo',null);
     await (delete(reviewLogs)..where((r) => r.wordId.equals(id))).go();
     await (delete(studyCards)..where((r) => r.wordId.equals(id))).go();
     await (delete(userWords)..where((r) => r.wordId.equals(id))).go();
@@ -632,27 +666,27 @@ class AppDatabase extends _$AppDatabase {
     await (delete(words)..where((r) => r.id.equals(id))).go();
   });
 
-  Future<List<DailyStatisticsSummary>> loadRecentStatistics(DateTime now) async {
-    final today = DateTime.utc(now.year, now.month, now.day), start = DateTime.utc(now.year, now.month, now.day).subtract(const Duration(days: 6));
+  Future<List<DailyStatisticsSummary>> loadRecentStatistics(DateTime now, {int days = 7}) async {
+    final today = DateTime.utc(now.year, now.month, now.day), start = DateTime.utc(now.year, now.month, now.day).subtract(Duration(days: days - 1));
     final rows = await (select(dailyStatistics)..where((r) => r.date.isBiggerOrEqualValue(start) & r.date.isSmallerOrEqualValue(today))
       ..orderBy([(r) => OrderingTerm.asc(r.date)])).get();
     // Drift decodes SQLite timestamps as local DateTime objects. DateTime
     // equality distinguishes UTC and local objects even for the same instant.
     // Use the stored instant as the key so existing rows match in every timezone.
     final values = {for (final r in rows) r.date.millisecondsSinceEpoch: r};
-    return List.generate(7, (i) { final d = start.add(Duration(days:i)), r = values[d.millisecondsSinceEpoch];
+    return List.generate(days, (i) { final d = start.add(Duration(days:i)), r = values[d.millisecondsSinceEpoch];
       return DailyStatisticsSummary(date:d,newWords:r?.newWords??0,reviews:r?.reviewWords??0,
         correct:r?.correctCount??0,wrong:r?.wrongCount??0,durationMs:r?.studyDurationMs??0); });
   }
 
-  Future<Map<String,Object?>> createBackupSnapshot() async {
+  Future<Map<String,Object?>> createBackupSnapshot() => transaction(() async {
     const tables=['words','word_books','word_book_words','study_cards','review_logs','user_words','daily_statistics','app_settings'];
     final data=<String,List<Map<String,Object?>>>{};
     for(final t in tables){ final rows=await customSelect('SELECT * FROM $t').get(); data[t]=rows.map((r)=>Map<String,Object?>.from(r.data)).toList(); }
     return {'format':'korean-memo-backup','version':1,'createdAt':DateTime.now().toUtc().toIso8601String(),'tables':data};
-  }
+  });
 
-  Future<void> restoreBackupSnapshot(Map<String,dynamic> snapshot) async {
+  Future<void> restoreBackupSnapshot(Map<String,dynamic> snapshot, {bool captureRecovery = true}) async {
     const columns=<String,List<String>>{
       'words':['id','korean','normalized_korean','base_form','normalized_base_form','meaning_zh','pronunciation','part_of_speech','example_ko','example_zh','topik_level','category','tags','note','hanja','etymology','source','created_at','updated_at'],
       'word_books':['id','name','description','source_file_name','created_at','updated_at'],
@@ -668,9 +702,14 @@ class AppDatabase extends _$AppDatabase {
     for(final e in columns.entries){ final list=payload[e.key]; if(list is! List||list.length>100000) throw FormatException('备份表无效：${e.key}');
       for(final r in list){if(r is! Map||r.keys.toSet().length!=e.value.length||!e.value.every(r.containsKey)) throw FormatException('备份字段无效：${e.key}');}}
     await transaction(() async {
+      if(captureRecovery) await into(recoverySnapshots).insertOnConflictUpdate(
+        RecoverySnapshotsCompanion.insert(id:const Value(1),payload:jsonEncode(await createBackupSnapshot()),createdAt:DateTime.now().toUtc()));
       for(final t in ['review_logs','study_cards','word_book_words','user_words','daily_statistics','app_settings','words','word_books']) await customStatement('DELETE FROM $t');
       for(final t in columns.keys){for(final raw in payload[t] as List){final row=Map<String,Object?>.from(raw as Map), names=columns[t]!;
         await customStatement('INSERT INTO $t (${names.join(',')}) VALUES (${List.filled(names.length,'?').join(',')})',[for(final n in names) row[n]]);}}
+      // An undo snapshot is valid only for the transaction that produced it on
+      // this device; imported files must never provide executable row snapshots.
+      await saveSetting('last_review_undo',null);
     });
   }
 

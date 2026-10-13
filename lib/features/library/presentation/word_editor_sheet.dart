@@ -29,6 +29,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
   late final TextEditingController _korean;
   late final TextEditingController _meaning;
   late final TextEditingController _partOfSpeech;
+  final _exampleKo=TextEditingController(), _exampleZh=TextEditingController(), _tags=TextEditingController(), _note=TextEditingController();
   bool _saving = false;
   String? _error;
 
@@ -38,13 +39,14 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
     _korean = TextEditingController(text: widget.word?.korean ?? '');
     _meaning = TextEditingController(text: widget.word?.meaningZh ?? '');
     _partOfSpeech = TextEditingController(text: widget.word?.partOfSpeech ?? '');
+    _exampleKo.text=widget.word?.exampleKo??'';_exampleZh.text=widget.word?.exampleZh??'';_tags.text=widget.word?.tags??'';_note.text=widget.word?.note??'';
   }
 
   @override
   void dispose() {
     _korean.dispose();
     _meaning.dispose();
-    _partOfSpeech.dispose();
+    _partOfSpeech.dispose();_exampleKo.dispose();_exampleZh.dispose();_tags.dispose();_note.dispose();
     super.dispose();
   }
 
@@ -62,7 +64,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
           WordDraft(
             korean: _korean.text,
             meaningZh: _meaning.text,
-            partOfSpeech: _partOfSpeech.text,
+            partOfSpeech: _partOfSpeech.text, exampleKo:_exampleKo.text,exampleZh:_exampleZh.text,tags:_tags.text,note:_note.text,
           ),
         );
       } else {
@@ -70,7 +72,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
           wordId: word.id,
           korean: _korean.text,
           meaningZh: _meaning.text,
-          partOfSpeech: _partOfSpeech.text,
+          partOfSpeech: _partOfSpeech.text, exampleKo:_exampleKo.text,exampleZh:_exampleZh.text,tags:_tags.text,note:_note.text,
         );
       }
       if (mounted) Navigator.pop(context, true);
@@ -91,7 +93,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+          maxHeight: (MediaQuery.sizeOf(context).height - MediaQuery.viewInsetsOf(context).bottom - 70).clamp(160.0,MediaQuery.sizeOf(context).height*.82),
         ),
         child: ListView(
           shrinkWrap: true,
@@ -103,7 +105,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
             ),
             const SizedBox(height: 6),
             Text(
-              '记录韩语、中文释义和词性，即可加入学习计划。',
+              '所有单词进入统一词库。中文可暂缺，例句和标签可选填。',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
@@ -116,7 +118,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
                     autofocus: widget.word == null,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      labelText: '韩语单词',
+                      labelText: '韩语 / 英文单词',
                       prefixIcon: Icon(Icons.translate_rounded),
                     ),
                     validator: (value) =>
@@ -130,8 +132,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
                       labelText: '中文释义',
                       prefixIcon: Icon(Icons.menu_book_outlined),
                     ),
-                    validator: (value) =>
-                        value == null || value.trim().isEmpty ? '请输入中文释义' : null,
+
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -161,6 +162,11 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
                   ),
               ],
             ),
+            const SizedBox(height:14),
+            TextField(controller:_exampleKo,decoration:const InputDecoration(labelText:'韩语例句（填空训练使用原词）')),
+            const SizedBox(height:12),TextField(controller:_exampleZh,decoration:const InputDecoration(labelText:'例句译文')),
+            const SizedBox(height:12),TextField(controller:_tags,decoration:const InputDecoration(labelText:'场景 / 标签',hintText:'工业术语, 物流, 邮件, 日常')),
+            const SizedBox(height:12),TextField(controller:_note,maxLines:3,decoration:const InputDecoration(labelText:'学习笔记 / 搭配')),
             if (_error != null) ...[
               const SizedBox(height: 12),
               Text(_error!, style: TextStyle(color: colors.error)),

@@ -13,12 +13,11 @@ final libraryWordsProvider =
   final database = ref.watch(databaseProvider);
   final query = ref.watch(librarySearchProvider);
   final filter = ref.watch(libraryFilterProvider);
-  final bookId = ref.watch(libraryBookProvider);
   await ref.watch(bundledWordSeedProvider.future);
   return database.searchLibraryWords(
         query: query,
         filter: filter,
-        bookId: bookId,
+        bookId: null,
       );
 });
 

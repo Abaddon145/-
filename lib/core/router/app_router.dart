@@ -8,6 +8,8 @@ import '../../features/settings/presentation/daily_plan_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/statistics/presentation/statistics_page.dart';
 import '../../features/study/presentation/study_page.dart';
+import '../../features/statistics/presentation/checkin_page.dart';
+import '../../features/settings/presentation/reading_page.dart';
 
 final appRouter = GoRouter(
   routes: [
@@ -22,10 +24,12 @@ final appRouter = GoRouter(
           GoRoute(path: '/settings', builder: (context, state) => const SettingsPage(), routes: [
             GoRoute(path: 'daily-plan', builder: (context, state) => const DailyPlanPage()),
             GoRoute(path: 'appearance', builder: (context, state) => const AppearancePage()),
+            GoRoute(path: 'reading', builder: (context, state) => const ReadingPage()),
           ]),
         ]),
       ],
     ),
+    GoRoute(path: '/checkin', builder: (context, state) => const CheckinPage()),
     GoRoute(path: '/import', builder: (context, state) => const ImportPage()),
   ],
 );

@@ -51,20 +51,31 @@ class StudyController extends StateNotifier<StudyUiState> {
   final StudyRepository _repository;
   final void Function()? onRatingSaved;
   final Future<void> Function()? beforeLoad;
-  DateTime _shownAt = DateTime.now();
+  final Stopwatch _clock = Stopwatch();
+  bool _visible = true;
+  bool _appActive = true;
+  void setVisible(bool value) { if(!mounted)return; _visible = value; _syncClock(); }
+  void setAppActive(bool value) { if(!mounted)return; _appActive = value; _syncClock(); }
+  void _syncClock() {
+    if (_visible && _appActive && state.word != null && !state.isLoading && !state.isSubmitting) {
+      _clock.start();
+    } else { _clock.stop(); }
+  }
   int _loadVersion = 0;
 
   Future<void> load() async {
     if (!mounted) return;
     final version = ++_loadVersion;
     state = state.copyWith(isLoading: true, clearError: true);
+    _clock.stop();
     try {
       await beforeLoad?.call();
       if (!mounted || version != _loadVersion) return;
       final word = await _repository.nextWord();
       if (!mounted || version != _loadVersion) return;
-      _shownAt = DateTime.now();
+      _clock.reset();
       state = StudyUiState(word: word);
+      _syncClock();
     } catch (error) {
       if (!mounted || version != _loadVersion) return;
       state = StudyUiState(error: error);
@@ -93,17 +104,32 @@ class StudyController extends StateNotifier<StudyUiState> {
     if (state.word != null) state = state.copyWith(isRevealed: true);
   }
 
+  Future<void> undo() async {
+    if (state.isSubmitting || state.isLoading) return;
+    try {
+      final word = await _repository.undo();
+      if (!mounted || word == null) return;
+      _clock..stop()..reset();
+      state = StudyUiState(word: word);
+      _syncClock();
+      onRatingSaved?.call();
+    } catch (error) {
+      if (mounted) state = state.copyWith(error: error);
+    }
+  }
+
   Future<void> rate(StudyRating rating) async {
     final word = state.word;
     if (word == null || state.isLoading || state.isSubmitting || !state.isRevealed) {
       return;
     }
     state = state.copyWith(isSubmitting: true, clearError: true);
+    _clock.stop();
     try {
       await _repository.submitRating(
         word: word,
         rating: rating,
-        duration: DateTime.now().difference(_shownAt),
+        duration: _clock.elapsed,
       );
       if (!mounted) return;
       onRatingSaved?.call();
@@ -111,6 +137,7 @@ class StudyController extends StateNotifier<StudyUiState> {
     } catch (error) {
       if (!mounted) return;
       state = state.copyWith(isSubmitting: false, error: error);
+      _syncClock();
     }
   }
 }
@@ -129,6 +156,12 @@ final studyControllerProvider =
       ref.invalidate(studyRoundProgressProvider);
       ref.invalidate(recentStatisticsProvider);
       ref.invalidate(libraryWordsProvider);
+      ref.invalidate(sessionProgressProvider);
+      ref.invalidate(checkinsProvider);
+      ref.invalidate(learningOverviewProvider);
+      ref.invalidate(reviewForecastProvider);
+      ref.invalidate(monthStatisticsProvider);
+      ref.invalidate(objectiveStatisticsProvider);
     },
   );
   ref.listen(localDayProvider, (_, _) {
@@ -136,5 +169,7 @@ final studyControllerProvider =
     controller.refreshForNewDay();
   });
   controller.load();
+  controller.setVisible(ref.read(studyVisibleProvider));
+  ref.listen(studyVisibleProvider, (_, value) => controller.setVisible(value));
   return controller;
 });

@@ -40,6 +40,8 @@ class HomePage extends ConsumerWidget {
               const SizedBox(height: 4),
               Text('每天一点点，让韩语更熟悉。',
                   style: Theme.of(context).textTheme.bodyLarge),
+              const SizedBox(height: 16),
+              Card(child: ListTile(leading:const Icon(Icons.local_fire_department_rounded),title:ref.watch(checkinsProvider).when(data:(c)=>Text('连续打卡 ${c.streak} 天 · 累计 ${c.days.length} 天'),loading:()=>const Text('学习打卡'),error:(_,_)=>const Text('学习打卡')),trailing:const Icon(Icons.chevron_right),onTap:()=>context.push('/checkin'))),
               const SizedBox(height: 24),
               Card(
                 color: colors.primaryContainer.withValues(alpha: 0.88),
@@ -66,7 +68,7 @@ class HomePage extends ConsumerWidget {
                       const SizedBox(height: 18),
                       FilledButton.icon(
                         onPressed: ready ? () {
-                          ref.read(studyBookProvider.notifier).state = null;
+                          ref.read(sessionOptionsProvider.notifier).daily();
                           context.go('/study');
                         } : null,
                         icon: const Icon(Icons.play_arrow_rounded),

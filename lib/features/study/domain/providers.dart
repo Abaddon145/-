@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
@@ -22,12 +23,51 @@ final ttsServiceProvider = Provider<TtsService>((ref) {
 });
 
 final studyBookProvider = StateProvider<int?>((ref) => null);
+final studyVisibleProvider = StateProvider<bool>((ref) => false);
+
+class SessionOptionsController extends StateNotifier<SessionOptions> {
+  SessionOptionsController(this.database) : super(const SessionOptions()) { _restore(); }
+  final AppDatabase database;
+  int _version=0;
+  Future<void> _restore() async {
+    final version=_version;
+    final raw = await database.loadSetting('selected_learning_session');
+    if (!mounted || raw == null ||version!=_version) return;
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      if (data['day'] == dayKey(DateTime.now())) { state = SessionOptions.fromJson(data); }
+    } catch (_) { /* Invalid preferences fall back to the daily queue. */ }
+  }
+  Future<void> start(SessionOptions options) async {
+    _version++;
+    await database.startSession(options, DateTime.now());
+    if (mounted) state = options;
+  }
+  Future<void> daily() async {
+    _version++; state = const SessionOptions();
+    await database.saveSetting('selected_learning_session',null);
+  }
+}
+
+final sessionOptionsProvider = StateNotifierProvider<SessionOptionsController, SessionOptions>((ref) {
+  final controller = SessionOptionsController(ref.watch(databaseProvider));
+  ref.listen(localDayProvider, (_, _) => controller.daily());
+  return controller;
+});
+final sessionProgressProvider = FutureProvider.autoDispose<SessionProgress>((ref) {
+  ref.watch(localDayProvider);
+  return ref.watch(databaseProvider).loadSession(ref.watch(sessionOptionsProvider), DateTime.now());
+});
+final checkinsProvider = FutureProvider.autoDispose<CheckinSummary>((ref) {
+  ref.watch(localDayProvider);
+  return ref.watch(databaseProvider).loadCheckins(DateTime.now());
+});
 
 final studyRepositoryProvider = Provider<StudyRepository>((ref) {
   return StudyRepository(
     ref.watch(databaseProvider),
     ref.watch(fsrsServiceProvider),
-    bookId: ref.watch(studyBookProvider),
+    options: ref.watch(sessionOptionsProvider),
   );
 });
 

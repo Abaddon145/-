@@ -8,6 +8,8 @@ import '../../study/presentation/study_controller.dart';
 import 'word_editor_sheet.dart';
 import '../domain/providers.dart';
 import '../../statistics/domain/providers.dart';
+import '../../study/presentation/session_sheet.dart';
+import 'word_detail_sheet.dart';
 
 class LibraryPage extends ConsumerWidget {
   const LibraryPage({super.key});
@@ -76,35 +78,23 @@ class LibraryPage extends ConsumerWidget {
     }
   }
 
-  Future<void> _studyBook(BuildContext context, WidgetRef ref, int bookId) async {
-    try {
-      final db = ref.read(databaseProvider);
-      final settings = await db.loadDailyPlanSettings();
-      await db.startExtraStudyRound(DateTime.now(), settings.newWordsPerDay);
-      if (!context.mounted) return;
-      ref.invalidate(studyRoundProgressProvider);
-      ref.invalidate(dailyPlanProgressProvider);
-      ref.read(studyBookProvider.notifier).state = bookId;
-      ref.invalidate(studyControllerProvider);
-      context.go('/study');
-    } catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('开始学习失败：$error')));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final words = ref.watch(libraryWordsProvider);
     final filter = ref.watch(libraryFilterProvider);
     final colors = Theme.of(context).colorScheme;
-    final books = ref.watch(wordBooksProvider);
-    final bookId = ref.watch(libraryBookProvider);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的词库'),
+        title: const Text('统一词库'),
         actions: [
+          IconButton(tooltip:'批量标记当前结果',icon:const Icon(Icons.checklist_rounded),onPressed:()async {
+            final items=words.valueOrNull??[];
+            final pos=TextEditingController(), tag=TextEditingController();
+            final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text('批量标记 ${items.length} 个词'),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:pos,decoration:const InputDecoration(labelText:'词性（留空保留）')),TextField(controller:tag,decoration:const InputDecoration(labelText:'追加标签（留空保留）'))]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('取消')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('应用'))]));
+            if(ok==true&&(pos.text.trim().isNotEmpty||tag.text.trim().isNotEmpty)) { await ref.read(databaseProvider).batchAnnotate(items.map((e)=>e.word.id).toList(),partOfSpeech:pos.text.trim().isEmpty?null:pos.text.trim(),tag:tag.text.trim().isEmpty?null:tag.text.trim());ref.invalidate(libraryWordsProvider); }
+          }),
+
           IconButton(
             tooltip: '导入 Excel 词库',
             icon: const Icon(Icons.file_upload_outlined),
@@ -125,42 +115,17 @@ class LibraryPage extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-              child: books.when(
-                loading: () => const LinearProgressIndicator(),
-                error: (_, _) => TextButton(
-                  onPressed: () => ref.invalidate(wordBooksProvider),
-                  child: const Text('重试读取词库分组'),
-                ),
-                data: (items) => Column(children: [
-                  DropdownButtonFormField<int>(
-                    key: ValueKey(bookId),
-                    initialValue: bookId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(labelText: '选择词库'),
-                    items: [
-                      const DropdownMenuItem<int>(value: null, child: Text('全部词库')),
-                      for (final book in items)
-                        DropdownMenuItem(value: book.id,
-                          child: Text(book.name, overflow: TextOverflow.ellipsis)),
-                    ],
-                    onChanged: (value) => ref.read(libraryBookProvider.notifier).state = value,
-                  ),
-                  if (bookId != null) ...[
-                    const SizedBox(height: 8),
-                    if (items.any((book) => book.id == bookId &&
-                        book.sourceFileName == 'technical-untranslated#20261009'))
-                      const Text('原表未提供中文释义；按英韩配对、仅英文、仅韩文标注。已有同词释义保留。'),
-                    FilledButton.icon(
-                      onPressed: () => _studyBook(context, ref, bookId),
-                      icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('单独学习本词库'),
-                    ),
-                  ],
-                ]),
-              ),
-            ),
+            Padding(padding: const EdgeInsets.symmetric(horizontal:18,vertical:8), child: Column(children: [
+              const Text('所有来源已合并 · 英韩无中文词也进入统一学习'),
+              FilledButton.icon(onPressed: () async {
+                await showSessionSheet(context, filter: filter);
+                if (context.mounted) context.go('/study');
+              }, icon: const Icon(Icons.play_arrow_rounded), label: const Text('学习当前范围')),
+              Wrap(spacing:6, children:[for(final tag in const ['工业术语','物流','邮件','日常'])
+                ActionChip(label:Text(tag),onPressed:()async {
+                  await showSessionSheet(context,tag:tag); if(context.mounted) context.go('/study');
+                })]),
+            ])),
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
               child: TextField(
@@ -168,7 +133,7 @@ class LibraryPage extends ConsumerWidget {
                     ref.read(librarySearchProvider.notifier).state = value,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.search_rounded),
-                  hintText: '搜索英文、韩语、中文或原形',
+                  hintText: '搜索单词、释义、词性或场景标签',
                 ),
               ),
             ),
@@ -226,6 +191,7 @@ class LibraryPage extends ConsumerWidget {
                           return Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             child: ListTile(
+                              onTap: () => showWordDetail(context, item.word),
                               contentPadding: const EdgeInsets.fromLTRB(18, 8, 8, 8),
                               title: Text(
                                 item.word.korean,
