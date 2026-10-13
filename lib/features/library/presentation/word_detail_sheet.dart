@@ -37,7 +37,7 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
   @override Widget build(BuildContext context) => SizedBox(
     height: MediaQuery.sizeOf(context).height * .80,
     child: FutureBuilder<Map<String, Object?>>(future: _data, builder: (context, snapshot) {
-      if (!snapshot.hasData) return Center(child: snapshot.hasError ? Text('${snapshot.error}') : const CircularProgressIndicator());
+      if (!snapshot.hasData) { return Center(child: snapshot.hasError ? Text('${snapshot.error}') : const CircularProgressIndicator()); }
       final card = snapshot.data!['card'] as StudyCard?;
       final user = snapshot.data!['user'] as UserWord?;
       final logs = snapshot.data!['logs'] as List<ReviewLog>;
@@ -69,7 +69,7 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('每行必须有形式名称和答案，用 = 分隔'))); return;
           }
           await ref.read(databaseProvider).saveSetting('word_forms:${widget.word.id}', lines.isEmpty ? null : lines.join('\n'));
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('活用表已保存')));
+          if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('活用表已保存'))); }
         }, child: const Text('保存活用表')),
         const Divider(), Text('最近复习', style: Theme.of(context).textTheme.titleMedium),
         for (final log in logs) ListTile(contentPadding: EdgeInsets.zero,

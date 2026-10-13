@@ -12,7 +12,7 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
   Future<void> _check() async {
     try {
       await ref.read(databaseProvider).checkIn(DateTime.now()); ref.invalidate(checkinsProvider);
-    } catch (error) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error'))); }
+    } catch (error) { if (mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$error'))); } }
   }
   @override Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;

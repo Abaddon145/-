@@ -35,7 +35,7 @@ class SessionOptionsController extends StateNotifier<SessionOptions> {
     if (!mounted || raw == null ||version!=_version) return;
     try {
       final data = jsonDecode(raw) as Map<String, dynamic>;
-      if (data['day'] == dayKey(DateTime.now())) state = SessionOptions.fromJson(data);
+      if (data['day'] == dayKey(DateTime.now())) { state = SessionOptions.fromJson(data); }
     } on FormatException { /* Invalid preferences fall back to the daily queue. */ }
   }
   Future<void> start(SessionOptions options) async {

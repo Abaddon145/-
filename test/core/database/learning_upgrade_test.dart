@@ -30,7 +30,7 @@ void main(){
   test('checkin is idempotent, uses local calendar day, and keeps streak',()async{
     final id=await add('하늘');
     await expectLater(db.checkIn(day),throwsA(isA<FormatException>()));
-    for(final offset in [2,1,0])await rate(id,3,date:day.subtract(Duration(days:offset)));
+    for(final offset in [2,1,0]){ await rate(id,3,date:day.subtract(Duration(days:offset))); }
     await db.checkIn(day);await db.checkIn(day);
     final check=await db.loadCheckins(day);
     expect(check.days,hasLength(3));expect(check.streak,3);expect(check.longest,3);
@@ -55,7 +55,7 @@ void main(){
   test('wrong history stays while three good answers graduate a weak word',()async{
     final id=await add('하늘');await rate(id,1);
     expect(await db.searchLibraryWords(query:'',filter:LibraryFilter.wrong),hasLength(1));
-    for(var i=0;i<3;i++)await rate(id,3);
+    for(var i=0;i<3;i++){ await rate(id,3); }
     expect(await db.searchLibraryWords(query:'',filter:LibraryFilter.wrong),isEmpty);
     expect((await db.searchLibraryWords(query:'',filter:LibraryFilter.all)).single.wrongCount,1);
   });

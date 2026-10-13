@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/reading_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -37,7 +38,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         bytes: bytes,
         mimeType: 'application/json',
       );
-      if (saved != null) await ref.read(databaseProvider).saveSetting('last_backup_at',DateTime.now().toUtc().toIso8601String());
+      if (saved != null) { await ref.read(databaseProvider).saveSetting('last_backup_at',DateTime.now().toUtc().toIso8601String()); }
       if (saved != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('备份文件已导出')),
@@ -189,7 +190,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             FutureBuilder<String?>(future:ref.read(databaseProvider).loadSetting('last_backup_at'),builder:(context,s)=>ListTile(title:const Text('备份提醒'),subtitle:Text(s.data==null?'还没有导出过备份，建议每周备份一次':'上次备份：${s.data!.substring(0,10)}'),trailing:TextButton(onPressed:_backup,child:const Text('现在备份')))),
             ListTile(title:const Text('撤销最近一次恢复'),subtitle:const Text('恢复前的本机快照会自动保留一次'),onTap:()async{
               final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('恢复到导入备份前？'),content:const Text('将替换现在的词库和学习进度。'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('取消')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('恢复'))]));
-              if(ok==true){final result=await ref.read(databaseProvider).recoverPreviousRestore();ref.invalidate(databaseProvider);if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(result?'已恢复到上一次快照':'没有可恢复的快照')));}
+              if(ok==true){final result=await ref.read(databaseProvider).recoverPreviousRestore();ref.invalidate(databaseProvider);if(context.mounted){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(result?'已恢复到上一次快照':'没有可恢复的快照')));}}
             }),
             ListTile(title:const Text('跨设备迁移'),subtitle:const Text('导出备份到“文件”或 iCloud Drive，在另一台设备恢复。自动云同步暂未接入。')),
             ListTile(title:const Text('查看新版与更新记录'),subtitle:const Text('当前 v0.4.0'),onTap:()=>launchUrl(Uri.parse('https://github.com/Abaddon145/-/releases'),mode:LaunchMode.externalApplication)),

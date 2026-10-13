@@ -15,7 +15,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
   @override void initState(){super.initState();_load();}
   Future<void> _load()async{
     final db=ref.read(databaseProvider);
-    for(final key in _values.keys.toList()) _values[key]=double.tryParse(await db.loadSetting(key)??'')??_values[key]!;
+    for(final key in _values.keys.toList()){ _values[key]=double.tryParse(await db.loadSetting(key)??'')??_values[key]!; }
     _focus=await db.loadSetting('focus_mode')=='true';
     if(mounted)setState(()=>_ready=true);
   }

@@ -159,7 +159,7 @@ extension LearningDatabase on AppDatabase {
         await saveSetting(key,jsonEncode({'correct': (value['correct'] as int)+(rating>=3?1:0), 'total': (value['total'] as int)+1}));
       }
     }
-    if (await loadSetting('auto_checkin') != 'false') await checkIn(date);
+    if (await loadSetting('auto_checkin') != 'false') { await checkIn(date); }
     await saveSetting('last_review_undo', jsonEncode({...undo, 'token': token}));
   }
 
@@ -167,21 +167,21 @@ extension LearningDatabase on AppDatabase {
     final raw = await loadSetting('last_review_undo');
     if (raw == null) return null;
     final undo = jsonDecode(raw) as Map<String, dynamic>;
-    if (undo['day'] != dayKey(now)) throw const FormatException('只能撤销今天最近的一次评分');
+    if (undo['day'] != dayKey(now)) { throw const FormatException('只能撤销今天最近的一次评分'); }
     final latest = await (select(reviewLogs)..orderBy([(r) => OrderingTerm.desc(r.id)])..limit(1)).getSingleOrNull();
-    if (latest == null || latest.submissionToken != undo['token']) throw const FormatException('评分记录已经变更，不能撤销');
+    if (latest == null || latest.submissionToken != undo['token']) { throw const FormatException('评分记录已经变更，不能撤销'); }
     final id = undo['wordId'] as int;
     await (delete(reviewLogs)..where((r) => r.id.equals(latest.id))).go();
     for (final table in ['study_cards', 'user_words']) {
       await customStatement('DELETE FROM $table WHERE word_id=?', [id]);
       final data = undo[table == 'study_cards' ? 'card' : 'user'] as Map?;
-      if (data != null) await _insertSnapshotRow(table, data);
+      if (data != null) { await _insertSnapshotRow(table, data); }
     }
     await (delete(dailyStatistics)..where((r) => r.date.equals(_dailyStatKey(now)))).go();
-    if (undo['statistics'] != null) await _insertSnapshotRow('daily_statistics', undo['statistics'] as Map);
+    if (undo['statistics'] != null) { await _insertSnapshotRow('daily_statistics', undo['statistics'] as Map); }
     for (final entry in (undo['settings'] as Map).entries) {
       if((entry.key as String).startsWith('checkin:')&&entry.value==null&&
-          (await loadDailyPlanProgress(now)).totalDone>0) continue;
+          (await loadDailyPlanProgress(now)).totalDone>0) { continue; }
       await saveSetting(entry.key as String, entry.value as String?);
     }
     await saveSetting('last_review_undo', null);
@@ -196,14 +196,14 @@ extension LearningDatabase on AppDatabase {
       throw const FormatException('完成至少一次学习后即可打卡');
     }
     final key = 'checkin:${dayKey(now)}';
-    if (await loadSetting(key) == null) await saveSetting(key, now.toUtc().toIso8601String());
+    if (await loadSetting(key) == null) { await saveSetting(key, now.toUtc().toIso8601String()); }
   }
 
   Future<CheckinSummary> loadCheckins(DateTime now) async {
     final rows = await (select(appSettings)..where((r) => r.key.like('checkin:%'))).get();
     final days = rows.map((r) => r.key.substring(8)).toSet();
     var cursor = _dailyStatKey(now);
-    if (!days.contains(dayKey(cursor))) cursor = cursor.subtract(const Duration(days: 1));
+    if (!days.contains(dayKey(cursor))) { cursor = cursor.subtract(const Duration(days: 1)); }
     var streak = 0;
     while (days.contains(dayKey(cursor))) { streak++; cursor = cursor.subtract(const Duration(days: 1)); }
     var longest = 0, current = 0;

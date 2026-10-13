@@ -42,12 +42,6 @@ class LibraryPage extends ConsumerWidget {
         title: const Text('删除词条？'),
         content: Text('“${item.word.korean}”的复习记录和学习状态也会被删除，此操作无法撤销。'),
         actions: [
-          IconButton(tooltip:'批量标记当前结果',icon:const Icon(Icons.checklist_rounded),onPressed:()async {
-            final items=words.valueOrNull??[];
-            final pos=TextEditingController(), tag=TextEditingController();
-            final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text('批量标记 ${items.length} 个词'),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:pos,decoration:const InputDecoration(labelText:'词性（留空保留）')),TextField(controller:tag,decoration:const InputDecoration(labelText:'追加标签（留空保留）'))]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('取消')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('应用'))]));
-            if(ok==true&&(pos.text.trim().isNotEmpty||tag.text.trim().isNotEmpty)) { await ref.read(databaseProvider).batchAnnotate(items.map((e)=>e.word.id).toList(),partOfSpeech:pos.text.trim().isEmpty?null:pos.text.trim(),tag:tag.text.trim().isEmpty?null:tag.text.trim());ref.invalidate(libraryWordsProvider); }
-          }),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('取消'),
@@ -94,6 +88,13 @@ class LibraryPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('统一词库'),
         actions: [
+          IconButton(tooltip:'批量标记当前结果',icon:const Icon(Icons.checklist_rounded),onPressed:()async {
+            final items=words.valueOrNull??[];
+            final pos=TextEditingController(), tag=TextEditingController();
+            final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text('批量标记 ${items.length} 个词'),content:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:pos,decoration:const InputDecoration(labelText:'词性（留空保留）')),TextField(controller:tag,decoration:const InputDecoration(labelText:'追加标签（留空保留）'))]),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('取消')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('应用'))]));
+            if(ok==true&&(pos.text.trim().isNotEmpty||tag.text.trim().isNotEmpty)) { await ref.read(databaseProvider).batchAnnotate(items.map((e)=>e.word.id).toList(),partOfSpeech:pos.text.trim().isEmpty?null:pos.text.trim(),tag:tag.text.trim().isEmpty?null:tag.text.trim());ref.invalidate(libraryWordsProvider); }
+          }),
+
           IconButton(
             tooltip: '导入 Excel 词库',
             icon: const Icon(Icons.file_upload_outlined),

@@ -29,7 +29,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       final file=await FilePicker.pickFile(type:FileType.custom,allowedExtensions:const['xlsx']);
       if(file==null)return;
       final data=Uint8List.fromList(await file.readAsBytes());
-      if(data.length>20*1024*1024)throw const FormatException('Excel 文件过大，请分批导入（最大20MB）');
+      if(data.length>20*1024*1024){throw const FormatException('Excel 文件过大，请分批导入（最大20MB）');}
       _bytes=data;_fileName=file.name;_sheets=_service.sheetNames(data);_sheet=_sheets.first;_all=false;
       _headers=_service.sheetHeaders(data,_sheet!);_mapping=_service.guessMapping(_headers);
       await _parse();
@@ -45,8 +45,8 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       final existing=words.map((w)=>'${w.normalizedKorean}\u0000${w.normalizedBaseForm}').toSet();
       var duplicates=0;
       for(final draft in preview.drafts){final key='${draft.normalizedKorean}\u0000${draft.normalizedBaseForm}';if(!existing.add(key))duplicates++;}
-      if(mounted&&version==_version)setState((){_preview=preview;_duplicates=duplicates;_error=null;});
-    }catch(e){if(mounted&&version==_version)setState((){_error=e;_preview=null;});}
+      if(mounted&&version==_version){setState((){_preview=preview;_duplicates=duplicates;_error=null;});}
+    }catch(e){if(mounted&&version==_version){setState((){_error=e;_preview=null;});}}
   }
   Future<void> _import()async{
     final preview=_preview;if(preview==null||_busy)return;
@@ -75,7 +75,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       if(!_all)for(final field in const[ImportField.korean,ImportField.english,ImportField.meaningZh,ImportField.partOfSpeech,ImportField.exampleKo,ImportField.tags])Padding(padding:const EdgeInsets.only(bottom:10),child:DropdownButtonFormField<int>(
         key:ValueKey('$_sheet-${field.name}-${_mapping[field]}'),initialValue:_mapping[field]??-1,decoration:InputDecoration(labelText:field.label),
         items:[const DropdownMenuItem(value:-1,child:Text('未指定')),for(var i=0;i<_headers.length;i++)DropdownMenuItem(value:i,child:Text('${i+1} · ${_headers[i]}',overflow:TextOverflow.ellipsis))],
-        onChanged:_busy?null:(v){if(v==-1)_mapping.remove(field);else _mapping[field]=v!;_parse();})),
+        onChanged:_busy?null:(v){if(v==-1){_mapping.remove(field);}else{_mapping[field]=v!;}_parse();})),
       SwitchListTile(title:const Text('补齐重复词的缺失字段'),subtitle:const Text('保留已有释义、例句、词性和学习状态'),value:_enrich,onChanged:_busy?null:(v)=>setState(()=>_enrich=v)),
     ],
     if(_error!=null)Text('$_error',style:TextStyle(color:Theme.of(context).colorScheme.error)),

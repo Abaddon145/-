@@ -11,7 +11,7 @@ class AppNavigationShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final active=navigationShell.currentIndex==2;
-    WidgetsBinding.instance.addPostFrameCallback((_){if(context.mounted&&ref.read(studyVisibleProvider)!=active)ref.read(studyVisibleProvider.notifier).state=active;});
+    WidgetsBinding.instance.addPostFrameCallback((_){if(context.mounted&&ref.read(studyVisibleProvider)!=active){ref.read(studyVisibleProvider.notifier).state=active;}});
     return Scaffold(
     body: navigationShell,
     bottomNavigationBar: active&&ref.watch(readingProvider).valueOrNull?.focus==true?null:NavigationBar(

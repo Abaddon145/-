@@ -81,11 +81,11 @@ class _StudyPageState extends ConsumerState<StudyPage> with WidgetsBindingObserv
                       final entries = await db.searchLibraryWords(query: word.korean, filter: LibraryFilter.favorites);
                       final favorite = entries.any((entry) => entry.word.id == word.id);
                       await db.setFavorite(word.id, !favorite); ref.invalidate(libraryWordsProvider);
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(favorite ? '已取消收藏' : '已收藏')));
+                      if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(favorite ? '已取消收藏' : '已收藏'))); }
                     }, icon: const Icon(Icons.star_border_rounded)),
                     IconButton(tooltip: '编辑单词', onPressed: () => _edit(word), icon: const Icon(Icons.edit_outlined)),
                     IconButton(tooltip: '单词详情', onPressed: () async {
-                      controller.setVisible(false); await showWordDetail(context, word); if (mounted) controller.setVisible(true);
+                      controller.setVisible(false); await showWordDetail(context, word); if (mounted) { ref.read(studyControllerProvider.notifier).setVisible(true); }
                     }, icon: const Icon(Icons.info_outline)),
                   ]),
                   const SizedBox(height: 24),

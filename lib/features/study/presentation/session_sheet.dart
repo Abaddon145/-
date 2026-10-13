@@ -35,7 +35,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
         queue: _queue, filter: _filter, mode: _mode, direction: _direction, partOfSpeech: _pos.text.trim(), tag: _tag.text.trim()));
       ref.invalidate(sessionProgressProvider);
       if (mounted) Navigator.pop(context);
-    } catch (error) { if (mounted) setState(() { _error = '$error'; _saving = false; }); }
+    } catch (error) { if (mounted) { setState(() { _error = '$error'; _saving = false; }); } }
   }
   @override Widget build(BuildContext context) => Padding(
     padding: EdgeInsets.fromLTRB(22, 8, 22, MediaQuery.viewInsetsOf(context).bottom + 22),

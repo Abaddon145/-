@@ -5,7 +5,7 @@ class LearningReport {
   static Future<String> csv(AppDatabase db,DateTime now)async {
     final rows=await db.loadRecentStatistics(now,days:30);
     final result=<String>['日期,新词数量,复习次数,认识次数,忘记次数,有效学习秒数'];
-    for(final row in rows) result.add('${dayKey(row.date)},${row.newWords},${row.reviews},${row.correct},${row.wrong},${row.durationMs~/1000}');
+    for(final row in rows){ result.add('${dayKey(row.date)},${row.newWords},${row.reviews},${row.correct},${row.wrong},${row.durationMs~/1000}'); }
     return '\uFEFF${result.join('\n')}';
   }
   static Future<String> weekly(AppDatabase db,DateTime now)async {

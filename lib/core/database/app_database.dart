@@ -703,7 +703,7 @@ class AppDatabase extends _$AppDatabase {
       for(final r in list){if(r is! Map||r.keys.toSet().length!=e.value.length||!e.value.every(r.containsKey)) throw FormatException('备份字段无效：${e.key}');}}
     await transaction(() async {
       if(captureRecovery) await into(recoverySnapshots).insertOnConflictUpdate(
-        RecoverySnapshotsCompanion.insert(id:1,payload:jsonEncode(await createBackupSnapshot()),createdAt:DateTime.now().toUtc()));
+        RecoverySnapshotsCompanion.insert(id:const Value(1),payload:jsonEncode(await createBackupSnapshot()),createdAt:DateTime.now().toUtc()));
       for(final t in ['review_logs','study_cards','word_book_words','user_words','daily_statistics','app_settings','words','word_books']) await customStatement('DELETE FROM $t');
       for(final t in columns.keys){for(final raw in payload[t] as List){final row=Map<String,Object?>.from(raw as Map), names=columns[t]!;
         await customStatement('INSERT INTO $t (${names.join(',')}) VALUES (${List.filled(names.length,'?').join(',')})',[for(final n in names) row[n]]);}}

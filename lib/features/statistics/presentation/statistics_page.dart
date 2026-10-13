@@ -17,7 +17,7 @@ class StatisticsPage extends ConsumerWidget {
       final text=csv?await LearningReport.csv(db,DateTime.now()):await LearningReport.weekly(db,DateTime.now());
       await FilePicker.saveFile(fileName:csv?'learning-report.csv':'learning-weekly.md',
         bytes:Uint8List.fromList(utf8.encode(text)),mimeType:csv?'text/csv':'text/markdown');
-    } catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('导出失败：$e')));}
+    } catch(e){if(context.mounted){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('导出失败：$e')));}}
   }
   @override Widget build(BuildContext context,WidgetRef ref) {
     final stats=ref.watch(recentStatisticsProvider), colors=Theme.of(context).colorScheme;
