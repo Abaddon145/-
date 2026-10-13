@@ -26,8 +26,15 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin || !url.pathname.startsWith(new URL('./', self.location).pathname)) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
+    const name = url.pathname.split('/').pop();
+    const critical = event.request.mode === 'navigate' ||
+      ['main.dart.js', 'flutter_bootstrap.js', 'index.html', 'version.json'].includes(name);
+    if (!critical) {
+      const cached = await cache.match(event.request);
+      if (cached) return cached;
+    }
     try {
-      const response = await fetch(event.request);
+      const response = await fetch(event.request, critical ? {cache: 'no-store'} : {});
       if (response.ok) await cache.put(event.request, response.clone());
       return response;
     } catch (error) {
