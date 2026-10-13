@@ -53,7 +53,9 @@ SyncDecision decideSync({
     return baselineRevision == null ? SyncDecision.conflict : SyncDecision.upload;
   }
   if (localDigest == remoteDigest) return SyncDecision.unchanged;
-  if (baselineDigest == null || baselineRevision == null) return SyncDecision.conflict;
+  if (baselineDigest == null || baselineRevision == null) {
+    return SyncDecision.conflict;
+  }
   if (remoteRevision == baselineRevision) return SyncDecision.upload;
   if (localDigest == baselineDigest) return SyncDecision.download;
   return SyncDecision.conflict;

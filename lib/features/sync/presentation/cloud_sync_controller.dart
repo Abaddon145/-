@@ -92,8 +92,10 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
           : '已连接，可检查最新进度');
       if (state.enabled) unawaited(sync(automatic: true));
     } catch (_) {
-      if (_valid(epoch, user.id)) state = state.copyWith(busy: false,
-        status: '无法连接云端，本机学习可继续；联网后再试');
+      if (_valid(epoch, user.id)) {
+        state = state.copyWith(busy: false,
+          status: '无法连接云端，本机学习可继续；联网后再试');
+      }
     }
   }
 

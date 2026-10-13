@@ -18,7 +18,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
   bool _hidden = true;
 
   void _message(String message) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   Future<void> _authenticate() async {
@@ -129,7 +131,9 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
               content: const Text('自动同步会停止。本机数据仍会保留；在共用设备上请留意本机学习记录。'),
               actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
                 FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('退出'))]));
-            if (ok == true) _message(await ref.read(cloudSyncProvider.notifier).signOut());
+            if (ok == true) {
+              _message(await ref.read(cloudSyncProvider.notifier).signOut());
+            }
           }, child: const Text('退出账户')),
         ],
         const SizedBox(height: 20),
