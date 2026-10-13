@@ -24,6 +24,7 @@ void main() {
     http.Response(jsonEncode(data), status, headers: {'content-type': 'application/json'});
 
   Future<void> settle() async {
+    await Future<void>.delayed(Duration.zero);
     for (var i = 0; i < 50 && controller.state.busy; i++) {
       await Future<void>.delayed(const Duration(milliseconds: 2));
     }

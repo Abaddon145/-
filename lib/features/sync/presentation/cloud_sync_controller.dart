@@ -101,7 +101,7 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
 
   Future<Map<String, dynamic>?> _remoteMetadata(String userId) => client!
     .from('korean_memo_snapshots').select('revision,digest,updated_at')
-    .eq('user_id', userId).maybeSingle();
+    .eq('user_id', userId).maybeSingle().timeout(const Duration(seconds: 20));
 
   Future<Map<String, dynamic>> _local() async {
     final data = portableSnapshot(await database.createBackupSnapshot());
@@ -179,7 +179,7 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
         final saved = await client!.rpc('save_korean_memo_snapshot', params: {
           'p_expected_revision': remote?['revision'] ?? 0,
           'p_digest': digest, 'p_payload': snapshot,
-        });
+        }).timeout(const Duration(seconds: 30));
         if (!_valid(epoch, user)) return;
         await _remember(Map<String, dynamic>.from(saved as Map),
           enable: resolveLocal ? true : null);
@@ -222,7 +222,7 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
   Future<void> _download(String user, int epoch, String initialDigest,
       {bool? enable}) async {
     final remote = await client!.from('korean_memo_snapshots')
-      .select().eq('user_id', user).maybeSingle();
+      .select().eq('user_id', user).maybeSingle().timeout(const Duration(seconds: 30));
     if (!_valid(epoch, user)) return;
     if (remote == null) throw const FormatException('云端还没有学习数据');
     final data = portableSnapshot(Map<String, Object?>.from(remote['payload'] as Map));
@@ -257,12 +257,18 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
     final epoch = _epoch;
     try {
       if (register) {
-        final response = await client!.auth.signUp(email: email, password: password);
+        final response = await client!.auth.signUp(email: email, password: password)
+          .timeout(const Duration(seconds: 30));
         return response.session == null ? '请到邮箱确认注册，然后返回应用登录' : '注册成功';
       }
-      await client!.auth.signInWithPassword(email: email, password: password);
+      await client!.auth.signInWithPassword(email: email, password: password)
+        .timeout(const Duration(seconds: 30));
       return '登录成功';
     } on AuthException catch (error) {
+      final message = error.message.toLowerCase();
+      if (message.contains('invalid login credentials')) return '邮箱或密码不正确';
+      if (message.contains('email not confirmed')) return '请先到邮箱确认注册，再返回登录';
+      if (message.contains('rate limit')) return '请求过于频繁，请稍后再试';
       return error.message;
     } catch (_) {
       return '暂时无法登录，请检查网络后重试';
