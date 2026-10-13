@@ -19,6 +19,10 @@ jobs:
       - name: Remove generated sample test
         run: rm -f test/widget_test.dart
       - run: flutter pub get
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dependency-lock
+          path: pubspec.lock
       - run: dart run build_runner build --delete-conflicting-outputs
       - run: dart format lib test
       - run: flutter analyze

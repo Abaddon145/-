@@ -682,7 +682,7 @@ class AppDatabase extends _$AppDatabase {
   Future<Map<String,Object?>> createBackupSnapshot() => transaction(() async {
     const tables=['words','word_books','word_book_words','study_cards','review_logs','user_words','daily_statistics','app_settings'];
     final data=<String,List<Map<String,Object?>>>{};
-    for(final t in tables){ final rows=await customSelect('SELECT * FROM $t').get(); data[t]=rows.map((r)=>Map<String,Object?>.from(r.data)).toList(); }
+    for(final t in tables){ final rows=await customSelect('SELECT * FROM $t').get(); data[t]=rows.where((r)=>t!='app_settings'||!(r.data['key'] as String).startsWith('cloud_')).map((r)=>Map<String,Object?>.from(r.data)).toList(); }
     return {'format':'korean-memo-backup','version':1,'createdAt':DateTime.now().toUtc().toIso8601String(),'tables':data};
   });
 
@@ -710,6 +710,8 @@ class AppDatabase extends _$AppDatabase {
       // An undo snapshot is valid only for the transaction that produced it on
       // this device; imported files must never provide executable row snapshots.
       await saveSetting('last_review_undo',null);
+      // Restoring a file never imports a different device's cloud binding.
+      await customStatement("DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'");
     });
   }
 

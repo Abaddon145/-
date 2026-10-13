@@ -13,6 +13,5 @@ macos/Flutter/ephemeral/
 android/.gradle/
 *.iml
 *.g.dart
-pubspec.lock
 web/sqlite3.wasm
 web/drift_worker.js
