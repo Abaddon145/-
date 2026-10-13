@@ -1,5 +1,5 @@
 // Own the app cache explicitly instead of relying on Flutter's deprecated worker.
-const CACHE = 'korean-memo-0.4.0';
+const CACHE = 'korean-memo-0.5.0';
 const CORE = ['./', 'index.html', 'flutter_bootstrap.js', 'main.dart.js',
   'sqlite3.wasm', 'drift_worker.js', 'manifest.json',
   'assets/FontManifest.json', 'assets/AssetManifest.bin.json',
