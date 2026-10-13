@@ -67,7 +67,8 @@ void main() {
           downloadStarted?.complete();
           await downloadGate?.future;
         }
-        return response(remote);
+        // maybeSingle uses a normal JSON array for GET and checks its length.
+        return response([remote]);
       }
       return response({'message': 'unexpected request'}, status: 500);
     });
