@@ -67,16 +67,18 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
       database.words, database.wordBooks, database.wordBookWords,
       database.studyCards, database.reviewLogs, database.userWords,
       database.dailyStatistics,
-    ])).map<void>((_) {}).listen((_) => _markLocalChange());
+    ])).map<void>((_) {}).listen((_) => _markLocalChange(), onError: _localWatchFailed);
     _settingsChanges = database.select(database.appSettings).watch().map((rows) {
-      final portable = rows.where((row) => portableSetting(row.key))
-          .map((row) => [row.key, row.value, row.updatedAt.toUtc().toIso8601String()])
-          .toList()..sort((a, b) => a.first.compareTo(b.first));
-      final stamp = jsonEncode(portable);
-      final changed = _settingsStamp != null && _settingsStamp != stamp;
-      _settingsStamp = stamp;
+      final current = {for (final row in rows.where((row) => portableSetting(row.key)))
+        row.key: (row.value, row.updatedAt)};
+      final previous = _portableSettings;
+      final changed = previous != null && (previous.length != current.length ||
+        current.entries.any((entry) => previous[entry.key] != entry.value));
+      // Compare immutable values directly: avoid JSON-copying large backgrounds
+      // every time the device-only cloud timestamp changes.
+      _portableSettings = current;
       return changed;
-    }).listen((changed) { if (changed) _markLocalChange(); });
+    }).listen((changed) { if (changed) _markLocalChange(); }, onError: _localWatchFailed);
     _auth = client!.auth.onAuthStateChange.listen((event) {
       if (event.session?.user.id != state.userId) unawaited(_loadAccount());
     }, onError: (Object error) {
@@ -100,7 +102,7 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
   StreamSubscription<bool>? _settingsChanges;
   Timer? _timer;
   Timer? _autoSaveTimer;
-  String? _settingsStamp;
+  Map<String, (String, DateTime)>? _portableSettings;
   int _generation = 0;
   bool _restoring = false;
   DateTime? _lastResend;
@@ -378,6 +380,13 @@ class CloudSyncController extends StateNotifier<CloudSyncState> {
     if (state.userId == null || _baselineRevision == null) return;
     state = state.copyWith(pendingLocal: true);
     _queueAutoSave();
+  }
+
+  void _localWatchFailed(Object error) {
+    lastError = error;
+    if (mounted) {
+      state = state.copyWith(failed: true, status: '无法检查本机同步状态，请重新打开应用');
+    }
   }
 
   void _queueAutoSave() {
