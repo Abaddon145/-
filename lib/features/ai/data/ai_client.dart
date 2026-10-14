@@ -55,61 +55,11 @@ class AiProxyClient implements AiGateway {
     AiCancellation cancellation, {
     Object? data,
   }) async {
-    final uri = _uri(path), client = _clientFactory();
-    var timedOut = false;
-    final timer = Timer(timeout, () {
-      timedOut = true;
-      cancellation.cancel();
-      client.close();
-    });
-    try {
-      cancellation.check();
-      final request =
-          http.AbortableRequest(method, uri, abortTrigger: cancellation.signal)
-            ..headers.addAll({
-              'Authorization': 'Bearer $credential',
-              'Content-Type': 'application/json',
-            });
-      if (data != null) request.body = jsonEncode(data);
-      final response = await client.send(request);
-      final bytes = <int>[];
-      await for (final chunk in response.stream) {
-        bytes.addAll(chunk);
-        if (bytes.length > 32768) throw const AiException('invalid_response');
-        cancellation.check();
-      }
-      cancellation.check();
-      dynamic json;
-      try {
-        json = jsonDecode(utf8.decode(bytes));
-      } catch (_) {
-        throw const AiException('invalid_json');
-      }
-      if (response.statusCode != 200) {
-        final code = json is Map && json['error'] is Map
-            ? json['error']['code']
-            : null;
-        throw AiException(
-          code is String && code.length < 50
-              ? code
-              : response.statusCode == 429
-              ? 'rate_limited'
-              : 'provider_error',
-        );
-      }
-      if (json is! Map<String, dynamic>) {
-        throw const AiException('invalid_response');
-      }
-      return json;
-    } catch (error) {
-      if (timedOut) throw const AiException('timeout');
-      if (cancellation.cancelled) throw const AiException('cancelled');
-      if (error is AiException) rethrow;
-      throw const AiException('network');
-    } finally {
-      timer.cancel();
-      client.close();
-    }
+    return AiHttpTransport(
+      credential: credential,
+      timeout: timeout,
+      clientFactory: _clientFactory,
+    ).send(method, _uri(path), cancellation, data: data, proxyErrors: true);
   }
 
   @override
@@ -137,5 +87,87 @@ class AiProxyClient implements AiGateway {
     }
     if (json['status'] != 'ready') throw const AiException('not_configured');
     return '服务已连接';
+  }
+}
+
+/// Shared cancellable HTTP transport; never persists or logs credentials or bodies.
+class AiHttpTransport {
+  AiHttpTransport({
+    required this.credential,
+    this.timeout = const Duration(seconds: 90),
+    http.Client Function()? clientFactory,
+  }) : _clientFactory = clientFactory ?? http.Client.new;
+  final String credential;
+  final Duration timeout;
+  final http.Client Function() _clientFactory;
+  Future<Map<String, dynamic>> send(
+    String method,
+    Uri uri,
+    AiCancellation cancellation, {
+    Object? data,
+    bool proxyErrors = false,
+  }) async {
+    final client = _clientFactory();
+    var timedOut = false;
+    final timer = Timer(timeout, () {
+      timedOut = true;
+      cancellation.cancel();
+      client.close();
+    });
+    try {
+      cancellation.check();
+      final request =
+          http.AbortableRequest(method, uri, abortTrigger: cancellation.signal)
+            ..followRedirects = false
+            ..headers.addAll({
+              'Authorization': 'Bearer $credential',
+              'Content-Type': 'application/json',
+            });
+      if (data != null) request.body = jsonEncode(data);
+      final response = await client.send(request);
+      final bytes = <int>[];
+      await for (final chunk in response.stream) {
+        bytes.addAll(chunk);
+        if (bytes.length > 32768) throw const AiException('invalid_response');
+        cancellation.check();
+      }
+      cancellation.check();
+      dynamic json;
+      try {
+        json = jsonDecode(utf8.decode(bytes));
+      } catch (_) {
+        if (response.statusCode == 200) throw const AiException('invalid_json');
+      }
+      if (response.statusCode != 200) {
+        final code = proxyErrors && json is Map && json['error'] is Map
+            ? json['error']['code']
+            : null;
+        throw AiException(
+          code is String && code.length < 50
+              ? code
+              : response.statusCode == 401 || response.statusCode == 403
+              ? 'unauthorized'
+              : response.statusCode == 429
+              ? 'rate_limited'
+              : response.statusCode == 402
+              ? 'insufficient_balance'
+              : response.statusCode == 408 || response.statusCode == 504
+              ? 'timeout'
+              : 'provider_error',
+        );
+      }
+      if (json is! Map<String, dynamic>) {
+        throw const AiException('invalid_response');
+      }
+      return json;
+    } catch (error) {
+      if (timedOut) throw const AiException('timeout');
+      if (cancellation.cancelled) throw const AiException('cancelled');
+      if (error is AiException) rethrow;
+      throw const AiException('network');
+    } finally {
+      timer.cancel();
+      client.close();
+    }
   }
 }
