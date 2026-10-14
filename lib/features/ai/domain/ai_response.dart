@@ -85,8 +85,11 @@ class AiSuggestion {
   String get context => result['context'] as String;
   bool get needsMoreContext => result['needsMoreContext'] as bool;
   bool get suspectedTypo => result['suspectedTypo'] as bool;
-  List<String> get spellings =>
-      (result['suggestedSpellings'] as List).cast<String>();
+  List<String> get spellings => (result['suggestedSpellings'] as List)
+      .cast<String>()
+      .where((s) => s.trim().isNotEmpty)
+      .toSet()
+      .toList();
   String fieldText(String key) => result[key] is List
       ? (result[key] as List).join('\n')
       : result[key] as String;

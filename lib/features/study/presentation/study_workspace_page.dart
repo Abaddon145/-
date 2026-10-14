@@ -31,7 +31,7 @@ class _StudyPageState extends ConsumerState<StudyPage> with WidgetsBindingObserv
     final controller = ref.read(studyControllerProvider.notifier);
     controller.pauseForPanel();
     try {await showSessionSheet(context);}
-    finally {if (mounted && controller.mounted) controller.resumeFromPanel();}
+    finally {if (mounted && controller.mounted) { controller.resumeFromPanel(); }}
   }
   Future<void> _edit(Word word) async {
     final controller = ref.read(studyControllerProvider.notifier);
@@ -45,7 +45,7 @@ class _StudyPageState extends ConsumerState<StudyPage> with WidgetsBindingObserv
     final controller = ref.read(studyControllerProvider.notifier);
     controller.pauseForPanel();
     try {await showAiAssistant(context, word, explain: true);}
-    finally {if (mounted && controller.mounted) controller.resumeFromPanel();}
+    finally {if (mounted && controller.mounted) { controller.resumeFromPanel(); }}
   }
   @override Widget build(BuildContext context) {
     final state = ref.watch(studyControllerProvider);
@@ -95,7 +95,7 @@ class _StudyPageState extends ConsumerState<StudyPage> with WidgetsBindingObserv
                     IconButton(tooltip: '单词详情', onPressed: () async {
                       controller.pauseForPanel();
                       try {await showWordDetail(context, word);}
-                      finally {if (mounted && controller.mounted) controller.resumeFromPanel();}
+                      finally {if (mounted && controller.mounted) { controller.resumeFromPanel(); }}
                     }, icon: const Icon(Icons.info_outline)),
                   ]),
                   const SizedBox(height: 24),
