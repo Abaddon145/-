@@ -201,7 +201,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             }),
             ListTile(leading:const Icon(Icons.cloud_sync_outlined),title:const Text('账户与云同步'),subtitle:const Text('登录后接续词库、学习进度与打卡'),trailing:const Icon(Icons.chevron_right),onTap:()=>context.push('/settings/cloud')),
             ListTile(leading: const Icon(Icons.auto_awesome), title: const Text('AI 学习助手设置'),
-              subtitle: const Text('私有代理、会话凭证、语境与缓存'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/ai')),
+              subtitle: const Text('DeepSeek API Key、语境与缓存'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/ai')),
             ListTile(title:const Text('跨设备文件迁移'),subtitle:const Text('也可导出备份到“文件”或 iCloud Drive，在另一台设备恢复。')),
             ListTile(title:const Text('查看新版与更新记录'),subtitle:const Text('当前 v0.6.0'),onTap:()=>launchUrl(Uri.parse('https://github.com/Abaddon145/-/releases'),mode:LaunchMode.externalApplication)),
             const Center(child: Text('KoreanMemo · v0.6.0')),
