@@ -1,5 +1,5 @@
 // Own the app cache explicitly instead of relying on Flutter's deprecated worker.
-const CACHE = 'korean-memo-0.5.0';
+const CACHE = 'korean-memo-0.6.0';
 const CORE = ['./', 'index.html', 'flutter_bootstrap.js', 'main.dart.js',
   'sqlite3.wasm', 'drift_worker.js', 'manifest.json',
   'assets/FontManifest.json', 'assets/AssetManifest.bin.json',
@@ -21,6 +21,8 @@ self.addEventListener('activate', event => {
 });
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  // Keep session-only proxy credentials out of CacheStorage, including same-origin proxies.
+  if (event.request.headers.has('Authorization')) return;
   const url = new URL(event.request.url);
   // Cache only this app's static assets. Never intercept another service or user uploads.
   if (url.origin !== self.location.origin || !url.pathname.startsWith(new URL('./', self.location).pathname)) return;

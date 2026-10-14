@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'missing_meaning.dart';
+import 'ai_backup_validation.dart';
 
 part 'app_database.g.dart';
 part 'learning_extensions.dart';
@@ -124,6 +126,56 @@ class RecoverySnapshots extends Table {
   @override Set<Column<Object>> get primaryKey => {id};
 }
 
+@DataClassName('AiSuggestionRecord')
+class AiSuggestions extends Table {
+  TextColumn get id => text()();
+  IntColumn get wordId => integer()();
+  TextColumn get originalSnapshot => text()();
+  TextColumn get cacheKey => text()();
+  TextColumn get taskType => text()();
+  TextColumn get context => text()();
+  TextColumn get payload => text()();
+  TextColumn get savedFields => text().withDefault(const Constant('[]'))();
+  DateTimeColumn get createdAt => dateTime()();
+  @override Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('AiTaskRecord')
+class AiTasks extends Table {
+  TextColumn get id => text()();
+  TextColumn get context => text()();
+  TextColumn get status => text().withDefault(const Constant('paused'))();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  @override Set<Column<Object>> get primaryKey => {id};
+}
+
+@DataClassName('AiTaskItemRecord')
+class AiTaskItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get taskId => text().references(AiTasks, #id)();
+  IntColumn get wordId => integer()();
+  TextColumn get originalSnapshot => text()();
+  TextColumn get status => text().withDefault(const Constant('queued'))();
+  TextColumn get suggestionId => text().nullable()();
+  TextColumn get errorCode => text().nullable()();
+  IntColumn get attempts => integer().withDefault(const Constant(0))();
+  @override Set<Column<Object>> get primaryKey => {id};
+}
+
+class AiWordContents extends Table {
+  IntColumn get wordId => integer()();
+  TextColumn get field => text()();
+  TextColumn get value => text()();
+  TextColumn get requestId => text()();
+  TextColumn get model => text()();
+  TextColumn get promptVersion => text()();
+  TextColumn get originalSnapshot => text()();
+  DateTimeColumn get generatedAt => dateTime()();
+  DateTimeColumn get confirmedAt => dateTime()();
+  @override Set<Column<Object>> get primaryKey => {wordId, field};
+}
+
 @DriftDatabase(
   tables: [
     Words,
@@ -135,6 +187,10 @@ class RecoverySnapshots extends Table {
     DailyStatistics,
     AppSettings,
     RecoverySnapshots,
+    AiSuggestions,
+    AiTasks,
+    AiTaskItems,
+    AiWordContents,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -151,7 +207,7 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -161,6 +217,12 @@ class AppDatabase extends _$AppDatabase {
             await migrator.createTable(appSettings);
           }
           if (from < 3) await migrator.createTable(recoverySnapshots);
+          if (from < 4) {
+            await migrator.createTable(aiSuggestions);
+            await migrator.createTable(aiTasks);
+            await migrator.createTable(aiTaskItems);
+            await migrator.createTable(aiWordContents);
+          }
         },
       );
 
@@ -475,7 +537,7 @@ class AppDatabase extends _$AppDatabase {
       } else {
         reused++;
         if(enrichExisting) await (update(words)..where((w)=>w.id.equals(wordId))).write(WordsCompanion(
-          meaningZh: existing.meaningZh.isEmpty||existing.meaningZh.contains('未提供中文')||existing.meaningZh.contains('暂无中文') ? Value(draft.meaningZh) : const Value.absent(),
+          meaningZh: isMissingMeaning(existing.meaningZh) ? Value(draft.meaningZh) : const Value.absent(),
           partOfSpeech:existing.partOfSpeech==null?Value(_nullable(draft.partOfSpeech)):const Value.absent(),
           exampleKo:existing.exampleKo==null?Value(_nullable(draft.exampleKo)):const Value.absent(),
           exampleZh:existing.exampleZh==null?Value(_nullable(draft.exampleZh)):const Value.absent(),
@@ -599,6 +661,7 @@ class AppDatabase extends _$AppDatabase {
       LibraryFilter.all => const Constant<bool>(true),
       LibraryFilter.favorites => userWords.isFavorite.equals(true),
       LibraryFilter.wrong => userWords.isDifficult.equals(true),
+      LibraryFilter.missingMeaning => const Constant<bool>(true),
     };
     final queryBuilder = select(words).join([
       leftOuterJoin(userWords, userWords.wordId.equalsExp(words.id)),
@@ -609,7 +672,7 @@ class AppDatabase extends _$AppDatabase {
       ..orderBy([OrderingTerm.asc(words.korean)])
       ;
     final rows = await queryBuilder.get();
-    return rows.map((row) {
+    return rows.where((row) => filter != LibraryFilter.missingMeaning || isMissingMeaning(row.readTable(words).meaningZh)).map((row) {
       final userWord = row.readTableOrNull(userWords);
       return LibraryWordEntry(
         word: row.readTable(words),
@@ -656,6 +719,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> deleteWord(int id) => transaction(() async {
+    await (delete(aiWordContents)..where((r) => r.wordId.equals(id))).go();
     await (delete(appSettings)..where((r)=>r.key.isIn(['word_status:$id','word_forms:$id','correct_streak:$id']))).go();
     final undo=await loadSetting('last_review_undo');
     if(undo!=null&&(jsonDecode(undo) as Map)['wordId']==id)await saveSetting('last_review_undo',null);
@@ -679,15 +743,16 @@ class AppDatabase extends _$AppDatabase {
         correct:r?.correctCount??0,wrong:r?.wrongCount??0,durationMs:r?.studyDurationMs??0); });
   }
 
-  Future<Map<String,Object?>> createBackupSnapshot() => transaction(() async {
-    const tables=['words','word_books','word_book_words','study_cards','review_logs','user_words','daily_statistics','app_settings'];
+  Future<Map<String,Object?>> createBackupSnapshot({bool includeAi = false}) => transaction(() async {
+    final tables=['words','word_books','word_book_words','study_cards','review_logs','user_words','daily_statistics','app_settings',
+      if(includeAi) ...['ai_suggestions','ai_tasks','ai_task_items','ai_word_contents']];
     final data=<String,List<Map<String,Object?>>>{};
-    for(final t in tables){ final rows=await customSelect('SELECT * FROM $t').get(); data[t]=rows.where((r)=>t!='app_settings'||!(r.data['key'] as String).startsWith('cloud_')).map((r)=>Map<String,Object?>.from(r.data)).toList(); }
+    for(final t in tables){ final rows=await customSelect('SELECT * FROM $t').get(); data[t]=rows.where((r)=>t!='app_settings'||(!(r.data['key'] as String).startsWith('cloud_') && !const {'ai_access_token','ai_credential','model_api_key'}.contains(r.data['key']))).map((r)=>Map<String,Object?>.from(r.data)).toList(); }
     return {'format':'korean-memo-backup','version':1,'createdAt':DateTime.now().toUtc().toIso8601String(),'tables':data};
   });
 
   Future<void> restoreBackupSnapshot(Map<String,dynamic> snapshot, {bool captureRecovery = true}) async {
-    const columns=<String,List<String>>{
+    final columns=<String,List<String>>{
       'words':['id','korean','normalized_korean','base_form','normalized_base_form','meaning_zh','pronunciation','part_of_speech','example_ko','example_zh','topik_level','category','tags','note','hanja','etymology','source','created_at','updated_at'],
       'word_books':['id','name','description','source_file_name','created_at','updated_at'],
       'word_book_words':['word_book_id','word_id','sort_order'],
@@ -699,12 +764,23 @@ class AppDatabase extends _$AppDatabase {
     };
     if(snapshot['format']!='korean-memo-backup'||snapshot['version']!=1) throw const FormatException('不支持的备份格式');
     final payload=snapshot['tables']; if(payload is! Map) throw const FormatException('备份缺少数据');
+    const aiColumns=<String,List<String>>{
+      'ai_suggestions':['id','word_id','original_snapshot','cache_key','task_type','context','payload','saved_fields','created_at'],
+      'ai_tasks':['id','context','status','created_at','updated_at'],
+      'ai_task_items':['id','task_id','word_id','original_snapshot','status','suggestion_id','error_code','attempts'],
+      'ai_word_contents':['word_id','field','value','request_id','model','prompt_version','original_snapshot','generated_at','confirmed_at'],
+    };
+    if(aiColumns.keys.any(payload.containsKey)) {
+      if(!aiColumns.keys.every(payload.containsKey)) throw const FormatException('AI 备份表不完整');
+      columns.addAll(aiColumns);
+    }
     for(final e in columns.entries){ final list=payload[e.key]; if(list is! List||list.length>100000) throw FormatException('备份表无效：${e.key}');
       for(final r in list){if(r is! Map||r.keys.toSet().length!=e.value.length||!e.value.every(r.containsKey)) throw FormatException('备份字段无效：${e.key}');}}
+    if (columns.containsKey('ai_suggestions')) validateAiBackup(payload);
     await transaction(() async {
       if(captureRecovery) await into(recoverySnapshots).insertOnConflictUpdate(
-        RecoverySnapshotsCompanion.insert(id:const Value(1),payload:jsonEncode(await createBackupSnapshot()),createdAt:DateTime.now().toUtc()));
-      for(final t in ['review_logs','study_cards','word_book_words','user_words','daily_statistics','app_settings','words','word_books']) await customStatement('DELETE FROM $t');
+        RecoverySnapshotsCompanion.insert(id:const Value(1),payload:jsonEncode(await createBackupSnapshot(includeAi: true)),createdAt:DateTime.now().toUtc()));
+      for(final t in ['ai_word_contents','ai_task_items','ai_tasks','ai_suggestions','review_logs','study_cards','word_book_words','user_words','daily_statistics','app_settings','words','word_books']) await customStatement('DELETE FROM $t');
       for(final t in columns.keys){for(final raw in payload[t] as List){final row=Map<String,Object?>.from(raw as Map), names=columns[t]!;
         await customStatement('INSERT INTO $t (${names.join(',')}) VALUES (${List.filled(names.length,'?').join(',')})',[for(final n in names) row[n]]);}}
       // An undo snapshot is valid only for the transaction that produced it on
@@ -712,6 +788,9 @@ class AppDatabase extends _$AppDatabase {
       await saveSetting('last_review_undo',null);
       // Restoring a file never imports a different device's cloud binding.
       await customStatement("DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'");
+      await customStatement("DELETE FROM app_settings WHERE key IN ('ai_access_token','ai_credential','model_api_key')");
+      await customStatement("UPDATE ai_tasks SET status = 'paused' WHERE status = 'running'");
+      await customStatement("UPDATE ai_task_items SET status = 'queued' WHERE status = 'running'");
     });
   }
 
@@ -882,6 +961,6 @@ DateTime? _dateTime(Object? value) {
 DateTime _dailyStatKey(DateTime localDate) =>
     DateTime.utc(localDate.year, localDate.month, localDate.day);
 
-enum LibraryFilter { all, favorites, wrong }
+enum LibraryFilter { all, favorites, wrong, missingMeaning }
 class LibraryWordEntry { const LibraryWordEntry({required this.word,required this.isFavorite,required this.wrongCount}); final Word word; final bool isFavorite; final int wrongCount; }
 class DailyStatisticsSummary { const DailyStatisticsSummary({required this.date,required this.newWords,required this.reviews,required this.correct,required this.wrong,required this.durationMs}); final DateTime date; final int newWords,reviews,correct,wrong,durationMs; }

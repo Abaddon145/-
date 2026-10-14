@@ -5,6 +5,9 @@ import '../../../core/database/app_database.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 import '../domain/providers.dart';
+import '../../ai/presentation/ai_assistant_sheet.dart';
+import '../../ai/domain/ai_models.dart';
+import '../../ai/domain/ai_providers.dart';
 
 Future<void> showWordDetail(BuildContext context, Word word) => showModalBottomSheet<void>(
   context: context, isScrollControlled: true, useSafeArea: true, showDragHandle: true,
@@ -20,8 +23,13 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
   late Future<Map<String, Object?>> _data;
   Future<Map<String, Object?>> _load() async {
     final db = ref.read(databaseProvider), id = widget.word.id;
-    _forms.text = await db.loadSetting('word_forms:$id') ?? '';
-    return {'card': await db.cardForWord(id),
+    final aiRepository = ref.read(aiRepositoryProvider);
+    final forms = await db.loadSetting('word_forms:$id') ?? '';
+    if (mounted) _forms.text = forms;
+    final word = await (db.select(db.words)..where((r) => r.id.equals(id))).getSingleOrNull();
+    return {'word': word,
+      'ai': word == null ? <String,String>{} : await aiRepository.contents(word),
+      'card': await db.cardForWord(id),
       'user': await (db.select(db.userWords)..where((r) => r.wordId.equals(id))).getSingleOrNull(),
       'status': await db.loadSetting('word_status:$id'),
       'logs': await (db.select(db.reviewLogs)..where((r) => r.wordId.equals(id))
@@ -42,12 +50,23 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
       final user = snapshot.data!['user'] as UserWord?;
       final logs = snapshot.data!['logs'] as List<ReviewLog>;
       final status = snapshot.data!['status'];
+      final word = snapshot.data!['word'] as Word?;
+      if (word == null) return const Center(child: Text('词条已删除'));
+      final ai = snapshot.data!['ai'] as Map<String,String>;
       return ListView(padding: const EdgeInsets.fromLTRB(24, 8, 24, 28), children: [
-        Text(widget.word.korean, style: Theme.of(context).textTheme.headlineSmall),
-        Text(widget.word.meaningZh), const SizedBox(height: 10),
-        Text('${widget.word.partOfSpeech ?? '未标词性'} · ${widget.word.tags ?? '未标场景'}'),
-        if (widget.word.exampleKo != null) ListTile(title: Text(widget.word.exampleKo!), subtitle: Text(widget.word.exampleZh ?? '')),
-        if (widget.word.note != null) Text('笔记：${widget.word.note}'),
+        Text(word.korean, style: Theme.of(context).textTheme.headlineSmall),
+        Text(word.meaningZh), const SizedBox(height: 10),
+        Text('${word.partOfSpeech ?? '未标词性'} · ${word.tags ?? '未标场景'}'),
+        if (word.exampleKo != null) ListTile(title: Text(word.exampleKo!), subtitle: Text(word.exampleZh ?? '')),
+        if (word.note != null) Text('笔记：${word.note}'),
+        FilledButton.icon(onPressed: () async {
+          await showAiAssistant(context, word);
+          if (mounted) setState(() => _data = _load());
+        }, icon: const Icon(Icons.auto_awesome), label: const Text('AI 补全')),
+        if (ai.isNotEmpty) const Text('AI 生成·用户已确认'),
+        for (final entry in ai.entries) if (!['meaningZh','partOfSpeech','baseForm','exampleKo','exampleZh'].contains(entry.key))
+          ExpansionTile(title: Text(aiFieldLabels[entry.key] ?? (entry.key == 'spelling' ? '已确认拼写' : entry.key)), children: [Padding(padding: const EdgeInsets.all(12),
+            child: AiPlainText(entry.value, term: word.korean))]),
         const Divider(),
         Text(card == null ? '尚未学习' : '下次复习：${card.due.toLocal().toString().substring(0,16)}'),
         Text('历史认识 ${user?.correctCount ?? 0} 次 · 忘记 ${user?.wrongCount ?? 0} 次'),
