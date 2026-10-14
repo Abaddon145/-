@@ -13,6 +13,8 @@ import '../../features/study/presentation/study_page.dart';
 import '../../features/statistics/presentation/checkin_page.dart';
 import '../../features/settings/presentation/reading_page.dart';
 import '../../features/sync/presentation/cloud_sync_page.dart';
+import '../../features/ai/presentation/ai_settings_page.dart';
+import '../../features/ai/presentation/ai_tasks_page.dart';
 
 Page<void> appPage(GoRouterState state, Widget child, {bool backdrop = false}) =>
     NoTransitionPage<void>(key: state.pageKey,
@@ -33,11 +35,14 @@ final appRouter = GoRouter(
             GoRoute(path: 'appearance', pageBuilder: (context, state) => appPage(state, const AppearancePage(), backdrop: true)),
             GoRoute(path: 'reading', pageBuilder: (context, state) => appPage(state, const ReadingPage(), backdrop: true)),
             GoRoute(path: 'cloud', pageBuilder: (context, state) => appPage(state, const CloudSyncPage(), backdrop: true)),
+            GoRoute(path: 'ai', pageBuilder: (context, state) => appPage(state, const AiSettingsPage(), backdrop: true)),
           ]),
         ]),
       ],
     ),
     GoRoute(path: '/checkin', pageBuilder: (context, state) => appPage(state, const CheckinPage(), backdrop: true)),
+    GoRoute(path: '/ai/tasks', pageBuilder: (context, state) => appPage(state, const AiTasksPage(), backdrop: true)),
+    GoRoute(path: '/ai/tasks/:id', pageBuilder: (context, state) => appPage(state, AiTaskPage(taskId: state.pathParameters['id']!), backdrop: true)),
     GoRoute(path: '/import', pageBuilder: (context, state) => appPage(state, const ImportPage(), backdrop: true)),
   ],
 );

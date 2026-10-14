@@ -16,6 +16,7 @@ import '../../statistics/domain/providers.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 import '../../sync/presentation/cloud_sync_controller.dart';
+import '../../ai/domain/ai_providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -26,11 +27,12 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _busy = false;
+  bool _includeAi = false;
 
   Future<void> _backup() async {
     setState(() => _busy = true);
     try {
-      final data = await ref.read(databaseProvider).createBackupSnapshot();
+      final data = await ref.read(databaseProvider).createBackupSnapshot(includeAi: _includeAi);
       final bytes = Uint8List.fromList(
         utf8.encode(const JsonEncoder.withIndent('  ').convert(data)),
       );
@@ -91,6 +93,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       );
       if (confirmed != true) return;
       setState(() => _busy = true);
+      await ref.read(aiTaskRunnerProvider).cancelAll();
       await ref.read(cloudSyncProvider.notifier).pauseForLocalRestore();
       await ref.read(databaseProvider).restoreBackupSnapshot(decoded);
       ref.invalidate(appearanceProvider);ref.invalidate(readingProvider);ref.invalidate(checkinsProvider);ref.invalidate(sessionOptionsProvider);ref.invalidate(sessionProgressProvider);
@@ -163,6 +166,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             ),
             const SizedBox(height: 24),
             Text('数据管理', style: Theme.of(context).textTheme.titleMedium),
+            SwitchListTile(title: const Text('文件备份包含 AI 数据'), subtitle: const Text('包含建议、任务和确认内容；不含访问凭证'),
+              value: _includeAi, onChanged: _busy ? null : (v) => setState(() => _includeAi = v)),
             const SizedBox(height: 10),
             Card(
               child: Column(
@@ -192,12 +197,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             FutureBuilder<String?>(future:ref.read(databaseProvider).loadSetting('last_backup_at'),builder:(context,s)=>ListTile(title:const Text('备份提醒'),subtitle:Text(s.data==null?'还没有导出过备份，建议每周备份一次':'上次备份：${s.data!.substring(0,10)}'),trailing:TextButton(onPressed:_backup,child:const Text('现在备份')))),
             ListTile(title:const Text('撤销最近一次恢复'),subtitle:const Text('恢复前的本机快照会自动保留一次'),onTap:()async{
               final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('恢复到导入备份前？'),content:const Text('将替换现在的词库和学习进度。'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('取消')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('恢复'))]));
-              if(ok==true){await ref.read(cloudSyncProvider.notifier).pauseForLocalRestore();final result=await ref.read(databaseProvider).recoverPreviousRestore();ref.invalidate(databaseProvider);if(context.mounted){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(result?'已恢复到上一次快照':'没有可恢复的快照')));}}
+              if(ok==true){await ref.read(aiTaskRunnerProvider).cancelAll();await ref.read(cloudSyncProvider.notifier).pauseForLocalRestore();final result=await ref.read(databaseProvider).recoverPreviousRestore();ref.invalidate(databaseProvider);if(context.mounted){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(result?'已恢复到上一次快照':'没有可恢复的快照')));}}
             }),
             ListTile(leading:const Icon(Icons.cloud_sync_outlined),title:const Text('账户与云同步'),subtitle:const Text('登录后接续词库、学习进度与打卡'),trailing:const Icon(Icons.chevron_right),onTap:()=>context.push('/settings/cloud')),
+            ListTile(leading: const Icon(Icons.auto_awesome), title: const Text('AI 学习助手设置'),
+              subtitle: const Text('私有代理、会话凭证、语境与缓存'), trailing: const Icon(Icons.chevron_right), onTap: () => context.push('/settings/ai')),
             ListTile(title:const Text('跨设备文件迁移'),subtitle:const Text('也可导出备份到“文件”或 iCloud Drive，在另一台设备恢复。')),
-            ListTile(title:const Text('查看新版与更新记录'),subtitle:const Text('当前 v0.5.2'),onTap:()=>launchUrl(Uri.parse('https://github.com/Abaddon145/-/releases'),mode:LaunchMode.externalApplication)),
-            const Center(child: Text('KoreanMemo · v0.5.2')),
+            ListTile(title:const Text('查看新版与更新记录'),subtitle:const Text('当前 v0.6.0'),onTap:()=>launchUrl(Uri.parse('https://github.com/Abaddon145/-/releases'),mode:LaunchMode.externalApplication)),
+            const Center(child: Text('KoreanMemo · v0.6.0')),
             if (_busy) ...[
               const SizedBox(height: 16),
               const LinearProgressIndicator(),

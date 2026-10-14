@@ -11,6 +11,7 @@ import '../domain/practice.dart';
 import '../domain/providers.dart';
 import 'study_controller.dart';
 import 'session_sheet.dart';
+import '../../ai/presentation/ai_assistant_sheet.dart';
 
 class StudyPage extends ConsumerStatefulWidget {
   const StudyPage({super.key});
@@ -27,17 +28,24 @@ class _StudyPageState extends ConsumerState<StudyPage> with WidgetsBindingObserv
     ref.read(studyControllerProvider.notifier).setAppActive(state == AppLifecycleState.resumed);
   }
   Future<void> _configure() async {
-    ref.read(studyControllerProvider.notifier).setVisible(false);
-    await showSessionSheet(context);
-    if (mounted) ref.read(studyControllerProvider.notifier).setVisible(true);
+    final controller = ref.read(studyControllerProvider.notifier);
+    controller.pauseForPanel();
+    try {await showSessionSheet(context);}
+    finally {if (mounted && controller.mounted) { controller.resumeFromPanel(); }}
   }
   Future<void> _edit(Word word) async {
     final controller = ref.read(studyControllerProvider.notifier);
-    controller.setVisible(false);
+    controller.pauseForPanel();
     final saved = await showWordEditor(context, word: word);
     if (!mounted) return;
-    controller.setVisible(true);
+    controller.resumeFromPanel();
     if (saved == true) { ref.invalidate(libraryWordsProvider); await controller.load(); }
+  }
+  Future<void> _explain(Word word) async {
+    final controller = ref.read(studyControllerProvider.notifier);
+    controller.pauseForPanel();
+    try {await showAiAssistant(context, word, explain: true);}
+    finally {if (mounted && controller.mounted) { controller.resumeFromPanel(); }}
   }
   @override Widget build(BuildContext context) {
     final state = ref.watch(studyControllerProvider);
@@ -85,10 +93,14 @@ class _StudyPageState extends ConsumerState<StudyPage> with WidgetsBindingObserv
                     }, icon: const Icon(Icons.star_border_rounded)),
                     IconButton(tooltip: '编辑单词', onPressed: () => _edit(word), icon: const Icon(Icons.edit_outlined)),
                     IconButton(tooltip: '单词详情', onPressed: () async {
-                      controller.setVisible(false); await showWordDetail(context, word); if (mounted) { ref.read(studyControllerProvider.notifier).setVisible(true); }
+                      controller.pauseForPanel();
+                      try {await showWordDetail(context, word);}
+                      finally {if (mounted && controller.mounted) { controller.resumeFromPanel(); }}
                     }, icon: const Icon(Icons.info_outline)),
                   ]),
                   const SizedBox(height: 24),
+                  OutlinedButton.icon(onPressed: state.isSubmitting ? null : () => _explain(word),
+                    icon: const Icon(Icons.auto_awesome), label: const Text('AI 解释')),
                   Text(item.question, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize:reading.wordSize,height:reading.lineHeight), textAlign: TextAlign.center),
                   if (word.partOfSpeech?.isNotEmpty == true) Padding(padding: const EdgeInsets.only(top: 10), child: Chip(label: Text(word.partOfSpeech!))),
                   const SizedBox(height: 12),

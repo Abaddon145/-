@@ -1,0 +1,24 @@
+name: AI proxy CI
+on:
+  push:
+    branches: [main, "codex/**"]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  proxy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-proxy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ai-proxy/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build

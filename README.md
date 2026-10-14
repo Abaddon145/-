@@ -1,5 +1,15 @@
 # KoreanMemo
 
+## v0.6.0 AI 学习助手
+
+新增单词详情 AI 补全、统一词库 AI 批量补中文（每批最多 20）、学习页 AI 解释。
+建议经过预览、编辑和字段选择才保存；任务/缓存保存在 Drift，支持取消、部分失败重试和重开恢复。
+AI 保存不改变 FSRS、学习计数与打卡；每日新词和继续学习轮次仍不限 100。
+
+需要另外部署私有 Node.js 代理并配置模型，GitHub Pages 继续托管静态前端。
+没有代理地址与密钥时普通背词继续可用，AI 不会自动请求模型。
+见 [部署与使用](docs/ai-deployment.md)、[开源参考](docs/ai-open-source-references.md)、[验证记录](docs/ai-validation.md)。
+
 本地优先的韩语背单词应用。用户从 Excel 导入自己的词库，应用通过韩语 TTS 和 FSRS 安排学习与复习。
 
 ## 当前里程碑

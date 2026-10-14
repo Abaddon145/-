@@ -54,10 +54,15 @@ class StudyController extends StateNotifier<StudyUiState> {
   final Stopwatch _clock = Stopwatch();
   bool _visible = true;
   bool _appActive = true;
+  int _panelDepth = 0;
+  void pauseForPanel() {if (!mounted) return; _panelDepth++; _syncClock();}
+  void resumeFromPanel() {if (!mounted) return; if (_panelDepth > 0) _panelDepth--; _syncClock();}
+  Duration get effectiveStudyTime => _clock.elapsed;
+  bool get isTiming => _clock.isRunning;
   void setVisible(bool value) { if(!mounted)return; _visible = value; _syncClock(); }
   void setAppActive(bool value) { if(!mounted)return; _appActive = value; _syncClock(); }
   void _syncClock() {
-    if (_visible && _appActive && state.word != null && !state.isLoading && !state.isSubmitting) {
+    if (_visible && _appActive && _panelDepth == 0 && state.word != null && !state.isLoading && !state.isSubmitting) {
       _clock.start();
     } else { _clock.stop(); }
   }
