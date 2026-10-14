@@ -44,8 +44,10 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       _bytes=data;_fileName=file.name;_sheets=_service.sheetNames(data);_sheet=_sheets.first;_all=false;
       _headers=_service.sheetHeaders(data,_sheet!);_mapping=_service.guessMapping(_headers);
       await _parse();
-    }catch(e){if(mounted)setState(()=>_error=e is TimeoutException ? '读取文件超时，请先将文件下载到本机再重试' : e);}
+    }catch(e){
       _bytes=null;
+      if(mounted)setState(()=>_error=e is TimeoutException ? '读取文件超时，请先将文件下载到本机再重试' : e);
+    }
     finally{if(mounted)setState((){_busy=false;_stage='';});}
   }
   Future<void> _parse()async {
