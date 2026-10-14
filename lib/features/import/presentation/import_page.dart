@@ -33,7 +33,6 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       if(!file.name.toLowerCase().endsWith('.xlsx')) {
         throw const FormatException('请选择.xlsx格式；.xls或.csv请先在Excel/WPS中另存为.xlsx');
       }
-      if(file.size>20*1024*1024) { throw const FormatException('Excel文件超过20MB，请分批导入'); }
       setState((){_stage='正在读取文件…';_bytes=null;});
       final data=Uint8List.fromList(await file.readAsBytes().timeout(const Duration(seconds:30)));
       if(!mounted)return;
@@ -46,7 +45,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       await _parse();
     }catch(e){
       _bytes=null;
-      if(mounted)setState(()=>_error=e is TimeoutException ? '读取文件超时，请先将文件下载到本机再重试' : e);
+      if(mounted){setState(()=>_error=e is TimeoutException ? '读取文件超时，请先将文件下载到本机再重试' : e);}
     }
     finally{if(mounted)setState((){_busy=false;_stage='';});}
   }

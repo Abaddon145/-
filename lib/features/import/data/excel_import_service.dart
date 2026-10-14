@@ -43,7 +43,7 @@ class ExcelImportService {
   int _headerIndex(List<List<String>> rows) {
     for (var i = 0; i < rows.length && i < 20; i++) {
       final mapping = guessMapping(rows[i]);
-      if (mapping.containsKey(ImportField.korean) || mapping.containsKey(ImportField.english)) return i;
+      if (mapping.containsKey(ImportField.korean) || mapping.containsKey(ImportField.english)) { return i; }
     }
     return 0;
   }
@@ -74,6 +74,40 @@ class ExcelImportService {
     final mapping = mappingOverride ?? guessMapping(headers);
     if (!mapping.containsKey(ImportField.korean) && !mapping.containsKey(ImportField.english)) {
       throw const FormatException('未识别单词列，请在下方手动选择韩语或英文列');
+    }
+    final drafts = <WordDraft>[];
+    var invalidRows = 0;
+    for (final row in rows.skip(headerIndex + 1)) {
+      final korean = _value(row, mapping[ImportField.korean]);
+      final english = _value(row, mapping[ImportField.english]);
+      final meaning = _value(row, mapping[ImportField.meaningZh]);
+      if (korean.isEmpty && english.isEmpty && meaning.isEmpty) continue;
+      if (korean.isEmpty && english.isEmpty) {
+        invalidRows++;
+        continue;
+      }
+      final term = korean.isNotEmpty && english.isNotEmpty && korean != english ? '$english / $korean' : korean.isNotEmpty ? korean : english;
+      if (!RegExp(r'[A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(term)) { invalidRows++; continue; }
+      final hasKorean = RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(term);
+      final hasEnglish = RegExp(r'[A-Za-z]').hasMatch(term);
+      drafts.add(
+        WordDraft(
+          korean: term,
+          meaningZh: meaning.isEmpty ? '原表未提供中文释义' : meaning,
+          baseForm: _value(row, mapping[ImportField.baseForm]),
+          pronunciation: _optional(row, mapping[ImportField.pronunciation]),
+          partOfSpeech: _optional(row, mapping[ImportField.partOfSpeech]),
+          exampleKo: _optional(row, mapping[ImportField.exampleKo]),
+          exampleZh: _optional(row, mapping[ImportField.exampleZh]),
+          topikLevel: _optional(row, mapping[ImportField.topikLevel]),
+          category: _optional(row, mapping[ImportField.category]),
+          tags: [if(_optional(row,mapping[ImportField.tags])!=null)_optional(row,mapping[ImportField.tags])!,
+            if(meaning.isEmpty)hasKorean && hasEnglish ? '英韩配对' : hasKorean ? '仅韩文' : '仅英文'].join(', '),
+          note: _optional(row, mapping[ImportField.note]),
+          hanja: _optional(row, mapping[ImportField.hanja]),
+          etymology: _optional(row, mapping[ImportField.etymology]),
+        ),
+      );
     }
     return ParsedWorkbook(sheetName:name,headers:headers,mapping:mapping,drafts:drafts,invalidRows:invalidRows);
   }

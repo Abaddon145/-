@@ -6,7 +6,7 @@ import 'package:xml/xml.dart';
 /// Reads vocabulary text without depending on workbook styles or number formats.
 class XlsxTextReader {
   Map<String, List<List<String>>> read(Uint8List bytes) {
-    if (bytes.isEmpty) throw const FormatException('文件为空，请重新选择已下载的.xlsx文件');
+    if (bytes.isEmpty) { throw const FormatException('文件为空，请重新选择已下载的.xlsx文件'); }
     try {
       final archive = ZipDecoder().decodeBytes(bytes);
       if (archive.files.fold<int>(0, (sum, file) => sum + file.size) > 100 * 1024 * 1024) {
@@ -50,7 +50,7 @@ class XlsxTextReader {
               column = column * 26 + code - 64;
             }
             final index = column == 0 ? values.length : column - 1;
-            if (index > 16383) throw const FormatException('工作表列数超出Excel范围');
+            if (index > 16383) { throw const FormatException('工作表列数超出Excel范围'); }
             while (values.length <= index) { values.add(''); }
             final raw = cell.childElements.where((e) => e.name.local == 'v').firstOrNull?.innerText ?? '';
             final type = cell.getAttribute('t');
@@ -60,11 +60,11 @@ class XlsxTextReader {
                 : type == 'e' ? '' : raw).trim();
           }
           if (values.any((value) => value.isNotEmpty)) rows.add(values);
-          if (rows.length > 100000) throw const FormatException('单表超过10万行，请分批导入');
+          if (rows.length > 100000) { throw const FormatException('单表超过10万行，请分批导入'); }
         }
         if (rows.isNotEmpty) result[sheet.getAttribute('name') ?? '工作表'] = rows;
       }
-      if (result.isEmpty) throw const FormatException('Excel中没有包含数据的工作表');
+      if (result.isEmpty) { throw const FormatException('Excel中没有包含数据的工作表'); }
       return result;
     } on FormatException {
       rethrow;
