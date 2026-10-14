@@ -10,7 +10,7 @@
 | Drift build_runner 代码生成 | 成功，数据库 v4 增量迁移 |
 | `flutter analyze` | No issues found |
 | `flutter test --reporter expanded` | **78 项全部通过**，包含现有 45 项及 AI 新增 33 项 |
-| `npm test`（ai-proxy） | **20 项全部通过**，仅 Mock SDK HTTP / 本机测试代理，无真实模型请求 |
+| `npm test`（ai-proxy） | **21 项全部通过**，仅 Mock SDK HTTP / 本机测试代理，无真实模型请求；新增 DeepSeek 地址、Chat / JSON object、输出上限和非思考参数的验证 |
 | `npm run check` / `npm run build` | TypeScript 检查与编译通过 |
 | `flutter build web --release --base-href '/-/' --pwa-strategy offline-first` | 发布构建成功，包含 Drift sqlite3.wasm 和 worker |
 | `git diff --check` | 通过 |

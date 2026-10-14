@@ -79,6 +79,27 @@ test('compatible chat json_object/text capabilities do not assume strict schema 
     assert.deepEqual(bodies[0]?.response_format, mode === 'text' ? undefined : {type: 'json_object'});
   }
 });
+test('DeepSeek configuration targets its Chat API with JSON output and bounded non-thinking output', async () => {
+  const c = loadConfig({PROXY_ACCESS_TOKEN: config.accessToken, MODEL_NAME: 'deepseek-flash',
+    MODEL_API_KEY: 'unit-test-deepseek-key', CHAT_REASONING_EFFORT: 'none'});
+  assert.equal(c.baseURL, 'https://api.deepseek.com');
+  assert.equal(c.api, 'chat'); assert.equal(c.outputMode, 'json_object');
+  const r = request(); let calls = 0;
+  const provider = new OpenAIProvider(c, (async (url, init) => {
+    calls++;
+    assert.equal(String(url), 'https://api.deepseek.com/chat/completions');
+    const body = JSON.parse(init?.body as string);
+    assert.equal(body.model, 'deepseek-flash');
+    assert.deepEqual(body.response_format, {type: 'json_object'});
+    assert.equal(body.max_tokens, 4000); assert.equal(body.reasoning_effort, 'none');
+    assert.equal(body.response_format.json_schema, undefined);
+    return new Response(JSON.stringify({choices: [{finish_reason: 'stop',
+      message: {content: JSON.stringify(result(r)), reasoning_content: ''}}]}),
+      {headers: {'content-type': 'application/json'}});
+  }) as typeof fetch);
+  assert.deepEqual(await provider.generate(r, 'complete', new AbortController().signal), result(r));
+  assert.equal(calls, 1);
+});
 for (const [reason, refusal, code] of [['length', null, 'truncated'], ['stop', 'no', 'refused'],
   ['content_filter', null, 'refused']] as const) test(`chat ${reason}/${refusal} is distinguished`, async () => {
   const {provider} = mockProvider({...config, api: 'chat'}, () => ({choices: [{finish_reason: reason, message: {content: '', refusal}}]}));

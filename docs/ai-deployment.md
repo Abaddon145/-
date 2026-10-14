@@ -29,13 +29,27 @@ npm start
 
 | 配置 | 内容 |
 | --- | --- |
-| `MODEL_BASE_URL` | 模型 API 基地址，默认 `https://api.openai.com/v1`；非本机必须 HTTPS |
-| `MODEL_NAME` | 服务商确实支持的模型名，没有默认猜测 |
-| `MODEL_API_KEY` | 服务端模型密钥 |
+| `MODEL_BASE_URL` | 模型 API 基地址，本次默认 `https://api.deepseek.com`；非本机必须 HTTPS |
+| `MODEL_NAME` | 模板预填 `deepseek-flash`，可改为 DeepSeek 当前支持且你已开通的模型；程序不会猜测未填写的模型 |
+| `MODEL_API_KEY` | 服务端 DeepSeek API 密钥 |
 | `PROXY_ACCESS_TOKEN` | 单独随机生成至少 24 字符的访问凭证，可用 `openssl rand -hex 32`；不能直接复用模型密钥 |
 | `PROVIDER_API` | `responses` 或 `chat`，以服务商实际支持为准 |
 | `OUTPUT_MODE` | 支持严格结构化输出时选 `json_schema`；否则明确选 `json_object` 或 `text`，所有模式仍通过 Zod 严格校验 |
 | `ALLOWED_ORIGINS` | 逗号分隔，PWA 为 `https://abaddon145.github.io`，不是带 `/-/` 的 URL |
+
+### 本次使用 DeepSeek
+
+`.env.example` 已按 DeepSeek 的 Chat Completions API 配置 `PROVIDER_API=chat` 和 `OUTPUT_MODE=json_object`。
+`MODEL_BASE_URL=https://api.deepseek.com`，模型示例为 `deepseek-flash`。
+`CHAT_MAX_TOKENS=4000` 限制输出；`CHAT_REASONING_EFFORT=none` 使用非思考模式，适合短词条补全和解释。
+这些参数与模型名已核对 [DeepSeek 官方 API 文档](https://api-docs.deepseek.com/) 和 [Chat API 参数](https://api-docs.deepseek.com/api/create-chat-completion/)。
+若使用其他兼容服务，可将 `CHAT_REASONING_EFFORT=omit`；不支持 `max_tokens` 的服务可设置 `CHAT_MAX_TOKENS=omit`，并显式调整 API / 输出能力配置。
+
+DeepSeek 的 [JSON Output](https://api-docs.deepseek.com/guides/json_mode/) 使用 JSON object 模式；本项目仍在服务端和客户端验证字段、数量、长度及请求身份，不把 JSON 模式当成严格 Schema 保证。
+代理使用官方 OpenAI SDK 的兼容协议调用 DeepSeek，实际请求发往 `MODEL_BASE_URL` 指定的 DeepSeek 服务，无需 OpenAI 模型账户或 OpenAI 模型密钥。
+
+DeepSeek 网页聊天的登录不等于 API 访问。若已有 DeepSeek API 密钥，请仅填写到部署服务器的 `.env` / 环境变量；不要粘贴到 App 的代理凭证框。
+完成服务器配置后，在 App 中填写 **私有代理的 HTTPS 地址及独立代理访问凭证**，而不是 DeepSeek 模型 API 地址与密钥。
 
 代理默认监听 `127.0.0.1:8787`。通过已有 Nginx/Caddy 等反向代理提供 HTTPS，转发 `Authorization`，限制请求体至 16 KiB；读超时需超过 `REQUEST_TIMEOUT_MS`。关闭反向代理对请求头、正文、凭证与模型响应的记录。移动端在 HTTPS 网站上不能请求远端明文 HTTP。
 
@@ -83,4 +97,4 @@ AI 保存的用法、搭配、语法等在独立表中，不拼接进备注。�
 
 测试只用 Mock 模型、Mock HTTP 或本机测试代理，不使用真实模型密钥，不产生计费请求。验证记录见 [AI 验收记录](ai-validation.md)。
 
-本次代码与 Mock 流程可以审查；没有提供真实代理地址/密钥，因此 AI 还未完成真实服务接入，线上 v0.5.2 不会因为创建 PR 自动更新。工业术语和疑似拼写结果始终需要人工核对。服务商 API 能力需要部署者验证并配置；选错能力会明确失败，不会自动降级发第二次计费请求。
+本次代码与 Mock 流程可以审查；没有提供真实代理地址/密钥，因此 AI 还未完成真实服务接入。前端发布后，仍需独立部署并配置 DeepSeek 代理；仅创建 PR 不会更新线上站点。工业术语和疑似拼写结果始终需要人工核对。服务商 API 能力需要部署者验证并配置；选错能力会明确失败，不会自动降级发第二次计费请求。

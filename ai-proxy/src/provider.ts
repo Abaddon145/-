@@ -35,6 +35,8 @@ export class OpenAIProvider implements Provider {
       }
       const response = await this.client.chat.completions.create({
         model: this.config.model,
+        ...(this.config.chatMaxTokens ? {max_tokens: this.config.chatMaxTokens} : {}),
+        ...(this.config.chatReasoningEffort ? {reasoning_effort: this.config.chatReasoningEffort} : {}),
         messages: [{role: 'system', content: systemPrompt}, {role: 'user', content: prompt}],
         ...(this.config.outputMode === 'text' ? {} : {response_format: this.config.outputMode === 'json_schema'
           ? {type: 'json_schema' as const, json_schema: {name: 'korean_memo', strict: true, schema}}
