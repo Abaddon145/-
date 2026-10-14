@@ -43,8 +43,10 @@ class AiException implements Exception {
   final String code;
   String get message =>
       const {
-        'not_configured': '请先在 AI 设置中填写代理地址和本次会话凭证。',
-        'unauthorized': '代理访问凭证无效，请重新填写。',
+        'not_configured': '请先在 AI 设置中填写 DeepSeek API Key，或配置私有代理。',
+        'unauthorized': 'API Key 或代理访问凭证无效，请重新填写。',
+        'model_unavailable': '当前账户未提供该模型，请在高级选项中检查模型名称。',
+        'insufficient_balance': 'DeepSeek API 余额不足，请到 DeepSeek 开放平台检查。',
         'network': '无法连接 AI 服务，请检查网络。普通背词仍可使用。',
         'timeout': 'AI 请求超时，可稍后手动重试。',
         'rate_limited': '请求达到服务限额，请稍后重试。',

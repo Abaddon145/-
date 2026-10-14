@@ -15,3 +15,7 @@ Zod 4.3.6 用于服务端验证及 JSON Schema 生成（MIT）；TypeScript、ts
 四个参考项目的词库、生成内容、图片、品牌素材与界面均未复制。测试例子由本项目自建，仅存在测试代码。流程借鉴不构成对参考项目速度或模型效果的性能承诺。
 
 本项目的 schema、提示词、Flutter UI 和 TypeScript 适配代码独立编写。附上参考项目许可用于审查；直接依赖的版权及第三方许可文件仍保留在 npm 包中，打包服务端时必须随依赖一同分发。
+
+## v0.6.1 个人 DeepSeek API Key 直连
+
+按用户后续要求增加 `lib/features/ai/data/ai_deepseek_client.dart`；不新增 SDK 或依赖，使用已有 Dart HTTP。`domain/ai_prompts.dart` 独立重写并沿用本项目 ko-zh-v1 字段契约，按 [DeepSeek 官方 Chat API](https://api-docs.deepseek.com/api/create-chat-completion/) 和 [JSON Output](https://api-docs.deepseek.com/guides/json_mode/) 配置。官方 API 文档和跨域预检核对日期 2026-10-14。代理端 SDK/队列与原许可记录不变；密钥不写入源码、数据库、日志或备份。
