@@ -47,7 +47,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       _bytes=null;
       if(mounted){setState(()=>_error=e is TimeoutException ? '读取文件超时，请先将文件下载到本机再重试' : e);}
     }
-    finally{if(mounted)setState((){_busy=false;_stage='';});}
+    finally{if(mounted){setState((){_busy=false;_stage='';});}}
   }
   Future<void> _parse()async {
     final bytes=_bytes;if(bytes==null)return;
@@ -65,7 +65,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       for(final draft in preview.drafts){final key='${draft.normalizedKorean}\u0000${draft.normalizedBaseForm}';if(!existing.add(key))duplicates++;}
       if(mounted&&version==_version){setState((){_preview=preview;_duplicates=duplicates;_error=null;});}
     }catch(e){if(mounted&&version==_version){setState((){_error=e;_preview=null;});}}
-    finally{if(mounted&&version==_version)setState(()=>_parsing=false);}
+    finally{if(mounted&&version==_version){setState(()=>_parsing=false);}}
   }
   Future<void> _import()async{
     final preview=_preview;if(preview==null||_busy||_parsing)return;
@@ -80,7 +80,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       ref.invalidate(studyControllerProvider);ref.invalidate(dailyPlanProgressProvider);
       if(mounted){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('统一词库新增 ${result.inserted} · 复用 ${result.reused}')));context.go('/library');}
     }catch(e){if(mounted)setState(()=>_error=e);}
-    finally{if(mounted)setState(()=>_busy=false);}
+    finally{if(mounted){setState(()=>_busy=false);}}
   }
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('导入统一词库')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(20),children:[
     const Text('韩语、英文、英韩配对均可导入；只有中文的行跳过。不会覆盖原有学习进度。'),
