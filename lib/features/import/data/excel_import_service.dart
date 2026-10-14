@@ -1,13 +1,13 @@
 import 'dart:typed_data';
 
-import 'package:excel/excel.dart';
+import 'xlsx_text_reader.dart';
 
 import '../../../core/database/app_database.dart';
 import '../domain/import_models.dart';
 
 class ExcelImportService {
   static const _aliases = <ImportField, Set<String>>{
-    ImportField.korean: {'韩语单词', '韩语', '单词', '단어', 'word', 'korean'},
+    ImportField.korean: {'韩语单词', '韩语', '单词', '단어', 'word', 'korean', '英语 / 韩语', '英文 / 韩文', '英语/韩文', '英韩', '한국어'},
     ImportField.english: {'英文','英语','영어','english','englishword'},
     ImportField.meaningZh: {
       '中文释义',
@@ -30,36 +30,54 @@ class ExcelImportService {
     ImportField.etymology: {'词源', '어원', 'etymology'},
   };
 
-  List<String> sheetNames(Uint8List bytes) => Excel.decodeBytes(bytes).tables.keys.toList();
-  List<String> sheetHeaders(Uint8List bytes, String name) => Excel.decodeBytes(bytes).tables[name]!.rows.first.map(_cellText).toList();
-
-  ParsedWorkbook parseFirstSheet(Uint8List bytes, {String? sheetName, Map<ImportField,int>? mappingOverride, bool allSheets=false}) {
-    final workbook = Excel.decodeBytes(bytes);
-    if (workbook.tables.isEmpty) {
-      throw const FormatException('Excel 中没有可读取的工作表。');
+  Uint8List? _cachedBytes;
+  Map<String, List<List<String>>>? _cachedSheets;
+  Map<String, List<List<String>>> _sheets(Uint8List bytes) {
+    if (!identical(bytes, _cachedBytes)) {
+      final decoded = XlsxTextReader().read(bytes);
+      _cachedBytes = bytes;
+      _cachedSheets = decoded;
     }
-    if(allSheets) {
-      final drafts=<WordDraft>[];var invalid=0;
-      for(final name in workbook.tables.keys) {
-        try { final sheet=parseFirstSheet(bytes,sheetName:name);drafts.addAll(sheet.drafts);invalid+=sheet.invalidRows; }
-        on FormatException { invalid+=workbook.tables[name]!.rows.length; }
+    return _cachedSheets!;
+  }
+  int _headerIndex(List<List<String>> rows) {
+    for (var i = 0; i < rows.length && i < 20; i++) {
+      final mapping = guessMapping(rows[i]);
+      if (mapping.containsKey(ImportField.korean) || mapping.containsKey(ImportField.english)) { return i; }
+    }
+    return 0;
+  }
+  List<String> sheetNames(Uint8List bytes) => _sheets(bytes).keys.toList();
+  List<String> sheetHeaders(Uint8List bytes, String name) {
+    final rows = _sheets(bytes)[name];
+    if (rows == null) throw const FormatException('工作表不存在，请重新选择');
+    return rows[_headerIndex(rows)];
+  }
+  ParsedWorkbook parseFirstSheet(Uint8List bytes, {String? sheetName, Map<ImportField,int>? mappingOverride, bool allSheets=false}) {
+    final sheets = _sheets(bytes);
+    if (allSheets) {
+      final drafts = <WordDraft>[];
+      var invalid = 0;
+      for (final name in sheets.keys) {
+        try {
+          final parsed = parseFirstSheet(bytes, sheetName: name);
+          drafts.addAll(parsed.drafts); invalid += parsed.invalidRows;
+        } on FormatException { invalid += sheets[name]!.length; }
       }
       return ParsedWorkbook(sheetName:'全部工作表',headers:const [],mapping:const {},drafts:drafts,invalidRows:invalid);
     }
-    final entry = sheetName==null ? workbook.tables.entries.first : workbook.tables.entries.firstWhere((s)=>s.key==sheetName);
-    final rows = entry.value.rows;
-    if (rows.isEmpty) {
-      throw const FormatException('工作表为空。');
-    }
-    final headers = rows.first.map(_cellText).toList(growable: false);
+    final name = sheetName ?? sheets.keys.first;
+    final rows = sheets[name];
+    if (rows == null) throw const FormatException('工作表不存在，请重新选择');
+    final headerIndex = _headerIndex(rows);
+    final headers = rows[headerIndex];
     final mapping = mappingOverride ?? guessMapping(headers);
     if (!mapping.containsKey(ImportField.korean) && !mapping.containsKey(ImportField.english)) {
-      throw const FormatException('请手动选择韩语或英文单词列。');
+      throw const FormatException('未识别单词列，请在下方手动选择韩语或英文列');
     }
-
     final drafts = <WordDraft>[];
     var invalidRows = 0;
-    for (final row in rows.skip(1)) {
+    for (final row in rows.skip(headerIndex + 1)) {
       final korean = _value(row, mapping[ImportField.korean]);
       final english = _value(row, mapping[ImportField.english]);
       final meaning = _value(row, mapping[ImportField.meaningZh]);
@@ -68,9 +86,13 @@ class ExcelImportService {
         invalidRows++;
         continue;
       }
+      final term = korean.isNotEmpty && english.isNotEmpty && korean != english ? '$english / $korean' : korean.isNotEmpty ? korean : english;
+      if (!RegExp(r'[A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(term)) { invalidRows++; continue; }
+      final hasKorean = RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(term);
+      final hasEnglish = RegExp(r'[A-Za-z]').hasMatch(term);
       drafts.add(
         WordDraft(
-          korean: korean.isNotEmpty && english.isNotEmpty && korean != english ? '$english / $korean' : korean.isNotEmpty ? korean : english,
+          korean: term,
           meaningZh: meaning.isEmpty ? '原表未提供中文释义' : meaning,
           baseForm: _value(row, mapping[ImportField.baseForm]),
           pronunciation: _optional(row, mapping[ImportField.pronunciation]),
@@ -80,20 +102,14 @@ class ExcelImportService {
           topikLevel: _optional(row, mapping[ImportField.topikLevel]),
           category: _optional(row, mapping[ImportField.category]),
           tags: [if(_optional(row,mapping[ImportField.tags])!=null)_optional(row,mapping[ImportField.tags])!,
-            if(meaning.isEmpty)korean.isNotEmpty&&english.isNotEmpty?'英韩配对':korean.isNotEmpty?'仅韩文':'仅英文'].join(', '),
+            if(meaning.isEmpty)hasKorean && hasEnglish ? '英韩配对' : hasKorean ? '仅韩文' : '仅英文'].join(', '),
           note: _optional(row, mapping[ImportField.note]),
           hanja: _optional(row, mapping[ImportField.hanja]),
           etymology: _optional(row, mapping[ImportField.etymology]),
         ),
       );
     }
-    return ParsedWorkbook(
-      sheetName: entry.key,
-      headers: headers,
-      mapping: mapping,
-      drafts: drafts,
-      invalidRows: invalidRows,
-    );
+    return ParsedWorkbook(sheetName:name,headers:headers,mapping:mapping,drafts:drafts,invalidRows:invalidRows);
   }
 
   Map<ImportField, int> guessMapping(List<String> headers) {
@@ -112,14 +128,14 @@ class ExcelImportService {
     return result;
   }
 
-  String _cellText(Data? cell) => cell?.value?.toString().trim() ?? '';
+  String _cellText(String cell) => cell.trim();
 
-  String _value(List<Data?> row, int? index) {
-    if (index == null || index >= row.length) return '';
+  String _value(List<String> row, int? index) {
+    if (index == null || index < 0 || index >= row.length) return '';
     return _cellText(row[index]);
   }
 
-  String? _optional(List<Data?> row, int? index) {
+  String? _optional(List<String> row, int? index) {
     final value = _value(row, index);
     return value.isEmpty ? null : value;
   }
@@ -127,7 +143,7 @@ class ExcelImportService {
   String _normalizeHeader(String value) {
     return value
         .toLowerCase()
-        .replaceAll(RegExp(r'[\s_\-（）()]'), '')
+        .replaceAll(RegExp(r'[\s_\-/／（）()]'), '')
         .trim();
   }
 }
