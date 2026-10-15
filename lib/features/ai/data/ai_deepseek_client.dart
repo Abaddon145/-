@@ -4,24 +4,33 @@ import '../domain/ai_models.dart';
 import '../domain/ai_prompts.dart';
 import 'ai_client.dart';
 
-/// Direct personal-key mode: key stays in memory and only goes to DeepSeek.
+/// Direct personal-key mode: key only goes to DeepSeek.
 class AiDeepSeekClient implements AiGateway {
   AiDeepSeekClient({
     required this.apiKey,
+    this.apiKeyLoader,
     this.model = 'deepseek-flash',
     Duration timeout = const Duration(seconds: 90),
     http.Client Function()? clientFactory,
-  }) : _transport = AiHttpTransport(
-         credential: apiKey.trim(),
-         timeout: timeout,
-         clientFactory: clientFactory,
-       );
+  }) : _timeout = timeout,
+       _clientFactory = clientFactory;
   final String apiKey, model;
-  final AiHttpTransport _transport;
+  final Future<String> Function()? apiKeyLoader;
+  final Duration _timeout;
+  final http.Client Function()? _clientFactory;
+  Future<AiHttpTransport> _transport() async {
+    final key = await apiKeyLoader?.call() ?? apiKey;
+    _validate(key);
+    return AiHttpTransport(
+      credential: key.trim(),
+      timeout: _timeout,
+      clientFactory: _clientFactory,
+    );
+  }
 
-  void _validate() {
-    if (apiKey.trim().isEmpty ||
-        apiKey.contains(RegExp(r'\s')) ||
+  void _validate(String key) {
+    if (key.trim().isEmpty ||
+        key.contains(RegExp(r'\s')) ||
         model.trim().isEmpty ||
         model.length > 200) {
       throw const AiException('not_configured');
@@ -33,9 +42,10 @@ class AiDeepSeekClient implements AiGateway {
     AiRequest request,
     AiCancellation cancellation,
   ) async {
-    _validate();
+    final transport = await _transport();
+    cancellation.check();
     request.validate();
-    final response = await _transport.send(
+    final response = await transport.send(
       'POST',
       Uri.https('api.deepseek.com', '/chat/completions'),
       cancellation,
@@ -93,8 +103,8 @@ class AiDeepSeekClient implements AiGateway {
 
   @override
   Future<String> health() async {
-    _validate();
-    final response = await _transport.send(
+    final transport = await _transport();
+    final response = await transport.send(
       'GET',
       Uri.https('api.deepseek.com', '/models'),
       AiCancellation(),

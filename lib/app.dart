@@ -5,13 +5,14 @@ import 'core/router/app_router.dart';
 import 'core/time/local_day.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/appearance_settings.dart';
-import 'features/sync/presentation/cloud_sync_observer.dart';
+import 'features/ai/domain/ai_providers.dart';
 
 class KoreanMemoApp extends ConsumerWidget {
   const KoreanMemoApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(aiApiKeyProvider);
     final appearance = ref.watch(appearanceProvider).valueOrNull;
     final preset = AppTheme.preset(appearance?.styleId ?? 'porcelain');
     return MaterialApp.router(
@@ -20,9 +21,8 @@ class KoreanMemoApp extends ConsumerWidget {
       theme: AppTheme.forPreset(preset),
       themeMode: preset.dark ? ThemeMode.dark : ThemeMode.light,
       routerConfig: appRouter,
-      builder: (context, child) => CloudSyncObserver(
-        child: LocalDayObserver(child: child ?? const SizedBox.shrink()),
-      ),
+      builder: (context, child) =>
+          LocalDayObserver(child: child ?? const SizedBox.shrink()),
     );
   }
 }

@@ -212,6 +212,8 @@ class AppDatabase extends _$AppDatabase {
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (migrator) => migrator.createAll(),
+        // Retire only obsolete cloud markers; keep every local learning table.
+        beforeOpen: (_) => customStatement("DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'"),
         onUpgrade: (migrator, from, to) async {
           if (from < 2) {
             await migrator.createTable(appSettings);
@@ -519,6 +521,33 @@ class AppDatabase extends _$AppDatabase {
     required String source,
     bool enrichExisting = false,
   }) async {
+    if (!enrichExisting) {
+      // Batch the Web worker messages: importing thousands of bundled words
+      // one SELECT / INSERT / link at a time delays the first usable screen.
+      final existing = await select(words).get();
+      final known = existing.map((w) => (w.normalizedKorean, w.normalizedBaseForm)).toSet();
+      final additions = <WordsCompanion>[];
+      for (final draft in drafts) {
+        if (known.add((draft.normalizedKorean, draft.normalizedBaseForm))) {
+          additions.add(draft.toCompanion(source: source));
+        }
+      }
+      for (var offset = 0; offset < additions.length; offset += 400) {
+        await batch((b) => b.insertAll(words, additions.skip(offset).take(400)));
+      }
+      final all = additions.isEmpty ? existing : await select(words).get();
+      final ids = {for (final w in all) (w.normalizedKorean, w.normalizedBaseForm): w.id};
+      final links = <WordBookWordsCompanion>[
+        for (var i = 0; i < drafts.length; i++)
+          WordBookWordsCompanion.insert(wordBookId: wordBookId,
+            wordId: ids[(drafts[i].normalizedKorean, drafts[i].normalizedBaseForm)]!, sortOrder: i),
+      ];
+      for (var offset = 0; offset < links.length; offset += 400) {
+        await batch((b) => b.insertAll(wordBookWords, links.skip(offset).take(400),
+          mode: InsertMode.insertOrReplace));
+      }
+      return ImportWriteResult(inserted: additions.length, reused: drafts.length - additions.length);
+    }
     var inserted = 0;
     var reused = 0;
     for (var index = 0; index < drafts.length; index++) {

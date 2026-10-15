@@ -4,10 +4,15 @@ import '../data/ai_client.dart';
 import '../data/ai_deepseek_client.dart';
 import '../data/ai_repository.dart';
 import '../data/ai_task_runner.dart';
+import '../data/ai_key_store.dart';
 
-// Credentials live only in Riverpod memory for this app session, never Drift or backups.
+// Optional proxy credential remains session-only; the personal DeepSeek key
+// is stored separately on this device and never enters Drift or file backups.
 final aiCredentialProvider = StateProvider<String>((ref) => '');
-final aiApiKeyProvider = StateProvider<String>((ref) => '');
+final aiKeyStoreProvider = Provider<AiKeyStore>((ref) => DeviceAiKeyStore());
+final aiApiKeyProvider = StateNotifierProvider<AiKeyController, String>(
+  (ref) => AiKeyController(ref.watch(aiKeyStoreProvider)),
+);
 final aiConnectionModeProvider = FutureProvider<String>(
   (ref) => ref
       .watch(databaseProvider)
@@ -43,6 +48,7 @@ final aiGatewayProvider = Provider<AiGateway>(
         )
       : AiDeepSeekClient(
           apiKey: ref.watch(aiApiKeyProvider),
+          apiKeyLoader: ref.watch(aiApiKeyProvider.notifier).current,
           model: ref.watch(aiModelProvider).valueOrNull ?? 'deepseek-flash',
         ),
 );

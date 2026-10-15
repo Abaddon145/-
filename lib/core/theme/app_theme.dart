@@ -107,23 +107,29 @@ abstract final class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: scheme.surface.withValues(alpha: 0.94),
-        height: 76,
+        height: 68,
         indicatorColor: scheme.primaryContainer,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-          fontSize: 12,
-          fontWeight: states.contains(WidgetState.selected)
-              ? FontWeight.w700 : FontWeight.w500,
-          color: states.contains(WidgetState.selected)
-              ? scheme.primary : scheme.onSurfaceVariant,
-        )),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 12,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+            color: states.contains(WidgetState.selected)
+                ? scheme.primary
+                : scheme.onSurfaceVariant,
+          ),
+        ),
         elevation: 0,
       ),
       cardTheme: CardThemeData(
         elevation: 0,
         color: scheme.surface.withValues(alpha: 0.92),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(26),
-          side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.42)),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.42),
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -138,11 +144,14 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide(color: scheme.primary, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),

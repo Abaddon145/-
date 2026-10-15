@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +23,29 @@ class LibraryPage extends ConsumerStatefulWidget {
 
 class _LibraryPageState extends ConsumerState<LibraryPage> {
   final _selected = <int>{};
+  final _search = TextEditingController();
+  Timer? _searchDelay;
+  @override
+  void initState() {
+    super.initState();
+    _search.text = ref.read(librarySearchProvider);
+  }
+
+  @override
+  void dispose() {
+    _searchDelay?.cancel();
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _searchChanged(String value) {
+    _searchDelay?.cancel();
+    setState(_selected.clear);
+    _searchDelay = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) ref.read(librarySearchProvider.notifier).state = value;
+    });
+  }
+
   bool _creating = false;
   void _refresh() {
     ref.invalidate(libraryWordsProvider);
@@ -185,11 +209,6 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             onPressed: () => context.push('/ai/tasks'),
             icon: const Icon(Icons.auto_awesome),
           ),
-          IconButton(
-            tooltip: '录入新单词',
-            onPressed: () => _edit(),
-            icon: const Icon(Icons.add_circle_outline),
-          ),
           PopupMenuButton<String>(
             tooltip: '词库操作',
             onSelected: (value) {
@@ -203,11 +222,48 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _edit(),
-        icon: const Icon(Icons.add),
-        label: const Text('录入单词'),
-      ),
+      bottomNavigationBar: visibleSelected == 0
+          ? null
+          : SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text('已选 $visibleSelected 个词 · 每批最多 20 条'),
+                        ),
+                        TextButton(
+                          onPressed: () => setState(_selected.clear),
+                          child: const Text('清除选择'),
+                        ),
+                      ],
+                    ),
+                    FilledButton.icon(
+                      onPressed: _creating ? null : () => _batch(items),
+                      icon: const Icon(Icons.auto_awesome),
+                      label: Text(
+                        _creating
+                            ? '正在创建任务…'
+                            : visibleSelected > 20
+                            ? 'AI 批量补中文（前 20 条）'
+                            : 'AI 批量补中文',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+      floatingActionButton: visibleSelected > 0
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _edit(),
+              icon: const Icon(Icons.add),
+              label: const Text('录入单词'),
+            ),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -216,71 +272,65 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
                 child: Column(
                   children: [
-                    const Text('所有来源已合并 · 英韩无中文词也进入统一学习'),
-                    FilledButton.icon(
-                      onPressed: () async {
-                        await showSessionSheet(
-                          context,
-                          filter: filter == LibraryFilter.missingMeaning
-                              ? LibraryFilter.all
-                              : filter,
-                        );
-                        if (context.mounted) context.go('/study');
-                      },
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('学习当前范围'),
-                    ),
-                    Wrap(
-                      spacing: 6,
-                      children: [
-                        for (final tag in const ['工业术语', '物流', '邮件', '日常'])
-                          ActionChip(
-                            label: Text(tag),
-                            onPressed: () async {
-                              await showSessionSheet(context, tag: tag);
-                              if (context.mounted) context.go('/study');
-                            },
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
                     TextField(
-                      onChanged: (v) =>
-                          ref.read(librarySearchProvider.notifier).state = v,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search),
-                        hintText: '搜索单词、释义、词性或场景标签',
+                      controller: _search,
+                      onChanged: _searchChanged,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText: '搜索单词、中文或标签',
+                        suffixIcon: _search.text.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: '清除搜索',
+                                onPressed: () {
+                                  _search.clear();
+                                  _searchChanged('');
+                                },
+                                icon: const Icon(Icons.close),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (final entry in const [
+                            (LibraryFilter.all, '全部'),
+                            (LibraryFilter.favorites, '收藏'),
+                            (LibraryFilter.wrong, '错词本'),
+                            (LibraryFilter.missingMeaning, '待补中文'),
+                          ])
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                label: Text(entry.$2),
+                                selected: filter == entry.$1,
+                                onSelected: (_) {
+                                  ref
+                                          .read(libraryFilterProvider.notifier)
+                                          .state =
+                                      entry.$1;
+                                  setState(_selected.clear);
+                                },
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
+                    Row(
                       children: [
-                        for (final entry in const [
-                          (LibraryFilter.all, '全部'),
-                          (LibraryFilter.favorites, '收藏'),
-                          (LibraryFilter.wrong, '错词本'),
-                          (LibraryFilter.missingMeaning, '待补中文'),
-                        ])
-                          ChoiceChip(
-                            label: Text(entry.$2),
-                            selected: filter == entry.$1,
-                            onSelected: (_) {
-                              ref.read(libraryFilterProvider.notifier).state =
-                                  entry.$1;
-                              setState(_selected.clear);
-                            },
+                        Expanded(
+                          child: Text(
+                            words.isLoading
+                                ? '正在读取词库…'
+                                : '当前结果 ${items.length} 个词',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
-                      ],
-                    ),
-                    if (selectable.isNotEmpty || _selected.isNotEmpty) ...[
-                      const Divider(),
-                      Text('已选 $visibleSelected 个待补中文词 · 本批最多 20 条'),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: [
+                        ),
+                        if (filter == LibraryFilter.missingMeaning &&
+                            selectable.isNotEmpty)
                           TextButton(
                             onPressed: () => setState(
                               () => _selected.addAll(
@@ -289,28 +339,45 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                             ),
                             child: const Text('选择当前结果'),
                           ),
-                          TextButton(
-                            onPressed: () => setState(_selected.clear),
-                            child: const Text('清除选择'),
-                          ),
-                          FilledButton(
-                            onPressed: visibleSelected == 0 || _creating
-                                ? null
-                                : () => _batch(items),
-                            child: Text(
-                              visibleSelected > 20
-                                  ? 'AI 批量补中文（前 20 条）'
-                                  : 'AI 批量补中文',
-                            ),
-                          ),
-                        ],
+                      ],
+                    ),
+                    if (filter == LibraryFilter.missingMeaning)
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 8),
+                        child: Text('勾选要补中文的词，底部即可创建 AI 任务；生成后仍需审核。'),
                       ),
-                      if (visibleSelected > 20)
-                        const Text('本批建成后保留剩余选择，可继续下一批。'),
-                    ],
-                    TextButton(
-                      onPressed: () => context.push('/ai/tasks'),
-                      child: const Text('查看任务进度、未完成任务与结果审核'),
+                    ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: const Text('学习范围与场景'),
+                      subtitle: const Text('按当前筛选或工作场景开始练习'),
+                      children: [
+                        FilledButton.icon(
+                          onPressed: () async {
+                            await showSessionSheet(
+                              context,
+                              filter: filter == LibraryFilter.missingMeaning
+                                  ? LibraryFilter.all
+                                  : filter,
+                            );
+                            if (context.mounted) context.go('/study');
+                          },
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('学习当前范围'),
+                        ),
+                        Wrap(
+                          spacing: 6,
+                          children: [
+                            for (final tag in const ['工业术语', '物流', '邮件', '日常'])
+                              ActionChip(
+                                label: Text(tag),
+                                onPressed: () async {
+                                  await showSessionSheet(context, tag: tag);
+                                  if (context.mounted) context.go('/study');
+                                },
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -361,7 +428,13 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(item.word.meaningZh),
+                                    Text(
+                                      missing
+                                          ? '待补中文 · 可用 AI 生成建议'
+                                          : item.word.meaningZh,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                     Text(
                                       item.word.partOfSpeech?.isNotEmpty == true
                                           ? item.word.partOfSpeech!

@@ -1,3 +1,4 @@
+import 'package:korean_memo/features/ai/data/ai_key_store.dart';
 import 'package:korean_memo/core/database/app_database.dart';
 import 'package:korean_memo/features/ai/domain/ai_models.dart';
 
@@ -52,3 +53,18 @@ AiSuggestion suggestionFor(
   'generatedAt': '2026-10-14T01:02:03Z',
   'promptVersion': aiPromptVersion,
 });
+
+class TestAiKeyStore implements AiKeyStore {
+  String? value;
+  @override
+  Future<String?> read() async => value;
+  @override
+  Future<void> write(String key) async {
+    value = key;
+  }
+
+  @override
+  Future<void> delete() async {
+    value = null;
+  }
+}
