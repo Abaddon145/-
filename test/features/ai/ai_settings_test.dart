@@ -63,7 +63,10 @@ void main() {
       expect(await db.loadSetting('ai_connection_mode'), 'deepseek');
       expect(await db.loadSetting('ai_deepseek_model'), 'deepseek-flash');
       expect(await db.loadSetting('ai_proxy_url'), isNull);
-      expect(container.read(aiGatewayProvider), isA<AiDeepSeekClient>());
+      expect(
+        await (container.read(aiGatewayProvider) as AiDeferredGateway).ready,
+        isA<AiDeepSeekClient>(),
+      );
       final rows = await db.select(db.appSettings).get();
       expect(
         rows.map((r) => r.value).join(),
@@ -120,7 +123,9 @@ void main() {
       await container
           .read(aiApiKeyProvider.notifier)
           .save('sk-direct-only-secret');
-      final gateway = container.read(aiGatewayProvider) as AiProxyClient;
+      final gateway =
+          await (container.read(aiGatewayProvider) as AiDeferredGateway).ready
+              as AiProxyClient;
       expect(gateway.credential, 'proxy-only-secret');
       expect(gateway.address, 'https://unit-test.invalid');
     },

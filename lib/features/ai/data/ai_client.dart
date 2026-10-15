@@ -21,6 +21,26 @@ abstract class AiGateway {
   Future<String> health();
 }
 
+/// Load the saved configuration before choosing a provider for the first call.
+class AiDeferredGateway implements AiGateway {
+  AiDeferredGateway(this._create);
+  final Future<AiGateway> Function() _create;
+  late final Future<AiGateway> ready = _create();
+  @override
+  Future<AiSuggestion> generate(
+    AiRequest request,
+    AiCancellation cancellation,
+  ) async {
+    cancellation.check();
+    final gateway = await ready;
+    cancellation.check();
+    return gateway.generate(request, cancellation);
+  }
+
+  @override
+  Future<String> health() async => (await ready).health();
+}
+
 class AiProxyClient implements AiGateway {
   AiProxyClient({
     required this.address,
