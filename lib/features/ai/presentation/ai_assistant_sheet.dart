@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
 import '../../library/domain/providers.dart';
 import '../data/ai_client.dart';
@@ -94,8 +95,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
       };
       _context = context;
       final cached =
-          widget.initialSuggestion ??
-          (widget.explain ? await repository.cached(_request()) : null);
+          widget.initialSuggestion ?? await repository.cached(_request());
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -132,6 +132,13 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
         key,
       );
       if (suggestion.fieldText(key).isNotEmpty &&
+          const {
+            'meaningZh',
+            'partOfSpeech',
+            'baseForm',
+            'exampleKo',
+            'exampleZh',
+          }.contains(key) &&
           aiFieldMissing(key, _existing[key]) &&
           !(key == 'meaningZh' &&
               (suggestion.needsMoreContext || suggestion.suspectedTypo))) {
@@ -283,260 +290,369 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
     }
   }
 
+  Widget _fieldEditor(String key) => Card(
+    margin: const EdgeInsets.only(bottom: 10),
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: Text(aiFieldLabels[key]!),
+            value: _selected.contains(key),
+            onChanged: _busy || _saved
+                ? null
+                : (value) => setState(() {
+                    if (value == true) {
+                      _selected.add(key);
+                    } else {
+                      _selected.remove(key);
+                    }
+                  }),
+          ),
+          Text(
+            '原内容：${_existing[key]?.isNotEmpty == true ? _existing[key] : '缺失'}',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _fields[key],
+            enabled: !_busy && !_saved,
+            minLines: 1,
+            maxLines: 5,
+            maxLength: aiListFields.contains(key) ? 3000 : aiFieldLimits[key],
+            decoration: InputDecoration(
+              labelText: 'AI 建议（可编辑）',
+              counterText: '',
+              helperText: aiListFields.contains(key) ? '每行一项，最多 6 项' : null,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
   @override
   Widget build(BuildContext context) {
     final suggestion = _suggestion;
+    const primary = [
+      'meaningZh',
+      'partOfSpeech',
+      'baseForm',
+      'exampleKo',
+      'exampleZh',
+    ];
+    final colors = Theme.of(context).colorScheme;
     return SizedBox(
-      height: MediaQuery.sizeOf(context).height * .88,
+      height: MediaQuery.sizeOf(context).height * .9,
       child: Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.viewInsetsOf(context).bottom,
         ),
         child: _loading
             ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+            : Column(
                 children: [
-                  Text(
-                    '${widget.explain ? 'AI 解释' : 'AI 补全词条'} · ${_word.korean}',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  TextButton.icon(
-                    onPressed: _busy ? null : _changeContext,
-                    icon: const Icon(Icons.tune),
-                    label: Text('语境：$_context'),
-                  ),
-                  const Text('AI 生成建议，请核对后选择保存。仅发送当前词条及必要语境。'),
-                  if (!widget.batch)
-                    DropdownButtonFormField<int>(
-                      initialValue: _exampleCount,
-                      decoration: const InputDecoration(labelText: '例句数量（每组）'),
-                      items: [
-                        for (var n = 1; n <= 3; n++)
-                          DropdownMenuItem(value: n, child: Text('$n')),
-                      ],
-                      onChanged: _busy
-                          ? null
-                          : (n) => setState(() => _exampleCount = n!),
-                    ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      FilledButton.icon(
-                        onPressed: _busy ? null : () => _generate(),
-                        icon: const Icon(Icons.auto_awesome),
-                        label: Text(suggestion == null ? '生成建议' : '重新生成候选'),
-                      ),
-                      if (_busy)
-                        TextButton(
-                          onPressed: () => _cancel?.cancel(),
-                          child: const Text('取消请求'),
-                        ),
-                    ],
-                  ),
-                  if (_busy)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12),
-                      child: LinearProgressIndicator(),
-                    ),
-                  if (_error != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(
-                        _error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                    ),
-                  if (_candidates.length > 1) ...[
-                    const Text('比较候选（点击切换，保留原生成内容）'),
-                    Wrap(
-                      spacing: 6,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 8, 4),
+                    child: Row(
                       children: [
-                        for (var i = 0; i < _candidates.length; i++)
-                          ChoiceChip(
-                            label: Text('候选 ${i + 1}'),
-                            selected:
-                                _candidates[i].requestId ==
-                                suggestion?.requestId,
-                            onSelected: _busy
-                                ? null
-                                : (_) =>
-                                      setState(() => _choose(_candidates[i])),
-                          ),
-                      ],
-                    ),
-                    for (var i = 0; i < _candidates.length; i++)
-                      Text('${i + 1}：${_candidates[i].fieldText('meaningZh')}'),
-                  ],
-                  if (suggestion != null) ...[
-                    Text(
-                      'AI 生成 · ${suggestion.model} · ${suggestion.generatedAt.toLocal().toString().substring(0, 16)}',
-                    ),
-                    if (suggestion.suspectedTypo || suggestion.needsMoreContext)
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
+                        Expanded(
                           child: Text(
-                            '${suggestion.suspectedTypo ? '疑似拼写异常。原词不会自动修改。\n' : ''}${suggestion.needsMoreContext ? '需要更多语境，请查看候选义项。\n' : ''}${suggestion.spellings.join(' / ')}',
+                            widget.explain ? 'AI 解释' : 'AI 补全词条',
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ),
-                      ),
-                    if (widget.explain) ...[
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          for (final action in const [
-                            ('simpler', '更简单'),
-                            ('work', '工作场景'),
-                            ('confusing', '易混淆词'),
-                            ('example', '例句解析'),
-                          ])
-                            ActionChip(
-                              label: Text(action.$2),
-                              onPressed: _busy
-                                  ? null
-                                  : () => _generate(style: action.$1),
-                            ),
-                        ],
-                      ),
-                      for (final key in const [
-                        'meaningZh',
-                        'collocations',
-                        'exampleKo',
-                        'exampleZh',
-                        'workExampleKo',
-                        'workExampleZh',
-                        'usageNote',
-                        'grammarNote',
-                        'ambiguityNotes',
-                        'confusingWords',
-                        'terminologyNote',
-                      ])
-                        if (suggestion.fieldText(key).isNotEmpty)
+                        IconButton(
+                          tooltip: '关闭 AI 面板',
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                      children: [
+                        SelectableText(
+                          _word.korean,
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: _busy ? null : _changeContext,
+                            icon: const Icon(Icons.tune),
+                            label: Text('语境：$_context'),
+                          ),
+                        ),
+                        const Text('先预览，再选择保存。AI 建议需要你核对。'),
+                        if (!widget.batch)
                           ExpansionTile(
-                            initiallyExpanded: [
-                              'meaningZh',
-                              'collocations',
-                              'exampleKo',
-                              'workExampleKo',
-                            ].contains(key),
-                            title: Text(aiFieldLabels[key]!),
+                            tilePadding: EdgeInsets.zero,
+                            title: const Text('生成选项'),
+                            subtitle: Text('每组 $_exampleCount 个例句'),
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  0,
-                                  16,
-                                  12,
+                              DropdownButtonFormField<int>(
+                                initialValue: _exampleCount,
+                                decoration: const InputDecoration(
+                                  labelText: '例句数量（每组）',
                                 ),
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: AiPlainText(
-                                    suggestion.fieldText(key),
-                                    term: _word.korean,
-                                  ),
-                                ),
+                                items: [
+                                  for (var n = 1; n <= 3; n++)
+                                    DropdownMenuItem(
+                                      value: n,
+                                      child: Text('$n'),
+                                    ),
+                                ],
+                                onChanged: _busy
+                                    ? null
+                                    : (n) => setState(() => _exampleCount = n!),
                               ),
+                              const SizedBox(height: 12),
                             ],
                           ),
-                      TextButton(
-                        onPressed: () => setState(() => _editing = !_editing),
-                        child: Text(_editing ? '收起保存编辑' : '预览并选择保存内容'),
-                      ),
-                    ],
-                    if (_editing) ...[
-                      const Divider(),
-                      const Text('原内容 → 建议；缺失字段默认勾选，已有内容需主动选择。'),
-                      for (final key in aiFieldLabels.keys)
-                        if (!widget.batch || key == 'meaningZh')
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            FilledButton.icon(
+                              onPressed: _busy ? null : () => _generate(),
+                              icon: const Icon(Icons.auto_awesome),
+                              label: Text(
+                                suggestion == null ? '生成建议' : '重新生成候选',
+                              ),
+                            ),
+                            if (_busy)
+                              TextButton(
+                                onPressed: () => _cancel?.cancel(),
+                                child: const Text('取消请求'),
+                              ),
+                          ],
+                        ),
+                        if (_busy)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: LinearProgressIndicator(),
+                          ),
+                        if (_error != null)
                           Card(
+                            color: colors.errorContainer,
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  CheckboxListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    controlAffinity:
-                                        ListTileControlAffinity.leading,
-                                    title: Text(aiFieldLabels[key]!),
-                                    value: _selected.contains(key),
-                                    onChanged: _busy || _saved
-                                        ? null
-                                        : (value) => setState(() {
-                                            if (value == true) {
-                                              _selected.add(key);
-                                            } else {
-                                              _selected.remove(key);
-                                            }
-                                          }),
-                                  ),
                                   Text(
-                                    '原内容：${_existing[key]?.isNotEmpty == true ? _existing[key] : '缺失'}',
-                                  ),
-                                  TextField(
-                                    controller: _fields[key],
-                                    enabled: !_busy && !_saved,
-                                    minLines: 1,
-                                    maxLines: 5,
-                                    maxLength: aiListFields.contains(key)
-                                        ? 3000
-                                        : aiFieldLimits[key],
-                                    decoration: InputDecoration(
-                                      labelText: 'AI 建议（可编辑）',
-                                      helperText: aiListFields.contains(key)
-                                          ? '每行一项，最多 6 项，每项 500 字'
-                                          : null,
+                                    _error!,
+                                    style: TextStyle(
+                                      color: colors.onErrorContainer,
                                     ),
                                   ),
+                                  if (_error ==
+                                      const AiException(
+                                        'not_configured',
+                                      ).message)
+                                    TextButton(
+                                      onPressed: () =>
+                                          context.push('/settings/ai'),
+                                      child: const Text('前往 AI 设置，填写 API Key'),
+                                    ),
                                 ],
                               ),
                             ),
                           ),
-                      if (!widget.batch && suggestion.spellings.isNotEmpty)
-                        DropdownButtonFormField<String>(
-                          key: ValueKey(suggestion.requestId),
-                          initialValue: _spelling,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: '拼写变更（单独确认）',
+                        if (_candidates.length > 1) ...[
+                          const SizedBox(height: 12),
+                          const Text('比较候选 · 点击切换'),
+                          Wrap(
+                            spacing: 6,
+                            children: [
+                              for (var i = 0; i < _candidates.length; i++)
+                                ChoiceChip(
+                                  label: Text('候选 ${i + 1}'),
+                                  selected:
+                                      _candidates[i].requestId ==
+                                      suggestion?.requestId,
+                                  onSelected: _busy
+                                      ? null
+                                      : (_) => setState(
+                                          () => _choose(_candidates[i]),
+                                        ),
+                                ),
+                            ],
                           ),
-                          items: [
-                            const DropdownMenuItem<String>(
-                              value: null,
-                              child: Text('保留原词拼写'),
+                        ],
+                        if (suggestion != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'AI 生成 · ${suggestion.model}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (suggestion.suspectedTypo ||
+                              suggestion.needsMoreContext)
+                            Card(
+                              color: colors.tertiaryContainer,
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Text(
+                                  '${suggestion.suspectedTypo ? '疑似拼写异常，原词不会自动修改。\n' : ''}${suggestion.needsMoreContext ? '需要更多语境，请查看候选义项。\n' : ''}${suggestion.spellings.join(' / ')}',
+                                ),
+                              ),
                             ),
-                            for (final spelling in suggestion.spellings)
-                              DropdownMenuItem(
-                                value: spelling,
-                                child: Text(spelling),
+                          if (widget.explain) ...[
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                for (final action in const [
+                                  ('simpler', '更简单'),
+                                  ('work', '工作场景'),
+                                  ('confusing', '易混淆词'),
+                                  ('example', '例句解析'),
+                                ])
+                                  ActionChip(
+                                    label: Text(action.$2),
+                                    onPressed: _busy
+                                        ? null
+                                        : () => _generate(style: action.$1),
+                                  ),
+                              ],
+                            ),
+                            for (final key in const [
+                              'meaningZh',
+                              'collocations',
+                              'exampleKo',
+                              'exampleZh',
+                              'workExampleKo',
+                              'workExampleZh',
+                              'usageNote',
+                              'grammarNote',
+                              'ambiguityNotes',
+                              'confusingWords',
+                              'terminologyNote',
+                            ])
+                              if (suggestion.fieldText(key).isNotEmpty)
+                                ExpansionTile(
+                                  initiallyExpanded: [
+                                    'meaningZh',
+                                    'exampleKo',
+                                    'exampleZh',
+                                  ].contains(key),
+                                  title: Text(aiFieldLabels[key]!),
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        16,
+                                        0,
+                                        16,
+                                        14,
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: AiPlainText(
+                                          suggestion.fieldText(key),
+                                          term: _word.korean,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                            TextButton(
+                              onPressed: () =>
+                                  setState(() => _editing = !_editing),
+                              child: Text(_editing ? '收起保存编辑' : '预览并选择保存内容'),
+                            ),
+                          ],
+                          if (_editing) ...[
+                            const SizedBox(height: 12),
+                            const Text('基础词条中缺失的字段默认勾选；已有内容与扩展说明请主动选择。'),
+                            const SizedBox(height: 12),
+                            for (final key in primary)
+                              if (!widget.batch || key == 'meaningZh')
+                                _fieldEditor(key),
+                            if (!widget.batch)
+                              ExpansionTile(
+                                tilePadding: EdgeInsets.zero,
+                                title: const Text('更多字段与说明'),
+                                subtitle: const Text('搭配、工作例句、语法与易混淆词'),
+                                children: [
+                                  for (final key in aiFieldLabels.keys)
+                                    if (!primary.contains(key))
+                                      _fieldEditor(key),
+                                ],
+                              ),
+                            if (!widget.batch &&
+                                suggestion.spellings.isNotEmpty)
+                              DropdownButtonFormField<String>(
+                                key: ValueKey(suggestion.requestId),
+                                initialValue: _spelling,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: '拼写变更（单独确认）',
+                                ),
+                                items: [
+                                  const DropdownMenuItem<String>(
+                                    value: null,
+                                    child: Text('保留原词拼写'),
+                                  ),
+                                  for (final spelling in suggestion.spellings)
+                                    DropdownMenuItem(
+                                      value: spelling,
+                                      child: Text(spelling),
+                                    ),
+                                ],
+                                onChanged: _busy || _saved
+                                    ? null
+                                    : (value) =>
+                                          setState(() => _spelling = value),
                               ),
                           ],
-                          onChanged: _busy || _saved
-                              ? null
-                              : (value) => setState(() => _spelling = value),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (suggestion != null && _editing)
+                    SafeArea(
+                      top: false,
+                      child: Container(
+                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          border: Border(
+                            top: BorderSide(color: colors.outlineVariant),
+                          ),
                         ),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed:
-                            _busy ||
-                                _saved ||
-                                (_selected.isEmpty && _spelling == null)
-                            ? null
-                            : _save,
-                        child: Text(
-                          _saved
-                              ? '已保存 · AI 生成·用户已确认'
-                              : '保存选中的 ${_selected.length} 个字段',
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            FilledButton(
+                              onPressed:
+                                  _busy ||
+                                      _saved ||
+                                      (_selected.isEmpty && _spelling == null)
+                                  ? null
+                                  : _save,
+                              child: Text(
+                                _saved
+                                    ? '已保存 · AI 生成·用户已确认'
+                                    : '保存选中的 ${_selected.length} 个字段',
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _saved ? '复习计划、学习次数与打卡保持不变。' : '只更新选中字段，复习计划不变。',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
                         ),
                       ),
-                      if (_saved) const Text('复习计划、学习次数与打卡保持不变。'),
-                    ],
-                  ],
+                    ),
                 ],
               ),
       ),

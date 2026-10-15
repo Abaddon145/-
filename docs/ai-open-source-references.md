@@ -19,3 +19,9 @@ Zod 4.3.6 用于服务端验证及 JSON Schema 生成（MIT）；TypeScript、ts
 ## v0.6.1 个人 DeepSeek API Key 直连
 
 按用户后续要求增加 `lib/features/ai/data/ai_deepseek_client.dart`；不新增 SDK 或依赖，使用已有 Dart HTTP。`domain/ai_prompts.dart` 独立重写并沿用本项目 ko-zh-v1 字段契约，按 [DeepSeek 官方 Chat API](https://api-docs.deepseek.com/api/create-chat-completion/) 和 [JSON Output](https://api-docs.deepseek.com/guides/json_mode/) 配置。官方 API 文档和跨域预检核对日期 2026-10-14。代理端 SDK/队列与原许可记录不变；密钥不写入源码、数据库、日志或备份。
+
+## v0.7.0 设备密钥持久化
+
+直接依赖 pub.dev 的 `flutter_secure_storage` **11.2.0**（BSD-3-Clause，Copyright 2017 German Saprykin），以 `pubspec.lock` 中制品校验值锁定。本次查看该发行包的 LICENSE、README、iOS/Web 选项与 Web 存储实现，不复制其源代码。实现位置：`lib/features/ai/data/ai_key_store.dart`、`tool/configure_device_storage.dart`。原生密钥使用设备安全存储；Web 使用其 WebCrypto 实验实现，同源脚本仍可能访问，不描述为服务器密钥托管。遵循用户后续要求从“仅会话保存”改为“此设备自动保存”，备份仍排除密钥。
+
+Drift Web 运行文件同步到已锁定的 **2.35.2**，包含上游 2.35.1 的 IndexedDB 事务持久化修复及 2.35.2 的 OPFS 嵌套事务修复；数据库 schema 仍为 v4。

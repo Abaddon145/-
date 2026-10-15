@@ -26,6 +26,9 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
   }
 
   Future<void> _load() async {
+    final keys = ref.read(aiApiKeyProvider.notifier);
+    await keys.ready;
+    if (!mounted) return;
     final values = await Future.wait([
       ref.read(aiAddressProvider.future),
       ref.read(aiContextProvider.future),
@@ -40,6 +43,7 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
       _model.text = values[3];
       _credential.text = ref.read(aiCredentialProvider);
       _apiKey.text = ref.read(aiApiKeyProvider);
+      if (keys.error != null) _status = keys.error!;
       _loaded = true;
     });
   }
@@ -89,8 +93,11 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
       if (_mode == 'deepseek') await db.saveSetting('ai_deepseek_model', model);
       await db.saveSetting('ai_default_context', _context);
       if (!mounted) return;
-      // Only non-secret preferences go into Drift. Separate session-only secrets.
-      ref.read(aiApiKeyProvider.notifier).state = apiKey;
+      // Only non-secret preferences go into Drift. Device key storage is separate.
+      if (_mode == 'deepseek') {
+        await ref.read(aiApiKeyProvider.notifier).save(apiKey);
+        if (!mounted) return;
+      }
       ref.read(aiCredentialProvider.notifier).state = _credential.text.trim();
       ref.invalidate(aiAddressProvider);
       ref.invalidate(aiContextProvider);
@@ -102,8 +109,28 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
               address: address,
               credential: _credential.text.trim(),
             );
-      final status = test ? await gateway.health() : '设置已保存；密钥与凭证仅限本次运行会话';
+      final status = test
+          ? await gateway.health()
+          : _mode == 'deepseek'
+          ? '设置已保存，下次打开自动使用此设备上的 API Key'
+          : '设置已保存；代理凭证仅限本次运行会话';
       if (mounted) setState(() => _status = status);
+    } catch (error) {
+      if (mounted) setState(() => _status = '$error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _clearKey() async {
+    setState(() => _busy = true);
+    try {
+      final keys = ref.read(aiApiKeyProvider.notifier);
+      await ref.read(aiTaskRunnerProvider).cancelAll();
+      await keys.clear();
+      if (!mounted) return;
+      _apiKey.clear();
+      setState(() => _status = '此设备保存的 API Key 已清除');
     } catch (error) {
       if (mounted) setState(() => _status = '$error');
     } finally {
@@ -158,7 +185,7 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
                     decoration: InputDecoration(
                       labelText: 'DeepSeek API Key',
                       hintText: 'sk-…（不是 Tracking ID）',
-                      helperText: '仅保存在当前会话；刷新或关闭后需重新输入，不进入备份',
+                      helperText: '保存在此设备，下次自动使用；不进入备份。清除浏览器数据后需重新填写。',
                       helperMaxLines: 3,
                       suffixIcon: IconButton(
                         tooltip: _showKey ? '隐藏密钥' : '显示密钥',
@@ -167,6 +194,14 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
                           _showKey ? Icons.visibility_off : Icons.visibility,
                         ),
                       ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _busy ? null : _clearKey,
+                      icon: const Icon(Icons.key_off_outlined),
+                      label: const Text('清除已保存密钥'),
                     ),
                   ),
                   ExpansionTile(

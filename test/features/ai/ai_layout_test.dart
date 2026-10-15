@@ -18,6 +18,9 @@ import 'package:korean_memo/features/study/domain/providers.dart';
 import 'package:korean_memo/features/study/presentation/study_controller.dart';
 import 'package:korean_memo/features/study/presentation/study_page.dart';
 import 'fixtures.dart';
+import 'package:korean_memo/features/ai/data/ai_repository.dart';
+import 'package:korean_memo/features/settings/presentation/settings_page.dart';
+import 'package:korean_memo/features/home/presentation/home_page.dart';
 
 const emptySeed = BundledSeedResult(
   importedBooks: 0,
@@ -58,6 +61,7 @@ void main() {
       ProviderScope(
         overrides: [
           databaseProvider.overrideWithValue(db),
+          aiKeyStoreProvider.overrideWithValue(TestAiKeyStore()),
           bundledWordSeedProvider.overrideWith((ref) async => emptySeed),
           if (gateway != null) aiGatewayProvider.overrideWithValue(gateway),
         ],
@@ -112,6 +116,74 @@ void main() {
     },
   );
   testWidgets(
+    'cached completion keeps save visible and never selects hidden extras',
+    (tester) async {
+      final db = AppDatabase(NativeDatabase.memory());
+      addTearDown(db.close);
+      final word = await addAiWord(db, '시험');
+      final request = AiRequest(
+        requestId: const Uuid().v4(),
+        word: word,
+        context: '日常韩语',
+        type: 'complete',
+      );
+      await AiRepository(db).store(request, suggestionFor(request));
+      final gateway = CountingGateway();
+      await narrow(
+        tester,
+        AiAssistantSheet(word: word),
+        db,
+        keyboard: 180,
+        gateway: gateway,
+      );
+      expect(gateway.calls, 0);
+      expect(find.text('保存选中的 4 个字段').hitTestable(), findsOneWidget);
+      await tester.drag(find.byType(ListView), const Offset(0, -1000));
+      await tester.pumpAndSettle();
+      expect(find.text('保存选中的 4 个字段').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+  testWidgets('home and local settings fit 320px with large text', (
+    tester,
+  ) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    for (final page in [const HomePage(), const SettingsPage()]) {
+      await narrow(tester, page, db);
+      expect(tester.takeException(), isNull);
+      expect(find.text('账户与云同步'), findsNothing);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -1200));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets('retired cloud bookmark redirects to local settings', (
+    tester,
+  ) async {
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    appRouter.go('/settings/cloud');
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          aiKeyStoreProvider.overrideWithValue(TestAiKeyStore()),
+          bundledWordSeedProvider.overrideWith((ref) async => emptySeed),
+        ],
+        child: MaterialApp.router(routerConfig: appRouter),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsPage), findsOneWidget);
+    expect(find.text('你的学习，保存在本机'), findsOneWidget);
+    expect(find.text('账户与云同步'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+  testWidgets(
     'AI settings adapts to keyboard and big text without querying on every build',
     (tester) async {
       final db = AppDatabase(NativeDatabase.memory());
@@ -157,6 +229,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           databaseProvider.overrideWithValue(db),
+          aiKeyStoreProvider.overrideWithValue(TestAiKeyStore()),
           bundledWordSeedProvider.overrideWith((ref) async => emptySeed),
           aiGatewayProvider.overrideWithValue(gateway),
         ],
@@ -221,6 +294,7 @@ void main() {
         ProviderScope(
           overrides: [
             databaseProvider.overrideWithValue(db),
+            aiKeyStoreProvider.overrideWithValue(TestAiKeyStore()),
             bundledWordSeedProvider.overrideWith((ref) async => emptySeed),
           ],
           child: MaterialApp.router(routerConfig: appRouter),
