@@ -21,6 +21,7 @@ class AppearancePreset {
 }
 
 abstract final class AppTheme {
+  static const fontFamily = 'KoreanMemoSans';
   static const presets = <AppearancePreset>[
     AppearancePreset(
       id: 'porcelain',
@@ -83,10 +84,12 @@ abstract final class AppTheme {
     );
     return ThemeData(
       useMaterial3: true,
+      fontFamily: fontFamily,
       colorScheme: scheme,
       scaffoldBackgroundColor: Colors.transparent,
       visualDensity: VisualDensity.standard,
       textTheme: Typography.material2021().black.apply(
+        fontFamily: fontFamily,
         bodyColor: scheme.onSurface,
         displayColor: scheme.onSurface,
       ),
