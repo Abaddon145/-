@@ -1,0 +1,17 @@
+KoreanMemo Sans Regular is a renamed, subsetted derivative of
+Noto Sans CJK SC Regular version 2.004.
+
+Original font copyright: © 2014-2021 Adobe (http://www.adobe.com/).
+Upstream project: https://github.com/notofonts/noto-cjk
+Release Sans2.004, commit 523d033d6cb47f4a80c58a35753646f5c3608a78.
+
+This font and its modifications are licensed under the SIL Open Font
+License 1.1; see the accompanying OFL.txt. The original copyright and
+license metadata are also retained inside the font.
+
+The subset contains all 11,172 modern precomposed Hangul syllables,
+Hangul Jamo supported by the original font, GB2312 characters, Chinese
+characters used in the bundled vocabulary and UI, Latin and punctuation.
+It is not restricted to Hangul characters found in the bundled words.
+The family is renamed KoreanMemo Sans. Vertical and regional alternate
+features are omitted; horizontal Korean shaping features are retained.

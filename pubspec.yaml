@@ -1,7 +1,7 @@
 name: korean_memo
 description: A local-first Korean vocabulary learning app with Excel import and FSRS.
 publish_to: none
-version: 0.7.0+11
+version: 0.7.1+12
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -35,6 +35,12 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: KoreanMemoSans
+      fonts:
+        - asset: assets/fonts/KoreanMemoSans-Regular.otf
   assets:
     - assets/data/default_word_books.json
     - assets/data/technical_word_books.json
+    - assets/fonts/OFL.txt
+    - assets/fonts/NOTICE.txt
