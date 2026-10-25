@@ -1,5 +1,7 @@
 # KoreanMemo
 
+v0.8.0 更新卡片层次、悬浮导航、按压反馈、答案揭示、平滑进度和底部面板，支持减少动态效果；同时改善学习页查询、AI 状态和本机备份提醒。[更新应用](https://abaddon145.github.io/-/update.html?v=0.8.0) · [功能与验证](docs/v0.8.0-validation.md)。
+
 v0.7.1 修复韩文缺字（如 `까딱하면` 中出现方框）：随应用打包完整现代韩文字体并缓存到本机，不修改词条和学习记录。[安全更新](https://abaddon145.github.io/-/update.html?v=0.7.1) · [修复与验证](docs/font-rendering-fix.md)。
 
 ## v0.7.0 本机学习体验升级

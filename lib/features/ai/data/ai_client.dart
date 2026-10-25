@@ -129,15 +129,23 @@ class AiHttpTransport {
   }) async {
     final client = _clientFactory();
     var timedOut = false;
+    final requestCancellation = AiCancellation();
     final timer = Timer(timeout, () {
       timedOut = true;
-      cancellation.cancel();
+      requestCancellation.cancel();
       client.close();
     });
     try {
       cancellation.check();
       final request =
-          http.AbortableRequest(method, uri, abortTrigger: cancellation.signal)
+          http.AbortableRequest(
+              method,
+              uri,
+              abortTrigger: Future.any<void>([
+                cancellation.signal,
+                requestCancellation.signal,
+              ]),
+            )
             ..followRedirects = false
             ..headers.addAll({
               'Authorization': 'Bearer $credential',
@@ -150,8 +158,10 @@ class AiHttpTransport {
         bytes.addAll(chunk);
         if (bytes.length > 32768) throw const AiException('invalid_response');
         cancellation.check();
+        requestCancellation.check();
       }
       cancellation.check();
+      requestCancellation.check();
       dynamic json;
       try {
         json = jsonDecode(utf8.decode(bytes));
@@ -174,6 +184,9 @@ class AiHttpTransport {
               : response.statusCode == 408 || response.statusCode == 504
               ? 'timeout'
               : 'provider_error',
+          retryAfterSeconds: response.statusCode == 429
+              ? aiRetryAfterSeconds(response.headers['retry-after'])
+              : null,
         );
       }
       if (json is! Map<String, dynamic>) {
@@ -190,4 +203,13 @@ class AiHttpTransport {
       client.close();
     }
   }
+}
+
+/// Only a bounded waiting hint; retries always require a user action.
+int? aiRetryAfterSeconds(String? value) {
+  if (value == null) return null;
+  final seconds = int.tryParse(value.trim());
+  // Accept delta-seconds. Other formats use the ordinary rate-limit guidance.
+  if (seconds == null || seconds < 0) return null;
+  return seconds.clamp(1, 300);
 }

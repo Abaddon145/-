@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import '../domain/backup_status.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +20,8 @@ import '../../../core/app_version.dart';
 import '../../ai/domain/ai_providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
-  const SettingsPage({super.key});
+  const SettingsPage({super.key, this.focusBackup = false});
+  final bool focusBackup;
 
   @override
   ConsumerState<SettingsPage> createState() => _SettingsPageState();
@@ -28,14 +30,35 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _busy = false;
   bool _includeAi = false;
-  late Future<String?> _lastBackup;
+  final _backupKey = GlobalKey();
+  void _scrollToBackup() {
+    if (!widget.focusBackup) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _backupKey.currentContext;
+      if (mounted && target != null) {
+        Scrollable.ensureVisible(
+          target,
+          duration: Duration.zero,
+          alignment: .05,
+        );
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.focusBackup != oldWidget.focusBackup) _scrollToBackup();
+  }
+
   @override
   void initState() {
     super.initState();
-    _lastBackup = ref.read(databaseProvider).loadSetting('last_backup_at');
+    _scrollToBackup();
   }
 
   void _refreshData() {
+    ref.invalidate(backupStatusProvider);
     ref.invalidate(appearanceProvider);
     ref.invalidate(readingProvider);
     ref.invalidate(checkinsProvider);
@@ -109,26 +132,48 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         utf8.encode(const JsonEncoder.withIndent('  ').convert(data)),
       );
       final saved = await FilePicker.saveFile(
-        fileName: 'korean-memo-backup.json',
+        fileName:
+            'korean-memo-${DateTime.now().toUtc().toIso8601String().replaceAll(':', '-').split('.').first}.json',
         bytes: bytes,
         mimeType: 'application/json',
       );
-      if (saved != null) {
+      if (!mounted) return;
+      final confirmed = !kIsWeb
+          ? saved != null
+          : await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('确认备份文件已保存'),
+                    content: const Text(
+                      '已发起下载。请确认 JSON 文件已保存到“文件”或下载目录，再更新备份时间。',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('暂未保存'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('已保存文件'),
+                      ),
+                    ],
+                  ),
+                ) ==
+                true;
+      if (!mounted) return;
+      if (confirmed) {
         await ref
             .read(databaseProvider)
             .saveSetting(
               'last_backup_at',
               DateTime.now().toUtc().toIso8601String(),
             );
-        if (mounted) {
-          setState(
-            () => _lastBackup = ref
-                .read(databaseProvider)
-                .loadSetting('last_backup_at'),
-          );
-        }
+        await ref
+            .read(databaseProvider)
+            .saveSetting('backup_snoozed_until', null);
+        if (mounted) ref.invalidate(backupStatusProvider);
       }
-      if (saved != null && mounted) {
+      if (confirmed && mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('备份文件已导出')));
@@ -160,11 +205,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         throw const FormatException('备份文件格式无效');
       }
       if (!mounted) return;
+      final tables = decoded['tables'];
+      if (decoded['format'] != 'korean-memo-backup' ||
+          decoded['version'] != 1 ||
+          tables is! Map ||
+          tables['words'] is! List ||
+          tables['review_logs'] is! List) {
+        throw const FormatException('备份结构无效');
+      }
+      final created = DateTime.tryParse(
+        decoded['createdAt']?.toString() ?? '',
+      )?.toLocal();
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('恢复备份？'),
-          content: const Text('恢复会替换此设备上的整个词库、学习进度和设置。建议先导出当前备份。'),
+          content: SingleChildScrollView(
+            child: Text(
+              '词条：${(tables['words'] as List).length} 个\n学习记录：${(tables['review_logs'] as List).length} 条\n备份时间：${created?.toString().split('.').first ?? '未记录'}\n\n恢复会替换此设备上的整个词库、学习进度和设置。建议先导出当前备份。',
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -236,141 +296,175 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       body: SafeArea(
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-          children: [
-            Card(
-              color: colors.primaryContainer,
-              margin: const EdgeInsets.only(bottom: 24),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.devices_rounded,
-                      color: colors.onPrimaryContainer,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      '你的学习，保存在本机',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 6),
-                    const Text('无需账户。换设备时，用备份文件带走词库与进度。'),
-                  ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Card(
+                color: colors.primaryContainer,
+                margin: const EdgeInsets.only(bottom: 24),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.devices_rounded,
+                        color: colors.onPrimaryContainer,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '你的学习，保存在本机',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 6),
+                      const Text('无需账户。换设备时，用备份文件带走词库与进度。'),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            group('AI 学习助手', [
-              tile(
-                Icons.auto_awesome_rounded,
-                'AI 学习助手设置',
-                configured
-                    ? 'DeepSeek 密钥已保存在此设备'
-                    : '输入 DeepSeek API Key，开始使用',
-                () => context.push('/settings/ai'),
-              ),
-              tile(
-                Icons.fact_check_outlined,
-                '本机 AI 任务',
-                '查看进度、继续未完成任务与审核结果',
-                () => context.push('/ai/tasks'),
-              ),
-            ]),
-            group('学习与外观', [
-              tile(
-                Icons.today_outlined,
-                '每日学习计划',
-                '调整新词目标与复习上限',
-                () => context.push('/settings/daily-plan'),
-              ),
-              tile(
-                Icons.palette_outlined,
-                '外观风格',
-                '${style.name} · 六套主题与自定义背景',
-                () => context.push('/settings/appearance'),
-              ),
-              tile(
-                Icons.text_fields_rounded,
-                '阅读、发音与背景调整',
-                '字体、语速与专注模式',
-                () => context.push('/settings/reading'),
-              ),
-              tile(
-                Icons.calendar_month_outlined,
-                '学习打卡与日历',
-                '查看自己的学习节奏',
-                () => context.push('/checkin'),
-              ),
-            ]),
-            group('文件备份与迁移', [
-              FutureBuilder<String?>(
-                future: _lastBackup,
-                builder: (context, snapshot) => Padding(
+              group('AI 学习助手', [
+                tile(
+                  Icons.auto_awesome_rounded,
+                  'AI 学习助手设置',
+                  configured
+                      ? 'DeepSeek 密钥已保存在此设备'
+                      : '输入 DeepSeek API Key，开始使用',
+                  () => context.push('/settings/ai'),
+                ),
+                tile(
+                  Icons.fact_check_outlined,
+                  '本机 AI 任务',
+                  '查看进度、继续未完成任务与审核结果',
+                  () => context.push('/ai/tasks'),
+                ),
+              ]),
+              group('学习与外观', [
+                tile(
+                  Icons.today_outlined,
+                  '每日学习计划',
+                  '调整新词目标与复习上限',
+                  () => context.push('/settings/daily-plan'),
+                ),
+                tile(
+                  Icons.palette_outlined,
+                  '外观风格',
+                  '${style.name} · 六套主题与自定义背景',
+                  () => context.push('/settings/appearance'),
+                ),
+                tile(
+                  Icons.text_fields_rounded,
+                  '阅读、发音与背景调整',
+                  '字体、语速与专注模式',
+                  () => context.push('/settings/reading'),
+                ),
+                tile(
+                  Icons.calendar_month_outlined,
+                  '学习打卡与日历',
+                  '查看自己的学习节奏',
+                  () => context.push('/checkin'),
+                ),
+              ]),
+              group('文件备份与迁移', [
+                Padding(
+                  key: _backupKey,
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      DateTime.tryParse(snapshot.data ?? '') == null
-                          ? '还没有导出备份，建议定期保存一份。'
-                          : '上次备份：${DateTime.parse(snapshot.data!).toLocal().toIso8601String().substring(0, 10)}',
+                      ref
+                              .watch(backupStatusProvider)
+                              .valueOrNull
+                              ?.lastExportLabel ??
+                          '正在读取备份状态…',
                     ),
                   ),
                 ),
+                SwitchListTile(
+                  title: const Text('每周备份提醒'),
+                  subtitle: const Text('首页提示，不打断学习；可稍后提醒'),
+                  value:
+                      ref.watch(backupStatusProvider).valueOrNull?.enabled ??
+                      true,
+                  onChanged: _busy
+                      ? null
+                      : (value) async {
+                          setState(() => _busy = true);
+                          try {
+                            await ref
+                                .read(databaseProvider)
+                                .saveSetting(
+                                  'backup_reminders_enabled',
+                                  '$value',
+                                );
+                            if (mounted) ref.invalidate(backupStatusProvider);
+                          } catch (_) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('提醒设置保存失败，请重试。')),
+                              );
+                            }
+                          } finally {
+                            if (mounted) setState(() => _busy = false);
+                          }
+                        },
+                ),
+                SwitchListTile(
+                  title: const Text('文件备份包含 AI 数据'),
+                  subtitle: const Text('包含建议与任务，不包含 API Key'),
+                  value: _includeAi,
+                  onChanged: _busy
+                      ? null
+                      : (v) => setState(() => _includeAi = v),
+                ),
+                tile(
+                  Icons.file_download_outlined,
+                  '备份学习进度',
+                  '导出词库、学习记录、收藏和设置',
+                  _backup,
+                ),
+                tile(
+                  Icons.restore_rounded,
+                  '恢复学习进度',
+                  '从 JSON 文件恢复；会替换本机数据',
+                  _restore,
+                ),
+                tile(
+                  Icons.undo_rounded,
+                  '撤销最近一次恢复',
+                  '返回恢复前保留的一次本机快照',
+                  _undoRestore,
+                ),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  child: Text('将备份保存到“文件”或 iCloud Drive，即可在另一台设备导入。'),
+                ),
+              ]),
+              TextButton.icon(
+                onPressed: () => launchUrl(
+                  Uri.parse('https://abaddon145.github.io/-/guide.html'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                icon: const Icon(Icons.menu_book_outlined),
+                label: const Text('查看配图使用指南'),
               ),
-              SwitchListTile(
-                title: const Text('文件备份包含 AI 数据'),
-                subtitle: const Text('包含建议与任务，不包含 API Key'),
-                value: _includeAi,
-                onChanged: _busy ? null : (v) => setState(() => _includeAi = v),
+              TextButton.icon(
+                onPressed: () => launchUrl(
+                  Uri.parse('https://github.com/Abaddon145/-/releases'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('查看更新记录'),
               ),
-              tile(
-                Icons.file_download_outlined,
-                '备份学习进度',
-                '导出词库、学习记录、收藏和设置',
-                _backup,
-              ),
-              tile(
-                Icons.restore_rounded,
-                '恢复学习进度',
-                '从 JSON 文件恢复；会替换本机数据',
-                _restore,
-              ),
-              tile(
-                Icons.undo_rounded,
-                '撤销最近一次恢复',
-                '返回恢复前保留的一次本机快照',
-                _undoRestore,
-              ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
-                child: Text('将备份保存到“文件”或 iCloud Drive，即可在另一台设备导入。'),
-              ),
-            ]),
-            TextButton.icon(
-              onPressed: () => launchUrl(
-                Uri.parse('https://abaddon145.github.io/-/guide.html'),
-                mode: LaunchMode.externalApplication,
-              ),
-              icon: const Icon(Icons.menu_book_outlined),
-              label: const Text('查看配图使用指南'),
-            ),
-            TextButton.icon(
-              onPressed: () => launchUrl(
-                Uri.parse('https://github.com/Abaddon145/-/releases'),
-                mode: LaunchMode.externalApplication,
-              ),
-              icon: const Icon(Icons.open_in_new),
-              label: const Text('查看更新记录'),
-            ),
-            const Center(child: Text('KoreanMemo · v$appVersion')),
-            if (_busy)
-              const Padding(
-                padding: EdgeInsets.all(12),
-                child: LinearProgressIndicator(),
-              ),
-          ],
+              const Center(child: Text('KoreanMemo · v$appVersion')),
+              if (_busy)
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: LinearProgressIndicator(),
+                ),
+            ],
+          ),
         ),
       ),
     );

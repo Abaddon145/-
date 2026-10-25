@@ -1,4 +1,5 @@
 import '../../../core/database/app_database.dart';
+import '../../../core/database/missing_meaning.dart';
 
 class PracticeItem {
   const PracticeItem(this.question, this.answer, this.spoken);
@@ -11,7 +12,7 @@ PracticeItem practiceItem(Word word, SessionOptions options, {String forms = '',
   final parts = word.korean.split('/').map((s) => s.trim()).toList();
   final ko = parts.where((s) => RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(s)).join(' / ');
   final en = parts.where((s) => RegExp(r'[a-zA-Z]').hasMatch(s) && !RegExp(r'[가-힣]').hasMatch(s)).join(' / ');
-  final translated = word.meaningZh.isNotEmpty && !word.meaningZh.contains('未提供中文') && !word.meaningZh.contains('暂无中文');
+  final translated = !isMissingMeaning(word.meaningZh);
   final front = ko.isNotEmpty ? ko : word.korean;
   final back = translated ? word.meaningZh : en.isNotEmpty && ko.isNotEmpty ? en : '暂无翻译，请在编辑中补充';
   if (options.mode == PracticeMode.cloze) {

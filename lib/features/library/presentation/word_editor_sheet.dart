@@ -1,3 +1,4 @@
+import '../../../core/theme/app_motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,7 +6,7 @@ import '../../../core/database/app_database.dart';
 import '../../study/domain/providers.dart';
 
 Future<bool?> showWordEditor(BuildContext context, {Word? word}) {
-  return showModalBottomSheet<bool>(
+  return showModalBottomSheet<bool>(sheetAnimationStyle: AppMotion.sheet(context), useRootNavigator: true,
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

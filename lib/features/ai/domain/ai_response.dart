@@ -39,8 +39,25 @@ const aiFieldLimits = <String, int>{
 };
 
 class AiException implements Exception {
-  const AiException(this.code);
+  const AiException(this.code, {this.retryAfterSeconds});
   final String code;
+  final int? retryAfterSeconds;
+  bool get canRetry => const {
+    'network',
+    'timeout',
+    'rate_limited',
+    'provider_error',
+    'truncated',
+    'empty_response',
+    'invalid_json',
+    'invalid_response',
+  }.contains(code);
+  bool get needsSettings => const {
+    'not_configured',
+    'unauthorized',
+    'model_unavailable',
+    'prompt_mismatch',
+  }.contains(code);
   String get message =>
       const {
         'not_configured': '请先在 AI 设置中填写 DeepSeek API Key，或配置私有代理。',
