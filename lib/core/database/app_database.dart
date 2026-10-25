@@ -776,7 +776,7 @@ class AppDatabase extends _$AppDatabase {
     final tables=['words','word_books','word_book_words','study_cards','review_logs','user_words','daily_statistics','app_settings',
       if(includeAi) ...['ai_suggestions','ai_tasks','ai_task_items','ai_word_contents']];
     final data=<String,List<Map<String,Object?>>>{};
-    for(final t in tables){ final rows=await customSelect('SELECT * FROM $t').get(); data[t]=rows.where((r)=>t!='app_settings'||(!(r.data['key'] as String).startsWith('cloud_') && !const {'ai_access_token','ai_credential','model_api_key'}.contains(r.data['key']))).map((r)=>Map<String,Object?>.from(r.data)).toList(); }
+    for(final t in tables){ final rows=await customSelect('SELECT * FROM $t').get(); data[t]=rows.where((r)=>t!='app_settings'||(!(r.data['key'] as String).startsWith('cloud_') && !const {'ai_access_token','ai_credential','model_api_key','last_backup_at','backup_snoozed_until','backup_reminders_enabled'}.contains(r.data['key']))).map((r)=>Map<String,Object?>.from(r.data)).toList(); }
     return {'format':'korean-memo-backup','version':1,'createdAt':DateTime.now().toUtc().toIso8601String(),'tables':data};
   });
 
@@ -807,11 +807,13 @@ class AppDatabase extends _$AppDatabase {
       for(final r in list){if(r is! Map||r.keys.toSet().length!=e.value.length||!e.value.every(r.containsKey)) throw FormatException('备份字段无效：${e.key}');}}
     if (columns.containsKey('ai_suggestions')) validateAiBackup(payload);
     await transaction(() async {
+      final localBackupSettings = {for(final key in ['last_backup_at','backup_snoozed_until','backup_reminders_enabled']) key: await loadSetting(key)};
       if(captureRecovery) await into(recoverySnapshots).insertOnConflictUpdate(
         RecoverySnapshotsCompanion.insert(id:const Value(1),payload:jsonEncode(await createBackupSnapshot(includeAi: true)),createdAt:DateTime.now().toUtc()));
       for(final t in ['ai_word_contents','ai_task_items','ai_tasks','ai_suggestions','review_logs','study_cards','word_book_words','user_words','daily_statistics','app_settings','words','word_books']) await customStatement('DELETE FROM $t');
       for(final t in columns.keys){for(final raw in payload[t] as List){final row=Map<String,Object?>.from(raw as Map), names=columns[t]!;
         await customStatement('INSERT INTO $t (${names.join(',')}) VALUES (${List.filled(names.length,'?').join(',')})',[for(final n in names) row[n]]);}}
+      for(final entry in localBackupSettings.entries) await saveSetting(entry.key, entry.value);
       // An undo snapshot is valid only for the transaction that produced it on
       // this device; imported files must never provide executable row snapshots.
       await saveSetting('last_review_undo',null);

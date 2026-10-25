@@ -10,6 +10,8 @@ import '../../library/presentation/word_detail_sheet.dart';
 import '../domain/practice.dart';
 import '../domain/providers.dart';
 import 'study_controller.dart';
+import 'study_content.dart';
+import '../../../core/theme/app_motion.dart';
 import 'session_sheet.dart';
 import '../../ai/presentation/ai_assistant_sheet.dart';
 
@@ -61,7 +63,7 @@ class _StudyPageState extends ConsumerState<StudyPage>
     final controller = ref.read(studyControllerProvider.notifier);
     controller.pauseForPanel();
     final saved = await showWordEditor(context, word: word);
-    if (!mounted) return;
+    if (!mounted || !controller.mounted) return;
     controller.resumeFromPanel();
     if (saved == true) {
       ref.invalidate(libraryWordsProvider);
@@ -90,6 +92,12 @@ class _StudyPageState extends ConsumerState<StudyPage>
     final reading =
         ref.watch(readingProvider).valueOrNull ?? const ReadingPreferences();
     final word = state.word;
+    final forms = word != null && options.mode == PracticeMode.forms
+        ? ref.watch(studyWordFormsProvider(word.id)).valueOrNull ?? ''
+        : '';
+    final favorite = word == null
+        ? false
+        : ref.watch(studyFavoriteProvider(word.id)).valueOrNull ?? false;
     if (_wordId != word?.id || _sessionKey != options.key) {
       _sessionKey = options.key;
       _wordId = word?.id;
@@ -212,17 +220,13 @@ class _StudyPageState extends ConsumerState<StudyPage>
                       child: Card(
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.all(18),
-                          child: FutureBuilder<String?>(
-                            future: options.mode == PracticeMode.forms
-                                ? ref
-                                      .read(databaseProvider)
-                                      .loadSetting('word_forms:${word.id}')
-                                : Future.value(''),
-                            builder: (context, snapshot) {
+                          key: ValueKey('${word.id}:${options.key}'),
+                          child: Builder(
+                            builder: (context) {
                               final item = practiceItem(
                                 word,
                                 options,
-                                forms: snapshot.data ?? '',
+                                forms: forms,
                                 formIndex:
                                     ref
                                         .watch(sessionProgressProvider)
@@ -240,17 +244,12 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                         tooltip: '收藏',
                                         onPressed: () async {
                                           final db = ref.read(databaseProvider);
-                                          final entries = await db
-                                              .searchLibraryWords(
-                                                query: word.korean,
-                                                filter: LibraryFilter.favorites,
-                                              );
-                                          final favorite = entries.any(
-                                            (entry) => entry.word.id == word.id,
-                                          );
                                           await db.setFavorite(
                                             word.id,
                                             !favorite,
+                                          );
+                                          ref.invalidate(
+                                            studyFavoriteProvider(word.id),
                                           );
                                           ref.invalidate(libraryWordsProvider);
                                           if (context.mounted) {
@@ -265,8 +264,23 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                             );
                                           }
                                         },
-                                        icon: const Icon(
-                                          Icons.star_border_rounded,
+                                        icon: AnimatedSwitcher(
+                                          duration: AppMotion.duration(
+                                            context,
+                                            160,
+                                          ),
+                                          transitionBuilder:
+                                              (child, animation) =>
+                                                  ScaleTransition(
+                                                    scale: animation,
+                                                    child: child,
+                                                  ),
+                                          child: Icon(
+                                            favorite
+                                                ? Icons.star_rounded
+                                                : Icons.star_border_rounded,
+                                            key: ValueKey(favorite),
+                                          ),
                                         ),
                                       ),
                                       IconButton(
@@ -344,22 +358,28 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                       decoration: const InputDecoration(
                                         labelText: '输入答案',
                                       ),
-                                      onSubmitted: (_) => setState(
-                                        () => _correct = answerMatches(
-                                          _answer.text,
-                                          item.answer,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    if (_correct == null)
-                                      OutlinedButton(
-                                        onPressed: () => setState(
+                                      onSubmitted: (_) {
+                                        FocusScope.of(context).unfocus();
+                                        setState(
                                           () => _correct = answerMatches(
                                             _answer.text,
                                             item.answer,
                                           ),
-                                        ),
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(height: 12),
+                                    if (_correct == null)
+                                      OutlinedButton(
+                                        onPressed: () {
+                                          FocusScope.of(context).unfocus();
+                                          setState(
+                                            () => _correct = answerMatches(
+                                              _answer.text,
+                                              item.answer,
+                                            ),
+                                          );
+                                        },
                                         child: const Text('检查答案'),
                                       )
                                     else ...[
@@ -400,30 +420,56 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                     ],
                                   ] else if (state.isRevealed) ...[
                                     const SizedBox(height: 24),
-                                    Text(
-                                      item.answer,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(
-                                            fontSize: reading.meaningSize,
-                                            height: reading.lineHeight,
+                                    RevealContent(
+                                      child: Column(
+                                        children: [
+                                          StudyMeaning(
+                                            key: ValueKey(word.id),
+                                            text: item.answer,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineSmall
+                                                ?.copyWith(
+                                                  fontSize: reading.meaningSize,
+                                                  height: reading.lineHeight,
+                                                ),
                                           ),
-                                      textAlign: TextAlign.center,
+                                          if (word.exampleKo?.isNotEmpty ==
+                                                  true ||
+                                              word.exampleZh?.isNotEmpty ==
+                                                  true)
+                                            ExpansionTile(
+                                              title: const Text('例句与翻译'),
+                                              initiallyExpanded: true,
+                                              children: [
+                                                if (word
+                                                        .exampleKo
+                                                        ?.isNotEmpty ==
+                                                    true)
+                                                  SelectableText(
+                                                    word.exampleKo!,
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                if (word
+                                                        .exampleZh
+                                                        ?.isNotEmpty ==
+                                                    true)
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          vertical: 10,
+                                                        ),
+                                                    child: Text(
+                                                      word.exampleZh!,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                        ],
+                                      ),
                                     ),
-                                    if (word.exampleKo != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 16),
-                                        child: Text(
-                                          word.exampleKo!,
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    if (word.exampleZh != null)
-                                      Text(
-                                        word.exampleZh!,
-                                        textAlign: TextAlign.center,
-                                      ),
                                   ],
                                 ],
                               );
@@ -433,54 +479,27 @@ class _StudyPageState extends ConsumerState<StudyPage>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    if (options.mode != PracticeMode.cards)
-                      FilledButton(
-                        onPressed: _correct == null || state.isSubmitting
-                            ? null
-                            : () {
-                                controller.reveal();
-                                controller.rate(
-                                  _correct!
-                                      ? StudyRating.good
-                                      : StudyRating.again,
-                                );
-                              },
-                        child: const Text('保存结果并继续'),
-                      )
-                    else if (!state.isRevealed)
-                      FilledButton(
-                        onPressed: controller.reveal,
-                        child: const Text('查看答案'),
-                      )
-                    else
-                      Row(
-                        children: [
-                          for (final item in const [
-                            (StudyRating.again, '忘记'),
-                            (StudyRating.hard, '困难'),
-                            (StudyRating.good, '认识'),
-                            (StudyRating.easy, '简单'),
-                          ])
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 3,
-                                ),
-                                child: FilledButton.tonal(
-                                  onPressed: state.isSubmitting
-                                      ? null
-                                      : () => controller.rate(item.$1),
-                                  style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 2,
-                                    ),
-                                  ),
-                                  child: Text(item.$2),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                    StudyActions(
+                      revealed: state.isRevealed,
+                      busy: state.isSubmitting,
+                      quiz: options.mode != PracticeMode.cards,
+                      onReveal: controller.reveal,
+                      onRate: (rating) {
+                        FocusScope.of(context).unfocus();
+                        controller.rate(rating);
+                      },
+                      onContinue: _correct == null
+                          ? null
+                          : () {
+                              FocusScope.of(context).unfocus();
+                              controller.reveal();
+                              controller.rate(
+                                _correct!
+                                    ? StudyRating.good
+                                    : StudyRating.again,
+                              );
+                            },
+                    ),
                   ],
                 ),
               ),
@@ -494,7 +513,9 @@ class _StudyPageState extends ConsumerState<StudyPage>
       children: [
         Row(children: [Text(label), const Spacer(), Text('$done / $target')]),
         const SizedBox(height: 5),
-        LinearProgressIndicator(value: (done / target).clamp(0, 1).toDouble()),
+        SmoothProgress(
+          value: target <= 0 ? 0 : (done / target).clamp(0, 1).toDouble(),
+        ),
       ],
     ),
   );

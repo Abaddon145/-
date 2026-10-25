@@ -1,3 +1,4 @@
+import '../../../core/theme/app_motion.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +10,7 @@ import '../../ai/presentation/ai_assistant_sheet.dart';
 import '../../ai/domain/ai_models.dart';
 import '../../ai/domain/ai_providers.dart';
 
-Future<void> showWordDetail(BuildContext context, Word word) => showModalBottomSheet<void>(
+Future<void> showWordDetail(BuildContext context, Word word) => showModalBottomSheet<void>(sheetAnimationStyle: AppMotion.sheet(context), useRootNavigator: true,
   context: context, isScrollControlled: true, useSafeArea: true, showDragHandle: true,
   builder: (_) => WordDetailSheet(word: word));
 
@@ -88,6 +89,7 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('每行必须有形式名称和答案，用 = 分隔'))); return;
           }
           await ref.read(databaseProvider).saveSetting('word_forms:${widget.word.id}', lines.isEmpty ? null : lines.join('\n'));
+          ref.invalidate(studyWordFormsProvider(widget.word.id));
           if (context.mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('活用表已保存'))); }
         }, child: const Text('保存活用表')),
         const Divider(), Text('最近复习', style: Theme.of(context).textTheme.titleMedium),

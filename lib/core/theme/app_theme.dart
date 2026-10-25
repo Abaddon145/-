@@ -103,13 +103,20 @@ abstract final class AppTheme {
         linearMinHeight: 6,
         borderRadius: BorderRadius.circular(12),
       ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         scrolledUnderElevation: 0,
         elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: scheme.onSurface,
+          fontFamily: fontFamily,
+          fontSize: 23,
+          fontWeight: FontWeight.w700,
+        ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: scheme.surface.withValues(alpha: 0.94),
+        backgroundColor: Colors.transparent,
         height: 68,
         indicatorColor: scheme.primaryContainer,
         labelTextStyle: WidgetStateProperty.resolveWith(
@@ -126,14 +133,37 @@ abstract final class AppTheme {
         elevation: 0,
       ),
       cardTheme: CardThemeData(
-        elevation: 0,
-        color: scheme.surface.withValues(alpha: 0.92),
+        elevation: 1,
+        shadowColor: scheme.shadow.withValues(alpha: preset.dark ? .12 : .035),
+        surfaceTintColor: Colors.transparent,
+        color: Color.alphaBlend(
+          scheme.surface.withValues(alpha: .96),
+          preset.start,
+        ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           side: BorderSide(
-            color: scheme.outlineVariant.withValues(alpha: 0.42),
+            color: scheme.outlineVariant.withValues(alpha: 0.35),
           ),
         ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        modalBarrierColor: Colors.black.withValues(alpha: .28),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        showDragHandle: true,
+        dragHandleColor: scheme.onSurfaceVariant.withValues(alpha: .3),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        elevation: 2,
+      ),
+      listTileTheme: const ListTileThemeData(
+        contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 5),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -154,7 +184,13 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size.fromHeight(52),
+          animationDuration: const Duration(milliseconds: 140),
+          textStyle: const TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),

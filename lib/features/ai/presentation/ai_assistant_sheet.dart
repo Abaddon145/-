@@ -1,7 +1,7 @@
+import '../../../core/theme/app_motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
 import '../../library/domain/providers.dart';
 import '../data/ai_client.dart';
@@ -9,6 +9,8 @@ import '../data/ai_repository.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_providers.dart';
 import 'ai_context_picker.dart';
+import 'ai_request_status.dart';
+import 'ai_field_picker.dart';
 
 Future<void> showAiAssistant(
   BuildContext context,
@@ -18,6 +20,8 @@ Future<void> showAiAssistant(
   bool batch = false,
   String? taskItemId,
 }) => showModalBottomSheet<void>(
+  sheetAnimationStyle: AppMotion.sheet(context),
+  useRootNavigator: true,
   context: context,
   isScrollControlled: true,
   useSafeArea: true,
@@ -60,6 +64,16 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
   final _fields = <String, TextEditingController>{};
   Map<String, String> _existing = {};
   AiCancellation? _cancel;
+  AiException? _failure;
+  bool _generating = false;
+
+  void _showError(Object error) {
+    _failure = error is AiException
+        ? error
+        : const AiException('provider_error');
+    _error = null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -105,7 +119,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = '$error';
+          _showError(error);
         });
       }
     }
@@ -131,37 +145,82 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
       (_fields[key] ??= TextEditingController()).text = suggestion.fieldText(
         key,
       );
-      if (suggestion.fieldText(key).isNotEmpty &&
-          const {
-            'meaningZh',
-            'partOfSpeech',
-            'baseForm',
-            'exampleKo',
-            'exampleZh',
-          }.contains(key) &&
-          aiFieldMissing(key, _existing[key]) &&
-          !(key == 'meaningZh' &&
-              (suggestion.needsMoreContext || suggestion.suspectedTypo))) {
-        _selected.add(key);
-      }
+      if (_recommendedField(key, suggestion)) _selected.add(key);
     }
     if (widget.batch) _selected.removeWhere((key) => key != 'meaningZh');
+  }
+
+  bool _recommendedField(String key, AiSuggestion suggestion) =>
+      suggestion.fieldText(key).isNotEmpty &&
+      (widget.explain
+              ? const {
+                  'meaningZh',
+                  'collocations',
+                  'exampleKo',
+                  'exampleZh',
+                  'workExampleKo',
+                  'workExampleZh',
+                  'usageNote',
+                  'grammarNote',
+                  'ambiguityNotes',
+                  'confusingWords',
+                  'terminologyNote',
+                }
+              : const {
+                  'meaningZh',
+                  'partOfSpeech',
+                  'baseForm',
+                  'exampleKo',
+                  'exampleZh',
+                })
+          .contains(key) &&
+      aiFieldMissing(key, _existing[key]) &&
+      !(key == 'meaningZh' &&
+          (suggestion.needsMoreContext || suggestion.suspectedTypo)) &&
+      (!widget.batch || key == 'meaningZh');
+
+  Future<void> _pickFields() async {
+    final suggestion = _suggestion;
+    if (suggestion == null || _busy || _saved) return;
+    FocusScope.of(context).unfocus();
+    final picks = await chooseAiFields(
+      context,
+      values: {
+        for (final entry in _fields.entries)
+          if (!widget.batch || entry.key == 'meaningZh')
+            entry.key: entry.value.text,
+      },
+      existing: _existing,
+      selected: _selected,
+      recommended: {
+        for (final key in aiFieldLabels.keys)
+          if (_recommendedField(key, suggestion)) key,
+      },
+    );
+    if (!mounted || picks == null) return;
+    setState(() {
+      _selected.clear();
+      _selected.addAll(picks);
+    });
   }
 
   Future<void> _generate({String? style}) async {
     if (_busy) return;
     final repository = ref.read(aiRepositoryProvider),
         gateway = ref.read(aiGatewayProvider);
-    _cancel = AiCancellation();
+    final cancellation = AiCancellation();
+    _cancel = cancellation;
     if (style != null) _style = style;
     final request = _request();
     setState(() {
       _busy = true;
+      _generating = true;
+      _failure = null;
       _error = null;
     });
     try {
-      final result = await gateway.generate(request, _cancel!);
-      _cancel!.check();
+      final result = await gateway.generate(request, cancellation);
+      cancellation.check();
       await repository.store(request, result, itemId: widget.taskItemId);
       if (mounted) {
         setState(() {
@@ -169,9 +228,14 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
         });
       }
     } catch (error) {
-      if (mounted) setState(() => _error = '$error');
+      if (mounted) setState(() => _showError(error));
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _generating = false;
+        });
+      }
     }
   }
 
@@ -184,6 +248,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
       _candidates.clear();
       _selected.clear();
       _error = null;
+      _failure = null;
     });
     if (widget.explain) {
       final cached = await ref.read(aiRepositoryProvider).cached(_request());
@@ -227,6 +292,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
       setState(() {
         _busy = true;
         _error = null;
+        _failure = null;
       });
       await repository.save(
         suggestion.requestId,
@@ -284,7 +350,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
         });
       }
     } catch (error) {
-      if (mounted) setState(() => _error = '$error');
+      if (mounted) setState(() => _showError(error));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -428,44 +494,24 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                                 suggestion == null ? '生成建议' : '重新生成候选',
                               ),
                             ),
-                            if (_busy)
-                              TextButton(
-                                onPressed: () => _cancel?.cancel(),
-                                child: const Text('取消请求'),
-                              ),
                           ],
                         ),
-                        if (_busy)
+                        if (_generating)
+                          AiRequestStatus(onCancel: () => _cancel?.cancel())
+                        else if (_busy)
                           const Padding(
                             padding: EdgeInsets.symmetric(vertical: 12),
                             child: LinearProgressIndicator(),
                           ),
+                        if (_failure != null)
+                          AiErrorNotice(
+                            error: _failure!,
+                            onRetry: _busy ? null : () => _generate(),
+                          ),
                         if (_error != null)
-                          Card(
-                            color: colors.errorContainer,
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _error!,
-                                    style: TextStyle(
-                                      color: colors.onErrorContainer,
-                                    ),
-                                  ),
-                                  if (_error ==
-                                      const AiException(
-                                        'not_configured',
-                                      ).message)
-                                    TextButton(
-                                      onPressed: () =>
-                                          context.push('/settings/ai'),
-                                      child: const Text('前往 AI 设置，填写 API Key'),
-                                    ),
-                                ],
-                              ),
-                            ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Text(_error!),
                           ),
                         if (_candidates.length > 1) ...[
                           const SizedBox(height: 12),
@@ -566,12 +612,16 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                             TextButton(
                               onPressed: () =>
                                   setState(() => _editing = !_editing),
-                              child: Text(_editing ? '收起保存编辑' : '预览并选择保存内容'),
+                              child: Text(_editing ? '收起编辑与对比' : '编辑与对比原内容'),
                             ),
                           ],
                           if (_editing) ...[
                             const SizedBox(height: 12),
-                            const Text('基础词条中缺失的字段默认勾选；已有内容与扩展说明请主动选择。'),
+                            Text(
+                              widget.explain
+                                  ? '缺失的学习内容默认勾选；已有内容默认保留。'
+                                  : '基础词条中缺失的字段默认勾选；已有内容与扩展说明请主动选择。',
+                            ),
                             const SizedBox(height: 12),
                             for (final key in primary)
                               if (!widget.batch || key == 'meaningZh')
@@ -617,7 +667,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                       ],
                     ),
                   ),
-                  if (suggestion != null && _editing)
+                  if (suggestion != null)
                     SafeArea(
                       top: false,
                       child: Container(
@@ -631,22 +681,40 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            FilledButton(
-                              onPressed:
-                                  _busy ||
-                                      _saved ||
-                                      (_selected.isEmpty && _spelling == null)
-                                  ? null
-                                  : _save,
-                              child: Text(
-                                _saved
-                                    ? '已保存 · AI 生成·用户已确认'
-                                    : '保存选中的 ${_selected.length} 个字段',
+                            if (!_saved)
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: TextButton.icon(
+                                  onPressed: _busy ? null : _pickFields,
+                                  icon: const Icon(
+                                    Icons.checklist_rounded,
+                                    size: 18,
+                                  ),
+                                  label: Text(
+                                    '选择内容 · 已选 ${_selected.length} 项',
+                                  ),
+                                ),
+                              ),
+                            PressFeedback(
+                              child: FilledButton(
+                                onPressed:
+                                    _busy ||
+                                        _saved ||
+                                        (_selected.isEmpty && _spelling == null)
+                                    ? null
+                                    : _save,
+                                child: Text(
+                                  _saved
+                                      ? '已保存 · AI 生成·用户已确认'
+                                      : '保存选中的 ${_selected.length} 个字段',
+                                ),
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              _saved ? '复习计划、学习次数与打卡保持不变。' : '只更新选中字段，复习计划不变。',
+                              _saved
+                                  ? '已存到此词的详情页，学习进度不变。'
+                                  : '已有内容默认保留，只保存所选字段。',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
 import '../../study/domain/providers.dart';
+import '../../../core/theme/app_motion.dart';
+import '../../settings/presentation/backup_reminder_card.dart';
+import '../../settings/domain/backup_status.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -37,6 +40,7 @@ class HomePage extends ConsumerWidget {
         child: RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(homeCountsProvider);
+            ref.invalidate(backupStatusProvider);
             ref.invalidate(dailyPlanProgressProvider);
             await ref.read(homeCountsProvider.future);
           },
@@ -127,6 +131,8 @@ class HomePage extends ConsumerWidget {
                 error: (_, _) => const Text('暂时无法读取统计，下拉可重试。'),
               ),
               const SizedBox(height: 24),
+              const BackupReminderCard(),
+              const SizedBox(height: 20),
               Text('常用入口', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
               for (final entry in [
@@ -150,16 +156,18 @@ class HomePage extends ConsumerWidget {
                   '/import',
                 ),
               ])
-                Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: Icon(entry.$1, color: colors.primary),
-                    title: Text(entry.$2),
-                    subtitle: Text(entry.$3),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => entry.$4 == '/library'
-                        ? context.go(entry.$4)
-                        : context.push(entry.$4),
+                PressFeedback(
+                  child: Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: Icon(entry.$1, color: colors.primary),
+                      title: Text(entry.$2),
+                      subtitle: Text(entry.$3),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => entry.$4 == '/library'
+                          ? context.go(entry.$4)
+                          : context.push(entry.$4),
+                    ),
                   ),
                 ),
               if (seed.hasError)
@@ -191,56 +199,73 @@ class _TodayCard extends StatelessWidget {
     final started = progress.newWordsDone + progress.reviewsDone > 0;
     return Card(
       margin: EdgeInsets.zero,
-      color: colors.primaryContainer.withValues(alpha: .9),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '今日学习',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+      clipBehavior: Clip.antiAlias,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              colors.primaryContainer,
+              Color.alphaBlend(
+                colors.primary.withValues(alpha: .06),
+                colors.surface,
+              ),
+            ],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '今日学习',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  tooltip: '调整今日计划',
-                  onPressed: onPlan,
-                  icon: const Icon(Icons.tune_rounded),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _PlanRow(
-              '新词',
-              progress.newWordsDone,
-              progress.settings.newWordsPerDay,
-            ),
-            const SizedBox(height: 14),
-            _PlanRow(
-              '复习',
-              progress.reviewsDone,
-              progress.settings.reviewsPerDay,
-            ),
-            const SizedBox(height: 22),
-            FilledButton.icon(
-              onPressed: ready ? onStart : null,
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: Text(
-                !ready
-                    ? '正在准备词库…'
-                    : started
-                    ? '继续今日学习'
-                    : '开始今天的学习',
+                  IconButton(
+                    tooltip: '调整今日计划',
+                    onPressed: onPlan,
+                    icon: const Icon(Icons.tune_rounded),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            const Text('完成目标后仍可继续新词、复习或混合练习。'),
-          ],
+              const SizedBox(height: 8),
+              _PlanRow(
+                '新词',
+                progress.newWordsDone,
+                progress.settings.newWordsPerDay,
+              ),
+              const SizedBox(height: 14),
+              _PlanRow(
+                '复习',
+                progress.reviewsDone,
+                progress.settings.reviewsPerDay,
+              ),
+              const SizedBox(height: 22),
+              PressFeedback(
+                child: FilledButton.icon(
+                  onPressed: ready ? onStart : null,
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: Text(
+                    !ready
+                        ? '正在准备词库…'
+                        : started
+                        ? '继续今日学习'
+                        : '开始今天的学习',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text('完成目标后仍可继续新词、复习或混合练习。'),
+            ],
+          ),
         ),
       ),
     );
@@ -256,7 +281,7 @@ class _PlanRow extends StatelessWidget {
     children: [
       Row(children: [Text(label), const Spacer(), Text('$done / $target')]),
       const SizedBox(height: 6),
-      LinearProgressIndicator(
+      SmoothProgress(
         value: target == 0 ? 1 : (done / target).clamp(0, 1).toDouble(),
       ),
     ],

@@ -75,8 +75,13 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/settings',
-              pageBuilder: (context, state) =>
-                  appPage(state, const SettingsPage(), backdrop: false),
+              pageBuilder: (context, state) => appPage(
+                state,
+                SettingsPage(
+                  focusBackup: state.uri.queryParameters['backup'] == '1',
+                ),
+                backdrop: false,
+              ),
               routes: [
                 GoRoute(
                   path: 'daily-plan',

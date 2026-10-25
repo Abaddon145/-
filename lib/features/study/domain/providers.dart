@@ -114,3 +114,19 @@ final wordBooksProvider = FutureProvider.autoDispose<List<WordBook>>((ref) async
   await ref.watch(bundledWordSeedProvider.future);
   return db.loadWordBooks();
 });
+
+// Scoped futures are reused during input, reveal and animation rebuilds.
+final studyWordFormsProvider = FutureProvider.autoDispose.family<String, int>(
+  (ref, id) async =>
+      await ref.watch(databaseProvider).loadSetting('word_forms:$id') ?? '',
+);
+final studyFavoriteProvider = FutureProvider.autoDispose.family<bool, int>((
+  ref,
+  id,
+) async {
+  final db = ref.watch(databaseProvider);
+  return (await (db.select(
+        db.userWords,
+      )..where((r) => r.wordId.equals(id))).getSingleOrNull())?.isFavorite ??
+      false;
+});

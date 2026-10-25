@@ -1,3 +1,4 @@
+import '../../../core/theme/app_motion.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,7 +6,7 @@ import '../../../core/database/app_database.dart';
 import '../domain/providers.dart';
 
 Future<void> showSessionSheet(BuildContext context, {LibraryFilter filter = LibraryFilter.all, String tag = ''}) =>
-  showModalBottomSheet<void>(context: context, isScrollControlled: true, useSafeArea: true,
+  showModalBottomSheet<void>(sheetAnimationStyle: AppMotion.sheet(context), useRootNavigator: true,context: context, isScrollControlled: true, useSafeArea: true,
     showDragHandle: true, builder: (_) => SessionSheet(filter: filter, tag: tag));
 
 class SessionSheet extends ConsumerStatefulWidget {
