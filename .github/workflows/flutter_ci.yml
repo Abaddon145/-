@@ -15,7 +15,12 @@ jobs:
           channel: stable
           cache: true
       - name: Generate platform scaffolding
-        run: flutter create --platforms=android --org com.abaddon145 .
+        run: |
+          # flutter create rewrites pubspec.lock before resolving. Keep the
+          # committed lock so this job matches the GitHub Pages build.
+          cp pubspec.lock /tmp/pubspec.lock.keep
+          flutter create --platforms=android --org com.abaddon145 .
+          mv /tmp/pubspec.lock.keep pubspec.lock
       - run: dart run tool/configure_device_storage.dart
       - name: Remove generated sample test
         run: rm -f test/widget_test.dart
@@ -42,7 +47,13 @@ jobs:
           channel: stable
           cache: true
       - name: Generate iOS scaffolding
-        run: flutter create --platforms=ios --org com.abaddon145 .
+        run: |
+          # flutter create rewrites pubspec.lock before resolving. Keep the
+          # committed lock so the simulator build uses the same dependencies
+          # as the GitHub Pages job.
+          cp pubspec.lock /tmp/pubspec.lock.keep
+          flutter create --platforms=ios --org com.abaddon145 .
+          mv /tmp/pubspec.lock.keep pubspec.lock
       - run: dart run tool/configure_device_storage.dart
       - run: flutter pub get
       - run: dart run build_runner build --delete-conflicting-outputs

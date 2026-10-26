@@ -61,21 +61,24 @@ Milestone 1 基础版本包含：
 
 ## 本地运行
 
-需要 Flutter stable（Dart 3.10+）。首次克隆后生成平台工程与 Drift 代码：
+需要 Flutter stable（Dart 3.10+）。`ios/` 与 `android/` 已在仓库中。克隆后安装依赖并生成 Drift 代码：
 
 ```bash
-flutter create --platforms=ios,android --org com.abaddon145 .
 flutter pub get
 dart run tool/configure_device_storage.dart
 dart run build_runner build --delete-conflicting-outputs
 flutter run
 ```
 
+平台目录缺失时再执行 `flutter create --platforms=ios,android --org com.abaddon145 .`。不要加 `--overwrite`，以免覆盖现有的 `lib/` 和已经改过的 `ios/Runner/Info.plist`。
+
 ## iPhone 安装说明
 
-iOS 构建必须在安装了 Xcode 的 Mac 上执行。连接 iPhone、启用 Developer Mode，并在 Xcode 中选择自己的 Signing Team 后即可运行。未付费的 Personal Team 可用于个人设备测试，但配置文件会定期到期；App Store / TestFlight 分发需要 Apple Developer Program。
+仓库已包含 `ios/`（Bundle ID `com.abaddon145.koreanMemo`，最低 iOS 15）。iOS 构建必须在安装了 Xcode 的 Mac 上执行。连接 iPhone、启用 Developer Mode，并在 Xcode 中选择自己的 Signing Team 后即可运行。未付费的 Personal Team 可用于个人设备测试，但配置文件会定期到期；App Store / TestFlight 分发需要 Apple Developer Program。
 
 不使用苹果签名时，可以打开 GitHub Pages 上的 PWA，在 Safari 分享菜单中选择“添加到主屏幕”。词库和学习进度保存在当前浏览器的本地数据库中。
+
+打开 `ios/Runner.xcworkspace`、选择签名团队、真机运行、Archive / Ad Hoc / TestFlight 的步骤见 [iPhone 真机安装](docs/ios-device-install.md)。Mac 上也可运行 `scripts/ios_device.sh`。
 
 ## 验证
 
