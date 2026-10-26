@@ -12,6 +12,7 @@ ios/.symlinks/
 macos/Flutter/ephemeral/
 android/.gradle/
 *.iml
+.idea/
 *.g.dart
 web/sqlite3.wasm
 web/drift_worker.js
