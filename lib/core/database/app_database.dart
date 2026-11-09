@@ -35,8 +35,8 @@ class Words extends Table {
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-        {normalizedKorean, normalizedBaseForm},
-      ];
+    {normalizedKorean, normalizedBaseForm},
+  ];
 }
 
 class WordBooks extends Table {
@@ -126,7 +126,8 @@ class RecoverySnapshots extends Table {
   IntColumn get id => integer()();
   TextColumn get payload => text()();
   DateTimeColumn get createdAt => dateTime()();
-  @override Set<Column<Object>> get primaryKey => {id};
+  @override
+  Set<Column<Object>> get primaryKey => {id};
 }
 
 @DataClassName('AiSuggestionRecord')
@@ -140,7 +141,8 @@ class AiSuggestions extends Table {
   TextColumn get payload => text()();
   TextColumn get savedFields => text().withDefault(const Constant('[]'))();
   DateTimeColumn get createdAt => dateTime()();
-  @override Set<Column<Object>> get primaryKey => {id};
+  @override
+  Set<Column<Object>> get primaryKey => {id};
 }
 
 @DataClassName('AiTaskRecord')
@@ -150,7 +152,8 @@ class AiTasks extends Table {
   TextColumn get status => text().withDefault(const Constant('paused'))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
-  @override Set<Column<Object>> get primaryKey => {id};
+  @override
+  Set<Column<Object>> get primaryKey => {id};
 }
 
 @DataClassName('AiTaskItemRecord')
@@ -163,7 +166,8 @@ class AiTaskItems extends Table {
   TextColumn get suggestionId => text().nullable()();
   TextColumn get errorCode => text().nullable()();
   IntColumn get attempts => integer().withDefault(const Constant(0))();
-  @override Set<Column<Object>> get primaryKey => {id};
+  @override
+  Set<Column<Object>> get primaryKey => {id};
 }
 
 class AiWordContents extends Table {
@@ -176,7 +180,8 @@ class AiWordContents extends Table {
   TextColumn get originalSnapshot => text()();
   DateTimeColumn get generatedAt => dateTime()();
   DateTimeColumn get confirmedAt => dateTime()();
-  @override Set<Column<Object>> get primaryKey => {wordId, field};
+  @override
+  Set<Column<Object>> get primaryKey => {wordId, field};
 }
 
 @DriftDatabase(
@@ -198,46 +203,48 @@ class AiWordContents extends Table {
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
-      : super(
-          executor ??
-              driftDatabase(
-                name: 'korean_memo',
-                web: DriftWebOptions(
-                  sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-                  driftWorker: Uri.parse('drift_worker.js'),
-                ),
+    : super(
+        executor ??
+            driftDatabase(
+              name: 'korean_memo',
+              web: DriftWebOptions(
+                sqlite3Wasm: Uri.parse('sqlite3.wasm'),
+                driftWorker: Uri.parse('drift_worker.js'),
               ),
-        );
+            ),
+      );
 
   @override
   int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (migrator) async {
-          await migrator.createAll();
-          await _ensureStudyCardsDueIndex();
-        },
-        // Retire only obsolete cloud markers; keep every local learning table.
-        beforeOpen: (_) => customStatement("DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'"),
-        onUpgrade: (migrator, from, to) async {
-          if (from < 2) {
-            await migrator.createTable(appSettings);
-          }
-          if (from < 3) await migrator.createTable(recoverySnapshots);
-          if (from < 4) {
-            await migrator.createTable(aiSuggestions);
-            await migrator.createTable(aiTasks);
-            await migrator.createTable(aiTaskItems);
-            await migrator.createTable(aiWordContents);
-          }
-          if (from < 5) await _ensureStudyCardsDueIndex();
-        },
-      );
+    onCreate: (migrator) async {
+      await migrator.createAll();
+      await _ensureStudyCardsDueIndex();
+    },
+    // Retire only obsolete cloud markers; keep every local learning table.
+    beforeOpen: (_) => customStatement(
+      "DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'",
+    ),
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.createTable(appSettings);
+      }
+      if (from < 3) await migrator.createTable(recoverySnapshots);
+      if (from < 4) {
+        await migrator.createTable(aiSuggestions);
+        await migrator.createTable(aiTasks);
+        await migrator.createTable(aiTaskItems);
+        await migrator.createTable(aiWordContents);
+      }
+      if (from < 5) await _ensureStudyCardsDueIndex();
+    },
+  );
 
   Future<void> _ensureStudyCardsDueIndex() => customStatement(
-        'CREATE INDEX IF NOT EXISTS idx_study_cards_due ON study_cards (due)',
-      );
+    'CREATE INDEX IF NOT EXISTS idx_study_cards_due ON study_cards (due)',
+  );
 
   Future<HomeCounts> loadHomeCounts(DateTime nowUtc) async {
     final dueResult = await customSelect(
@@ -262,20 +269,22 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<DailyPlanSettings> loadDailyPlanSettings() async {
-    final rows = await (select(appSettings)
-          ..where((row) => row.key.isIn(const [
+    final rows =
+        await (select(appSettings)..where(
+              (row) => row.key.isIn(const [
                 DailyPlanSettings.newWordsKey,
                 DailyPlanSettings.reviewsKey,
-              ])))
-        .get();
+              ]),
+            ))
+            .get();
     final values = {for (final row in rows) row.key: int.tryParse(row.value)};
     return DailyPlanSettings(
       newWordsPerDay:
           values[DailyPlanSettings.newWordsKey] ??
-              DailyPlanSettings.defaultNewWords,
+          DailyPlanSettings.defaultNewWords,
       reviewsPerDay:
           values[DailyPlanSettings.reviewsKey] ??
-              DailyPlanSettings.defaultReviews,
+          DailyPlanSettings.defaultReviews,
     ).normalized();
   }
 
@@ -283,29 +292,35 @@ class AppDatabase extends _$AppDatabase {
     final normalized = settings.normalized();
     final now = DateTime.now().toUtc();
     await transaction(() async {
-    await batch((batch) {
-      batch.insertAllOnConflictUpdate(appSettings, [
-        AppSettingsCompanion.insert(
-          key: DailyPlanSettings.newWordsKey,
-          value: normalized.newWordsPerDay.toString(),
-          updatedAt: now,
-        ),
-        AppSettingsCompanion.insert(
-          key: DailyPlanSettings.reviewsKey,
-          value: normalized.reviewsPerDay.toString(),
-          updatedAt: now,
-        ),
-      ]);
-    });
-      await (delete(appSettings)..where((row) => row.key.isIn(const [
-        'study_round_day', 'study_round_baseline', 'study_round_target',
-      ]))).go();
+      await batch((batch) {
+        batch.insertAllOnConflictUpdate(appSettings, [
+          AppSettingsCompanion.insert(
+            key: DailyPlanSettings.newWordsKey,
+            value: normalized.newWordsPerDay.toString(),
+            updatedAt: now,
+          ),
+          AppSettingsCompanion.insert(
+            key: DailyPlanSettings.reviewsKey,
+            value: normalized.reviewsPerDay.toString(),
+            updatedAt: now,
+          ),
+        ]);
+      });
+      await (delete(appSettings)..where(
+            (row) => row.key.isIn(const [
+              'study_round_day',
+              'study_round_baseline',
+              'study_round_target',
+            ]),
+          ))
+          .go();
     });
   }
 
   Future<String?> loadSetting(String key) async {
-    final row = await (select(appSettings)..where((item) => item.key.equals(key)))
-        .getSingleOrNull();
+    final row = await (select(
+      appSettings,
+    )..where((item) => item.key.equals(key))).getSingleOrNull();
     return row?.value;
   }
 
@@ -326,9 +341,9 @@ class AppDatabase extends _$AppDatabase {
   Future<DailyPlanProgress> loadDailyPlanProgress(DateTime localNow) async {
     final settings = await loadDailyPlanSettings();
     final day = _dailyStatKey(localNow);
-    final statistics = await (select(dailyStatistics)
-          ..where((row) => row.date.equals(day)))
-        .getSingleOrNull();
+    final statistics = await (select(
+      dailyStatistics,
+    )..where((row) => row.date.equals(day))).getSingleOrNull();
     return DailyPlanProgress(
       settings: settings,
       newWordsDone: statistics?.newWords ?? 0,
@@ -347,7 +362,8 @@ class AppDatabase extends _$AppDatabase {
         ? int.tryParse(await loadSetting('study_round_baseline') ?? '') ?? 0
         : 0;
     final target = active
-        ? int.tryParse(await loadSetting('study_round_target') ?? '') ?? progress.settings.newWordsPerDay
+        ? int.tryParse(await loadSetting('study_round_target') ?? '') ??
+              progress.settings.newWordsPerDay
         : progress.settings.newWordsPerDay;
     return StudyRoundProgress(
       totalNewWords: progress.newWordsDone,
@@ -363,8 +379,14 @@ class AppDatabase extends _$AppDatabase {
     }
     await transaction(() async {
       final progress = await loadDailyPlanProgress(localNow);
-      await saveSetting('study_round_day', _dailyStatKey(localNow).toIso8601String());
-      await saveSetting('study_round_baseline', progress.newWordsDone.toString());
+      await saveSetting(
+        'study_round_day',
+        _dailyStatKey(localNow).toIso8601String(),
+      );
+      await saveSetting(
+        'study_round_baseline',
+        progress.newWordsDone.toString(),
+      );
       await saveSetting('study_round_target', count.toString());
     });
   }
@@ -377,15 +399,22 @@ class AppDatabase extends _$AppDatabase {
     final progress = await loadDailyPlanProgress(localNow);
 
     if (progress.reviewsDone < progress.settings.reviewsPerDay) {
-      final dueQuery = select(words).join([
-        innerJoin(studyCards, studyCards.wordId.equalsExp(words.id)),
-        if (bookId != null)
-          innerJoin(wordBookWords, wordBookWords.wordId.equalsExp(words.id) & wordBookWords.wordBookId.equals(bookId)),
-      ])
-        ..where(studyCards.due.isSmallerOrEqualValue(nowUtc) &
-            const Constant<bool>(true))
-        ..orderBy([OrderingTerm.asc(studyCards.due)])
-        ..limit(1);
+      final dueQuery =
+          select(words).join([
+              innerJoin(studyCards, studyCards.wordId.equalsExp(words.id)),
+              if (bookId != null)
+                innerJoin(
+                  wordBookWords,
+                  wordBookWords.wordId.equalsExp(words.id) &
+                      wordBookWords.wordBookId.equals(bookId),
+                ),
+            ])
+            ..where(
+              studyCards.due.isSmallerOrEqualValue(nowUtc) &
+                  const Constant<bool>(true),
+            )
+            ..orderBy([OrderingTerm.asc(studyCards.due)])
+            ..limit(1);
       final dueRow = await dueQuery.getSingleOrNull();
       if (dueRow != null) return dueRow.readTable(words);
     }
@@ -393,38 +422,50 @@ class AppDatabase extends _$AppDatabase {
     final round = await loadStudyRoundProgress(localNow);
     if (progress.newWordsDone >= round.baseline + round.target) return null;
 
-    final newQuery = select(words).join([
-      leftOuterJoin(studyCards, studyCards.wordId.equalsExp(words.id)),
-      if (bookId != null)
-        innerJoin(wordBookWords, wordBookWords.wordId.equalsExp(words.id) & wordBookWords.wordBookId.equals(bookId)),
-    ])
-      ..where(studyCards.id.isNull() &
-          const Constant<bool>(true))
-      ..orderBy([OrderingTerm.asc(words.id)])
-      ..limit(1);
+    final newQuery =
+        select(words).join([
+            leftOuterJoin(studyCards, studyCards.wordId.equalsExp(words.id)),
+            if (bookId != null)
+              innerJoin(
+                wordBookWords,
+                wordBookWords.wordId.equalsExp(words.id) &
+                    wordBookWords.wordBookId.equals(bookId),
+              ),
+          ])
+          ..where(studyCards.id.isNull() & const Constant<bool>(true))
+          ..orderBy([OrderingTerm.asc(words.id)])
+          ..limit(1);
     final newRow = await newQuery.getSingleOrNull();
     return newRow?.readTable(words);
   }
 
-  Future<List<WordBook>> loadWordBooks() => (select(wordBooks)
-    ..orderBy([(row) => OrderingTerm.asc(row.id)])).get();
+  Future<List<WordBook>> loadWordBooks() =>
+      (select(wordBooks)..orderBy([(row) => OrderingTerm.asc(row.id)])).get();
 
   Future<HomeCounts> loadScopedStudyCounts(int? bookId) async {
     final scope = bookId == null
         ? '1=1'
         : 'EXISTS (SELECT 1 FROM word_book_words b WHERE b.word_id=w.id AND b.word_book_id=?)';
-    final variables = bookId == null ? <Variable>[] : <Variable>[Variable<int>(bookId)];
+    final variables = bookId == null
+        ? <Variable>[]
+        : <Variable>[Variable<int>(bookId)];
     final fresh = await customSelect(
       'SELECT COUNT(*) AS amount FROM words w WHERE $scope AND NOT EXISTS '
       '(SELECT 1 FROM study_cards s WHERE s.word_id=w.id)',
-      variables: variables, readsFrom: {words, wordBookWords, studyCards},
+      variables: variables,
+      readsFrom: {words, wordBookWords, studyCards},
     ).getSingle();
-    return HomeCounts(due: 0, newWords: fresh.read<int>('amount'), completed: 0);
+    return HomeCounts(
+      due: 0,
+      newWords: fresh.read<int>('amount'),
+      completed: 0,
+    );
   }
 
   Future<StudyCard?> cardForWord(int wordId) {
-    return (select(studyCards)..where((row) => row.wordId.equals(wordId)))
-        .getSingleOrNull();
+    return (select(
+      studyCards,
+    )..where((row) => row.wordId.equals(wordId))).getSingleOrNull();
   }
 
   Future<int> createWordBook({
@@ -464,9 +505,10 @@ class AppDatabase extends _$AppDatabase {
     required List<WordDraft> drafts,
   }) {
     return transaction(() async {
-      final existingBook = await (select(wordBooks)
-            ..where((row) => row.sourceFileName.equals(sourceFileName)))
-          .getSingleOrNull();
+      final existingBook =
+          await (select(wordBooks)
+                ..where((row) => row.sourceFileName.equals(sourceFileName)))
+              .getSingleOrNull();
       if (existingBook != null) return null;
 
       final now = DateTime.now().toUtc();
@@ -491,20 +533,23 @@ class AppDatabase extends _$AppDatabase {
         (draft.partOfSpeech?.trim().isEmpty ?? true)) {
       throw const FormatException('请填写韩语、中文释义和词性');
     }
-    final existing = await (select(words)
-          ..where((word) =>
-              word.normalizedKorean.equals(draft.normalizedKorean) &
-              word.normalizedBaseForm.equals(draft.normalizedBaseForm)))
-        .getSingleOrNull();
+    final existing =
+        await (select(words)..where(
+              (word) =>
+                  word.normalizedKorean.equals(draft.normalizedKorean) &
+                  word.normalizedBaseForm.equals(draft.normalizedBaseForm),
+            ))
+            .getSingleOrNull();
     if (existing != null) {
       throw const FormatException('这个单词已存在，请在词库中编辑');
     }
     const source = 'manual://words';
-    final book = await (select(wordBooks)
-          ..where((item) => item.sourceFileName.equals(source)))
-        .getSingleOrNull();
+    final book = await (select(
+      wordBooks,
+    )..where((item) => item.sourceFileName.equals(source))).getSingleOrNull();
     final now = DateTime.now().toUtc();
-    final bookId = book?.id ??
+    final bookId =
+        book?.id ??
         await into(wordBooks).insert(
           WordBooksCompanion.insert(
             name: '手动录入',
@@ -513,9 +558,7 @@ class AppDatabase extends _$AppDatabase {
             updatedAt: now,
           ),
         );
-    final wordId = await into(words).insert(
-      draft.toCompanion(source: '手动录入'),
-    );
+    final wordId = await into(words).insert(draft.toCompanion(source: '手动录入'));
     await into(wordBookWords).insert(
       WordBookWordsCompanion.insert(
         wordBookId: bookId,
@@ -527,7 +570,9 @@ class AppDatabase extends _$AppDatabase {
   });
 
   /// Looks up only the incoming keys, in chunks. Never scans the whole words table.
-  Future<Map<(String, String), Word>> _wordsForDrafts(List<WordDraft> drafts) async {
+  Future<Map<(String, String), Word>> _wordsForDrafts(
+    List<WordDraft> drafts,
+  ) async {
     final found = <(String, String), Word>{};
     for (var offset = 0; offset < drafts.length; offset += 200) {
       final keys = drafts
@@ -537,7 +582,9 @@ class AppDatabase extends _$AppDatabase {
           .toSet()
           .toList();
       if (keys.isEmpty) continue;
-      final rows = await (select(words)..where((word) => word.normalizedKorean.isIn(keys))).get();
+      final rows = await (select(
+        words,
+      )..where((word) => word.normalizedKorean.isIn(keys))).get();
       for (final row in rows) {
         found[(row.normalizedKorean, row.normalizedBaseForm)] = row;
       }
@@ -560,7 +607,9 @@ class AppDatabase extends _$AppDatabase {
       additions.add(draft.toCompanion(source: source));
     }
     for (var offset = 0; offset < additions.length; offset += 400) {
-      await batch((batch) => batch.insertAll(words, additions.skip(offset).take(400)));
+      await batch(
+        (batch) => batch.insertAll(words, additions.skip(offset).take(400)),
+      );
     }
     if (additions.isNotEmpty) {
       known
@@ -574,29 +623,52 @@ class AppDatabase extends _$AppDatabase {
       final key = (draft.normalizedKorean, draft.normalizedBaseForm);
       final existing = known[key];
       if (existing == null) continue;
-      links.add(WordBookWordsCompanion.insert(
-        wordBookId: wordBookId,
-        wordId: existing.id,
-        sortOrder: index,
-      ));
-      if (!enrichExisting || insertedKeys.contains(key) || !enriched.add(existing.id)) continue;
-      await (update(words)..where((word) => word.id.equals(existing.id))).write(WordsCompanion(
-        meaningZh: isMissingMeaning(existing.meaningZh) ? Value(draft.meaningZh) : const Value.absent(),
-        partOfSpeech: existing.partOfSpeech == null ? Value(_nullable(draft.partOfSpeech)) : const Value.absent(),
-        exampleKo: existing.exampleKo == null ? Value(_nullable(draft.exampleKo)) : const Value.absent(),
-        exampleZh: existing.exampleZh == null ? Value(_nullable(draft.exampleZh)) : const Value.absent(),
-        tags: existing.tags == null ? Value(_nullable(draft.tags)) : const Value.absent(),
-        updatedAt: Value(DateTime.now().toUtc()),
-      ));
+      links.add(
+        WordBookWordsCompanion.insert(
+          wordBookId: wordBookId,
+          wordId: existing.id,
+          sortOrder: index,
+        ),
+      );
+      if (!enrichExisting ||
+          insertedKeys.contains(key) ||
+          !enriched.add(existing.id)) {
+        continue;
+      }
+      await (update(words)..where((word) => word.id.equals(existing.id))).write(
+        WordsCompanion(
+          meaningZh: isMissingMeaning(existing.meaningZh)
+              ? Value(draft.meaningZh)
+              : const Value.absent(),
+          partOfSpeech: existing.partOfSpeech == null
+              ? Value(_nullable(draft.partOfSpeech))
+              : const Value.absent(),
+          exampleKo: existing.exampleKo == null
+              ? Value(_nullable(draft.exampleKo))
+              : const Value.absent(),
+          exampleZh: existing.exampleZh == null
+              ? Value(_nullable(draft.exampleZh))
+              : const Value.absent(),
+          tags: existing.tags == null
+              ? Value(_nullable(draft.tags))
+              : const Value.absent(),
+          updatedAt: Value(DateTime.now().toUtc()),
+        ),
+      );
     }
     for (var offset = 0; offset < links.length; offset += 400) {
-      await batch((batch) => batch.insertAll(
-            wordBookWords,
-            links.skip(offset).take(400),
-            mode: InsertMode.insertOrReplace,
-          ));
+      await batch(
+        (batch) => batch.insertAll(
+          wordBookWords,
+          links.skip(offset).take(400),
+          mode: InsertMode.insertOrReplace,
+        ),
+      );
     }
-    return ImportWriteResult(inserted: additions.length, reused: drafts.length - additions.length);
+    return ImportWriteResult(
+      inserted: additions.length,
+      reused: drafts.length - additions.length,
+    );
   }
 
   Future<ReviewWriteResult> persistReview({
@@ -617,11 +689,18 @@ class AppDatabase extends _$AppDatabase {
       final due = _dateTime(cardMap['due']) ?? now;
       final isNewWord = previous == null;
       // Learning and relearning steps stay inside the day and do not spend the review cap.
-      final isShortTerm = previous != null && (previous.state == 1 || previous.state == 3);
+      final isShortTerm =
+          previous != null && (previous.state == 1 || previous.state == 3);
       final countsAsReview = previous != null && !isShortTerm;
       final isWrong = rating == 1;
-      final lapses = (previous?.lapses ?? 0) + (previous != null && previous.state == 2 && isWrong ? 1 : 0);
-      final becameLeech = lapses >= leechLapseThreshold && previous != null && previous.state == 2 && isWrong;
+      final lapses =
+          (previous?.lapses ?? 0) +
+          (previous != null && previous.state == 2 && isWrong ? 1 : 0);
+      final becameLeech =
+          lapses >= leechLapseThreshold &&
+          previous != null &&
+          previous.state == 2 &&
+          isWrong;
       final companion = StudyCardsCompanion(
         wordId: Value(wordId),
         state: Value(_integer(cardMap['state'])),
@@ -640,8 +719,9 @@ class AppDatabase extends _$AppDatabase {
       if (previous == null) {
         await into(studyCards).insert(companion);
       } else {
-        await (update(studyCards)..where((row) => row.wordId.equals(wordId)))
-            .write(companion);
+        await (update(
+          studyCards,
+        )..where((row) => row.wordId.equals(wordId))).write(companion);
       }
       await into(reviewLogs).insert(
         ReviewLogsCompanion.insert(
@@ -659,9 +739,9 @@ class AppDatabase extends _$AppDatabase {
       );
 
       final day = _dailyStatKey(localDay);
-      final statistics = await (select(dailyStatistics)
-            ..where((row) => row.date.equals(day)))
-          .getSingleOrNull();
+      final statistics = await (select(
+        dailyStatistics,
+      )..where((row) => row.date.equals(day))).getSingleOrNull();
       if (statistics == null) {
         await into(dailyStatistics).insert(
           DailyStatisticsCompanion.insert(
@@ -674,28 +754,45 @@ class AppDatabase extends _$AppDatabase {
           ),
         );
       } else {
-        await (update(dailyStatistics)..where((row) => row.date.equals(day)))
-            .write(
+        await (update(
+          dailyStatistics,
+        )..where((row) => row.date.equals(day))).write(
           DailyStatisticsCompanion(
             newWords: Value(statistics.newWords + (isNewWord ? 1 : 0)),
-            reviewWords: Value(statistics.reviewWords + (countsAsReview ? 1 : 0)),
-            correctCount:
-                Value(statistics.correctCount + (isWrong ? 0 : 1)),
+            reviewWords: Value(
+              statistics.reviewWords + (countsAsReview ? 1 : 0),
+            ),
+            correctCount: Value(statistics.correctCount + (isWrong ? 0 : 1)),
             wrongCount: Value(statistics.wrongCount + (isWrong ? 1 : 0)),
-            studyDurationMs:
-                Value(statistics.studyDurationMs + durationMs),
+            studyDurationMs: Value(statistics.studyDurationMs + durationMs),
           ),
         );
       }
-      await customStatement('INSERT INTO user_words (word_id,is_favorite,is_difficult,correct_count,wrong_count,last_seen_at) VALUES (?,0,?,?,?,?) '
+      await customStatement(
+        'INSERT INTO user_words (word_id,is_favorite,is_difficult,correct_count,wrong_count,last_seen_at) VALUES (?,0,?,?,?,?) '
         'ON CONFLICT(word_id) DO UPDATE SET is_difficult=CASE WHEN excluded.is_difficult=1 THEN 1 ELSE user_words.is_difficult END, '
         'correct_count=user_words.correct_count+excluded.correct_count, wrong_count=user_words.wrong_count+excluded.wrong_count, last_seen_at=excluded.last_seen_at',
-        [wordId,isWrong?1:0,isWrong?0:1,isWrong?1:0,now.millisecondsSinceEpoch ~/ 1000]);
-      await finishLearningReview(wordId, rating, localDay, submissionToken, undo, session);
+        [
+          wordId,
+          isWrong ? 1 : 0,
+          isWrong ? 0 : 1,
+          isWrong ? 1 : 0,
+          now.millisecondsSinceEpoch ~/ 1000,
+        ],
+      );
+      await finishLearningReview(
+        wordId,
+        rating,
+        localDay,
+        submissionToken,
+        undo,
+        session,
+      );
       if (becameLeech) await saveSetting('word_status:$wordId', 'suspended');
       return ReviewWriteResult(leechSuspended: becameLeech, lapses: lapses);
     });
   }
+
   ({String where, List<Variable> variables}) _libraryClause({
     required String query,
     required LibraryFilter filter,
@@ -761,7 +858,8 @@ class AppDatabase extends _$AppDatabase {
   }) async {
     final clause = _libraryClause(query: query, filter: filter, bookId: bookId);
     final variables = [...clause.variables];
-    var sql = 'SELECT w.id $_libraryFrom WHERE ${clause.where} ORDER BY w.korean, w.id';
+    var sql =
+        'SELECT w.id $_libraryFrom WHERE ${clause.where} ORDER BY w.korean, w.id';
     if (limit != null) {
       sql += ' LIMIT ? OFFSET ?';
       variables.addAll([Variable<int>(limit), Variable<int>(offset)]);
@@ -773,8 +871,12 @@ class AppDatabase extends _$AppDatabase {
     ).get();
     final ids = [for (final row in idRows) row.read<int>('id')];
     if (ids.isEmpty) return const [];
-    final loaded = await (select(words)..where((word) => word.id.isIn(ids))).get();
-    final users = await (select(userWords)..where((row) => row.wordId.isIn(ids))).get();
+    final loaded = await (select(
+      words,
+    )..where((word) => word.id.isIn(ids))).get();
+    final users = await (select(
+      userWords,
+    )..where((row) => row.wordId.isIn(ids))).get();
     final byId = {for (final word in loaded) word.id: word};
     final userById = {for (final row in users) row.wordId: row};
     return [
@@ -790,7 +892,9 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> setFavorite(int id, bool value) => customStatement(
     'INSERT INTO user_words (word_id, is_favorite, is_difficult, correct_count, wrong_count) VALUES (?, ?, 0, 0, 0) '
-    'ON CONFLICT(word_id) DO UPDATE SET is_favorite = excluded.is_favorite', [id, value ? 1 : 0]);
+    'ON CONFLICT(word_id) DO UPDATE SET is_favorite = excluded.is_favorite',
+    [id, value ? 1 : 0],
+  );
 
   Future<void> updateWord({
     required int wordId,
@@ -815,8 +919,12 @@ class AppDatabase extends _$AppDatabase {
         partOfSpeech: partOfSpeech == null
             ? const Value.absent()
             : Value(_nullable(partOfSpeech)),
-        exampleKo: exampleKo == null ? const Value.absent() : Value(_nullable(exampleKo)),
-        exampleZh: exampleZh == null ? const Value.absent() : Value(_nullable(exampleZh)),
+        exampleKo: exampleKo == null
+            ? const Value.absent()
+            : Value(_nullable(exampleKo)),
+        exampleZh: exampleZh == null
+            ? const Value.absent()
+            : Value(_nullable(exampleZh)),
         tags: tags == null ? const Value.absent() : Value(_nullable(tags)),
         note: note == null ? const Value.absent() : Value(_nullable(note)),
         updatedAt: Value(DateTime.now().toUtc()),
@@ -828,9 +936,18 @@ class AppDatabase extends _$AppDatabase {
     await (delete(aiWordContents)..where((r) => r.wordId.equals(id))).go();
     await (delete(aiSuggestions)..where((r) => r.wordId.equals(id))).go();
     await (delete(aiTaskItems)..where((r) => r.wordId.equals(id))).go();
-    await (delete(appSettings)..where((r)=>r.key.isIn(['word_status:$id','word_forms:$id','correct_streak:$id']))).go();
-    final undo=await loadSetting('last_review_undo');
-    if(undo!=null&&(jsonDecode(undo) as Map)['wordId']==id)await saveSetting('last_review_undo',null);
+    await (delete(appSettings)..where(
+          (r) => r.key.isIn([
+            'word_status:$id',
+            'word_forms:$id',
+            'correct_streak:$id',
+          ]),
+        ))
+        .go();
+    final undo = await loadSetting('last_review_undo');
+    if (undo != null && (jsonDecode(undo) as Map)['wordId'] == id) {
+      await saveSetting('last_review_undo', null);
+    }
     await (delete(reviewLogs)..where((r) => r.wordId.equals(id))).go();
     await (delete(studyCards)..where((r) => r.wordId.equals(id))).go();
     await (delete(userWords)..where((r) => r.wordId.equals(id))).go();
@@ -838,19 +955,42 @@ class AppDatabase extends _$AppDatabase {
     await (delete(words)..where((r) => r.id.equals(id))).go();
   });
 
-  Future<List<DailyStatisticsSummary>> loadRecentStatistics(DateTime now, {int days = 7}) async {
-    final today = DateTime.utc(now.year, now.month, now.day), start = DateTime.utc(now.year, now.month, now.day).subtract(Duration(days: days - 1));
-    final rows = await (select(dailyStatistics)..where((r) => r.date.isBiggerOrEqualValue(start) & r.date.isSmallerOrEqualValue(today))
-      ..orderBy([(r) => OrderingTerm.asc(r.date)])).get();
+  Future<List<DailyStatisticsSummary>> loadRecentStatistics(
+    DateTime now, {
+    int days = 7,
+  }) async {
+    final today = DateTime.utc(now.year, now.month, now.day),
+        start = DateTime.utc(
+          now.year,
+          now.month,
+          now.day,
+        ).subtract(Duration(days: days - 1));
+    final rows =
+        await (select(dailyStatistics)
+              ..where(
+                (r) =>
+                    r.date.isBiggerOrEqualValue(start) &
+                    r.date.isSmallerOrEqualValue(today),
+              )
+              ..orderBy([(r) => OrderingTerm.asc(r.date)]))
+            .get();
     // Drift decodes SQLite timestamps as local DateTime objects. DateTime
     // equality distinguishes UTC and local objects even for the same instant.
     // Use the stored instant as the key so existing rows match in every timezone.
     final values = {for (final r in rows) r.date.millisecondsSinceEpoch: r};
-    return List.generate(days, (i) { final d = start.add(Duration(days:i)), r = values[d.millisecondsSinceEpoch];
-      return DailyStatisticsSummary(date:d,newWords:r?.newWords??0,reviews:r?.reviewWords??0,
-        correct:r?.correctCount??0,wrong:r?.wrongCount??0,durationMs:r?.studyDurationMs??0); });
+    return List.generate(days, (i) {
+      final d = start.add(Duration(days: i)),
+          r = values[d.millisecondsSinceEpoch];
+      return DailyStatisticsSummary(
+        date: d,
+        newWords: r?.newWords ?? 0,
+        reviews: r?.reviewWords ?? 0,
+        correct: r?.correctCount ?? 0,
+        wrong: r?.wrongCount ?? 0,
+        durationMs: r?.studyDurationMs ?? 0,
+      );
+    });
   }
-
 }
 
 class ReviewWriteResult {
@@ -874,9 +1014,9 @@ class DailyPlanSettings {
   final int reviewsPerDay;
 
   DailyPlanSettings normalized() => DailyPlanSettings(
-        newWordsPerDay: newWordsPerDay < 1 ? 1 : newWordsPerDay,
-        reviewsPerDay: reviewsPerDay.clamp(1, 500).toInt(),
-      );
+    newWordsPerDay: newWordsPerDay < 1 ? 1 : newWordsPerDay,
+    reviewsPerDay: reviewsPerDay.clamp(1, 500).toInt(),
+  );
 }
 
 class StudyRoundProgress {
@@ -912,8 +1052,7 @@ class DailyPlanProgress {
   final int studyDurationMs;
 
   int get totalDone => newWordsDone + reviewsDone;
-  int get totalLimit =>
-      settings.newWordsPerDay + settings.reviewsPerDay;
+  int get totalLimit => settings.newWordsPerDay + settings.reviewsPerDay;
   double get progress =>
       totalLimit == 0 ? 0 : (totalDone / totalLimit).clamp(0, 1).toDouble();
 }
@@ -1025,5 +1164,27 @@ DateTime _dailyStatKey(DateTime localDate) =>
     DateTime.utc(localDate.year, localDate.month, localDate.day);
 
 enum LibraryFilter { all, favorites, wrong, missingMeaning }
-class LibraryWordEntry { const LibraryWordEntry({required this.word,required this.isFavorite,required this.wrongCount}); final Word word; final bool isFavorite; final int wrongCount; }
-class DailyStatisticsSummary { const DailyStatisticsSummary({required this.date,required this.newWords,required this.reviews,required this.correct,required this.wrong,required this.durationMs}); final DateTime date; final int newWords,reviews,correct,wrong,durationMs; }
+
+class LibraryWordEntry {
+  const LibraryWordEntry({
+    required this.word,
+    required this.isFavorite,
+    required this.wrongCount,
+  });
+  final Word word;
+  final bool isFavorite;
+  final int wrongCount;
+}
+
+class DailyStatisticsSummary {
+  const DailyStatisticsSummary({
+    required this.date,
+    required this.newWords,
+    required this.reviews,
+    required this.correct,
+    required this.wrong,
+    required this.durationMs,
+  });
+  final DateTime date;
+  final int newWords, reviews, correct, wrong, durationMs;
+}
