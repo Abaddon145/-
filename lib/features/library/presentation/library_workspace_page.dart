@@ -168,16 +168,32 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           .take(20)
           .toList();
       if (words.isEmpty) throw const AiException('batch_limit');
+      final today = await ref.read(aiDailyRequestCountProvider.future);
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('发送 AI 请求？'),
+          content: Text(
+            '这一批会发送 ${words.length} 次请求，每个词一次。直连模式下今天已经发送 $today 次。',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('取消')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('发送')),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
       final initial = await ref.read(aiContextProvider.future);
       if (!mounted) return;
-      final context = await chooseAiContext(this.context, initial);
-      if (!mounted || context == null) return;
+      final chosen = await chooseAiContext(context, initial);
+      if (!mounted || chosen == null) return;
       final id = await ref
           .read(aiRepositoryProvider)
-          .createTask(words, context);
+          .createTask(words, chosen);
       if (!mounted) return;
       setState(() => _selected.removeAll(words.map((w) => w.id)));
-      await this.context.push('/ai/tasks/$id');
+      await context.push('/ai/tasks/$id');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -191,9 +207,19 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final words = ref.watch(libraryWordsProvider),
-        filter = ref.watch(libraryFilterProvider),
-        bookId = ref.watch(libraryBookProvider);
+    ref.listen(librarySearchProvider, (previous, next) {
+      if (previous != next) ref.read(libraryLimitProvider.notifier).state = libraryPageSize;
+    });
+    ref.listen(libraryFilterProvider, (previous, next) {
+      if (previous != next) ref.read(libraryLimitProvider.notifier).state = libraryPageSize;
+    });
+    ref.listen(libraryBookProvider, (previous, next) {
+      if (previous != next) ref.read(libraryLimitProvider.notifier).state = libraryPageSize;
+    });
+    final words = ref.watch(libraryWordsProvider);
+    final total = ref.watch(libraryCountProvider).valueOrNull;
+    final filter = ref.watch(libraryFilterProvider);
+    final bookId = ref.watch(libraryBookProvider);
     final books =
         ref.watch(wordBooksProvider).valueOrNull ?? const <WordBook>[];
     String? bookName;
@@ -272,7 +298,20 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               label: const Text('录入单词'),
             ),
       body: SafeArea(
-        child: CustomScrollView(
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.pixels < notification.metrics.maxScrollExtent - 480) {
+              return false;
+            }
+            final shown = words.valueOrNull?.length ?? 0;
+            final limit = ref.read(libraryLimitProvider);
+            final amount = ref.read(libraryCountProvider).valueOrNull ?? shown;
+            if (shown >= limit && shown < amount) {
+              ref.read(libraryLimitProvider.notifier).state = limit + libraryPageSize;
+            }
+            return false;
+          },
+          child: CustomScrollView(
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
@@ -356,7 +395,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                           child: Text(
                             words.isLoading
                                 ? '正在读取词库…'
-                                : '${bookName == null ? '全部词书' : '「$bookName」'} · ${items.length} 个词',
+                                : '${bookName == null ? '全部词书' : '「$bookName」'} · 已显示 ${items.length}${total == null ? '' : ' / $total'} 个词',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),
@@ -529,6 +568,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     ],
             ),
           ],
+        ),
         ),
       ),
     );

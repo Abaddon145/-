@@ -118,7 +118,8 @@ void main() {
       final gateway = TestGateway(), runner = AiTaskRunner(repo, () => gateway);
       await runner.start(task);
       final items = await repo.items(task);
-      expect(items.where((r) => r.status == 'conflict'), hasLength(2));
+      expect(items.where((r) => r.wordId == selected[1].id), isEmpty);
+      expect(items.where((r) => r.status == 'conflict'), hasLength(1));
       expect(gateway.requests, hasLength(1));
       expect((await repo.word(selected[0].id))!.meaningZh, '人工释义');
       await expectLater(

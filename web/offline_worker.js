@@ -1,9 +1,8 @@
 // Own the app cache explicitly instead of relying on Flutter's deprecated worker.
-const CACHE = 'korean-memo-0.9.0';
+const CACHE = 'korean-memo-0.10.0';
 const CORE = ['./', 'index.html', 'flutter_bootstrap.js', 'main.dart.js',
   'sqlite3.wasm', 'drift_worker.js', 'manifest.json',
   'assets/FontManifest.json', 'assets/AssetManifest.bin.json',
-  'assets/assets/fonts/KoreanMemoSans-Regular.otf',
   'assets/assets/data/default_word_books.json',
   'assets/assets/data/technical_word_books.json'];
 self.addEventListener('install', event => {
@@ -30,8 +29,12 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const name = url.pathname.split('/').pop();
-    const critical = event.request.mode === 'navigate' ||
-      ['main.dart.js', 'flutter_bootstrap.js', 'index.html', 'version.json'].includes(name);
+    // Versioned bundles stay in this cache until the service worker itself
+    // changes. A new worker installs beside the old one and the page offers
+    // "新版已就绪" before it takes over.
+    const versioned = name === 'main.dart.js' || name === 'flutter_bootstrap.js';
+    const critical = !versioned && (event.request.mode === 'navigate' ||
+      ['index.html', 'version.json'].includes(name));
     if (!critical) {
       const cached = await cache.match(event.request);
       if (cached) return cached;

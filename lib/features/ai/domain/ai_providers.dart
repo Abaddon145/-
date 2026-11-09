@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../../../core/time/local_day.dart';
 import '../../study/domain/providers.dart';
+import '../data/ai_usage.dart';
 import '../data/ai_client.dart';
 import '../data/ai_deepseek_client.dart';
 import '../data/ai_repository.dart';
@@ -12,8 +15,19 @@ import '../data/ai_key_store.dart';
 final aiCredentialProvider = StateProvider<String>((ref) => '');
 final aiKeyStoreProvider = Provider<AiKeyStore>((ref) => DeviceAiKeyStore());
 final aiApiKeyProvider = StateNotifierProvider<AiKeyController, String>(
-  (ref) => AiKeyController(ref.watch(aiKeyStoreProvider)),
+  (ref) => AiKeyController(
+    ref.watch(aiKeyStoreProvider),
+    loadPersist: kIsWeb
+        ? () async =>
+              (await ref.read(databaseProvider).loadSetting('ai_remember_key')) ==
+              'true'
+        : null,
+  ),
 );
+final aiDailyRequestCountProvider = FutureProvider.autoDispose<int>((ref) {
+  ref.watch(localDayProvider);
+  return loadTodayDirectRequests(ref.watch(databaseProvider), DateTime.now());
+});
 final aiConnectionModeProvider = FutureProvider<String>(
   (ref) => ref
       .watch(databaseProvider)
@@ -64,6 +78,10 @@ final aiGatewayProvider = Provider<AiGateway>((ref) {
             apiKeyLoader: keys.current,
             model: values[2],
             clientFactory: clientFactory,
+            onRequest: () async {
+              await recordDirectAiRequest(ref.read(databaseProvider));
+              ref.invalidate(aiDailyRequestCountProvider);
+            },
           );
   });
 });

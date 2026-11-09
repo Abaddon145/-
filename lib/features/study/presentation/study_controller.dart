@@ -4,8 +4,8 @@ import '../../../core/database/app_database.dart';
 import '../../../core/time/local_day.dart';
 import '../../../services/fsrs_service.dart';
 import '../data/study_repository.dart';
+import '../../home/presentation/visible_tab.dart';
 import '../../library/domain/providers.dart';
-import '../../statistics/domain/providers.dart';
 import '../domain/providers.dart';
 
 class StudyUiState {
@@ -209,18 +209,16 @@ final studyControllerProvider =
       await ref.read(bundledWordSeedProvider.future);
     },
     onRatingSaved: () {
-      ref.invalidate(homeCountsProvider);
-      ref.invalidate(studyBookCountsProvider);
       ref.invalidate(dailyPlanProgressProvider);
       ref.invalidate(studyRoundProgressProvider);
-      ref.invalidate(recentStatisticsProvider);
-      ref.invalidate(libraryWordsProvider);
       ref.invalidate(sessionProgressProvider);
-      ref.invalidate(checkinsProvider);
-      ref.invalidate(learningOverviewProvider);
-      ref.invalidate(reviewForecastProvider);
-      ref.invalidate(monthStatisticsProvider);
-      ref.invalidate(objectiveStatisticsProvider);
+      if (ref.read(visibleTabProvider) == 0) {
+        ref.invalidate(homeCountsProvider);
+      }
+      if (ref.read(visibleTabProvider) == 1) {
+        ref.invalidate(libraryWordsProvider);
+        ref.invalidate(libraryCountProvider);
+      }
     },
   );
   ref.listen(localDayProvider, (_, _) {

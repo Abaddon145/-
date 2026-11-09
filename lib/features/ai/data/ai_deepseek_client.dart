@@ -10,12 +10,14 @@ class AiDeepSeekClient implements AiGateway {
     required this.apiKey,
     this.apiKeyLoader,
     this.model = 'deepseek-flash',
+    this.onRequest,
     Duration timeout = const Duration(seconds: 90),
     http.Client Function()? clientFactory,
   }) : _timeout = timeout,
        _clientFactory = clientFactory;
   final String apiKey, model;
   final Future<String> Function()? apiKeyLoader;
+  final Future<void> Function()? onRequest;
   final Duration _timeout;
   final http.Client Function()? _clientFactory;
   Future<AiHttpTransport> _transport() async {
@@ -45,6 +47,8 @@ class AiDeepSeekClient implements AiGateway {
     final transport = await _transport();
     cancellation.check();
     request.validate();
+    await onRequest?.call();
+    cancellation.check();
     final response = await transport.send(
       'POST',
       Uri.https('api.deepseek.com', '/chat/completions'),

@@ -24,14 +24,20 @@ class DeviceAiKeyStore implements AiKeyStore {
 }
 
 class AiKeyController extends StateNotifier<String> {
-  AiKeyController(this.store) : super('') {
+  AiKeyController(this.store, {this.loadPersist}) : super('') {
     ready = _load();
   }
   final AiKeyStore store;
+  /// When set, a false result keeps the key in memory for this session only.
+  final Future<bool> Function()? loadPersist;
   late final Future<void> ready;
   String? error;
   Future<void> _load() async {
     try {
+      if (loadPersist != null && !await loadPersist!()) {
+        if (mounted) state = '';
+        return;
+      }
       final key = await store.read();
       if (mounted) state = key ?? '';
     } catch (_) {
@@ -39,10 +45,14 @@ class AiKeyController extends StateNotifier<String> {
     }
   }
 
-  Future<void> save(String key) async {
+  Future<void> save(String key, {bool persist = true}) async {
     await ready;
     try {
-      await store.write(key);
+      if (persist) {
+        await store.write(key);
+      } else {
+        await store.delete();
+      }
     } catch (_) {
       throw const FormatException('无法保存密钥，请检查此设备的存储权限后重试。');
     }

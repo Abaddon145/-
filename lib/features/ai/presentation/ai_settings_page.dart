@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../study/domain/providers.dart';
@@ -18,7 +19,7 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
       _apiKey = TextEditingController(),
       _model = TextEditingController(text: 'deepseek-flash');
   String _mode = 'deepseek', _context = '日常韩语', _status = '尚未测试连接';
-  bool _busy = false, _loaded = false, _showKey = false;
+  bool _busy = false, _loaded = false, _showKey = false, _rememberKey = false;
   @override
   void initState() {
     super.initState();
@@ -35,6 +36,8 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
       ref.read(aiConnectionModeProvider.future),
       ref.read(aiModelProvider.future),
     ]);
+    final remember = !kIsWeb ||
+        (await ref.read(databaseProvider).loadSetting('ai_remember_key')) == 'true';
     if (!mounted) return;
     setState(() {
       _address.text = values[0];
@@ -43,6 +46,7 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
       _model.text = values[3];
       _credential.text = ref.read(aiCredentialProvider);
       _apiKey.text = ref.read(aiApiKeyProvider);
+      _rememberKey = remember;
       if (keys.error != null) _status = keys.error!;
       _loaded = true;
     });
@@ -95,7 +99,27 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
       if (!mounted) return;
       // Only non-secret preferences go into Drift. Device key storage is separate.
       if (_mode == 'deepseek') {
-        await ref.read(aiApiKeyProvider.notifier).save(apiKey);
+        var persist = !kIsWeb || _rememberKey;
+        if (kIsWeb && persist) {
+          final accepted = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('在此设备记住密钥？'),
+              content: const Text(
+                '密钥会留在这个浏览器里。abaddon145.github.io 上的任何页面都能读取它，包括同一账号下的其他 GitHub Pages。只在你自己的设备上勾选。',
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('仅本次')),
+                FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('记住')),
+              ],
+            ),
+          );
+          if (!mounted) return;
+          persist = accepted == true;
+          setState(() => _rememberKey = persist);
+        }
+        await db.saveSetting('ai_remember_key', persist ? 'true' : 'false');
+        await ref.read(aiApiKeyProvider.notifier).save(apiKey, persist: persist);
         if (!mounted) return;
       }
       ref.read(aiCredentialProvider.notifier).state = _credential.text.trim();
@@ -112,7 +136,9 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
       final status = test
           ? await gateway.health()
           : _mode == 'deepseek'
-          ? '设置已保存，下次打开自动使用此设备上的 API Key'
+          ? kIsWeb && !_rememberKey
+                ? '设置已保存。密钥只在本次打开期间有效'
+                : '设置已保存，下次打开自动使用此设备上的 API Key'
           : '设置已保存；代理凭证仅限本次运行会话';
       if (mounted) setState(() => _status = status);
     } catch (error) {
@@ -185,7 +211,9 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
                     decoration: InputDecoration(
                       labelText: 'DeepSeek API Key',
                       hintText: 'sk-…（不是 Tracking ID）',
-                      helperText: '保存在此设备，下次自动使用；不进入备份。清除浏览器数据后需重新填写。',
+                      helperText: kIsWeb
+                          ? '默认只在本次打开期间有效。勾选记住后，同一 GitHub Pages 域名上的页面都能读到它。'
+                          : '保存在此设备，下次自动使用；不进入备份。',
                       helperMaxLines: 3,
                       suffixIcon: IconButton(
                         tooltip: _showKey ? '隐藏密钥' : '显示密钥',
@@ -196,6 +224,27 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
                       ),
                     ),
                   ),
+                  if (kIsWeb)
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _rememberKey,
+                      onChanged: _busy
+                          ? null
+                          : (value) => setState(() => _rememberKey = value ?? false),
+                      title: const Text('在此设备记住密钥'),
+                      subtitle: const Text(
+                        'abaddon145.github.io 上的任何页面都能读取已保存的密钥。',
+                      ),
+                    ),
+                  if (_mode == 'deepseek')
+                    ref.watch(aiDailyRequestCountProvider).when(
+                      data: (count) => Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('今天直连已发送 $count 次请求'),
+                      ),
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
+                    ),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(

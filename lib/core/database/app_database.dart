@@ -1,4 +1,3 @@
-// ignore_for_file: curly_braces_in_flow_control_structures
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -11,6 +10,7 @@ import 'ai_backup_validation.dart';
 
 part 'app_database.g.dart';
 part 'learning_extensions.dart';
+part 'backup_snapshot.dart';
 
 class Words extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -210,11 +210,14 @@ class AppDatabase extends _$AppDatabase {
         );
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (migrator) => migrator.createAll(),
+        onCreate: (migrator) async {
+          await migrator.createAll();
+          await _ensureStudyCardsDueIndex();
+        },
         // Retire only obsolete cloud markers; keep every local learning table.
         beforeOpen: (_) => customStatement("DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'"),
         onUpgrade: (migrator, from, to) async {
@@ -228,7 +231,12 @@ class AppDatabase extends _$AppDatabase {
             await migrator.createTable(aiTaskItems);
             await migrator.createTable(aiWordContents);
           }
+          if (from < 5) await _ensureStudyCardsDueIndex();
         },
+      );
+
+  Future<void> _ensureStudyCardsDueIndex() => customStatement(
+        'CREATE INDEX IF NOT EXISTS idx_study_cards_due ON study_cards (due)',
       );
 
   Future<HomeCounts> loadHomeCounts(DateTime nowUtc) async {
@@ -518,73 +526,77 @@ class AppDatabase extends _$AppDatabase {
     return wordId;
   });
 
+  /// Looks up only the incoming keys, in chunks. Never scans the whole words table.
+  Future<Map<(String, String), Word>> _wordsForDrafts(List<WordDraft> drafts) async {
+    final found = <(String, String), Word>{};
+    for (var offset = 0; offset < drafts.length; offset += 200) {
+      final keys = drafts
+          .skip(offset)
+          .take(200)
+          .map((draft) => draft.normalizedKorean)
+          .toSet()
+          .toList();
+      if (keys.isEmpty) continue;
+      final rows = await (select(words)..where((word) => word.normalizedKorean.isIn(keys))).get();
+      for (final row in rows) {
+        found[(row.normalizedKorean, row.normalizedBaseForm)] = row;
+      }
+    }
+    return found;
+  }
+
   Future<ImportWriteResult> _writeWords({
     required int wordBookId,
     required List<WordDraft> drafts,
     required String source,
     bool enrichExisting = false,
   }) async {
-    if (!enrichExisting) {
-      // Batch the Web worker messages: importing thousands of bundled words
-      // one SELECT / INSERT / link at a time delays the first usable screen.
-      final existing = await select(words).get();
-      final known = existing.map((w) => (w.normalizedKorean, w.normalizedBaseForm)).toSet();
-      final additions = <WordsCompanion>[];
-      for (final draft in drafts) {
-        if (known.add((draft.normalizedKorean, draft.normalizedBaseForm))) {
-          additions.add(draft.toCompanion(source: source));
-        }
-      }
-      for (var offset = 0; offset < additions.length; offset += 400) {
-        await batch((b) => b.insertAll(words, additions.skip(offset).take(400)));
-      }
-      final all = additions.isEmpty ? existing : await select(words).get();
-      final ids = {for (final w in all) (w.normalizedKorean, w.normalizedBaseForm): w.id};
-      final links = <WordBookWordsCompanion>[
-        for (var i = 0; i < drafts.length; i++)
-          WordBookWordsCompanion.insert(wordBookId: wordBookId,
-            wordId: ids[(drafts[i].normalizedKorean, drafts[i].normalizedBaseForm)]!, sortOrder: i),
-      ];
-      for (var offset = 0; offset < links.length; offset += 400) {
-        await batch((b) => b.insertAll(wordBookWords, links.skip(offset).take(400),
-          mode: InsertMode.insertOrReplace));
-      }
-      return ImportWriteResult(inserted: additions.length, reused: drafts.length - additions.length);
+    final known = await _wordsForDrafts(drafts);
+    final additions = <WordsCompanion>[];
+    final insertedKeys = <(String, String)>{};
+    for (final draft in drafts) {
+      final key = (draft.normalizedKorean, draft.normalizedBaseForm);
+      if (known.containsKey(key) || !insertedKeys.add(key)) continue;
+      additions.add(draft.toCompanion(source: source));
     }
-    var inserted = 0;
-    var reused = 0;
+    for (var offset = 0; offset < additions.length; offset += 400) {
+      await batch((batch) => batch.insertAll(words, additions.skip(offset).take(400)));
+    }
+    if (additions.isNotEmpty) {
+      known
+        ..clear()
+        ..addAll(await _wordsForDrafts(drafts));
+    }
+    final links = <WordBookWordsCompanion>[];
+    final enriched = <int>{};
     for (var index = 0; index < drafts.length; index++) {
       final draft = drafts[index];
-      final existing = await (select(words)
-            ..where((row) =>
-                row.normalizedKorean.equals(draft.normalizedKorean) &
-                row.normalizedBaseForm.equals(draft.normalizedBaseForm)))
-          .getSingleOrNull();
-      final wordId = existing?.id ??
-          await into(words).insert(
-            draft.toCompanion(source: source),
-          );
-      if (existing == null) {
-        inserted++;
-      } else {
-        reused++;
-        if(enrichExisting) await (update(words)..where((w)=>w.id.equals(wordId))).write(WordsCompanion(
-          meaningZh: isMissingMeaning(existing.meaningZh) ? Value(draft.meaningZh) : const Value.absent(),
-          partOfSpeech:existing.partOfSpeech==null?Value(_nullable(draft.partOfSpeech)):const Value.absent(),
-          exampleKo:existing.exampleKo==null?Value(_nullable(draft.exampleKo)):const Value.absent(),
-          exampleZh:existing.exampleZh==null?Value(_nullable(draft.exampleZh)):const Value.absent(),
-          tags:existing.tags==null?Value(_nullable(draft.tags)):const Value.absent(),
-          updatedAt:Value(DateTime.now().toUtc())));
-      }
-      await into(wordBookWords).insertOnConflictUpdate(
-        WordBookWordsCompanion.insert(
-          wordBookId: wordBookId,
-          wordId: wordId,
-          sortOrder: index,
-        ),
-      );
+      final key = (draft.normalizedKorean, draft.normalizedBaseForm);
+      final existing = known[key];
+      if (existing == null) continue;
+      links.add(WordBookWordsCompanion.insert(
+        wordBookId: wordBookId,
+        wordId: existing.id,
+        sortOrder: index,
+      ));
+      if (!enrichExisting || insertedKeys.contains(key) || !enriched.add(existing.id)) continue;
+      await (update(words)..where((word) => word.id.equals(existing.id))).write(WordsCompanion(
+        meaningZh: isMissingMeaning(existing.meaningZh) ? Value(draft.meaningZh) : const Value.absent(),
+        partOfSpeech: existing.partOfSpeech == null ? Value(_nullable(draft.partOfSpeech)) : const Value.absent(),
+        exampleKo: existing.exampleKo == null ? Value(_nullable(draft.exampleKo)) : const Value.absent(),
+        exampleZh: existing.exampleZh == null ? Value(_nullable(draft.exampleZh)) : const Value.absent(),
+        tags: existing.tags == null ? Value(_nullable(draft.tags)) : const Value.absent(),
+        updatedAt: Value(DateTime.now().toUtc()),
+      ));
     }
-    return ImportWriteResult(inserted: inserted, reused: reused);
+    for (var offset = 0; offset < links.length; offset += 400) {
+      await batch((batch) => batch.insertAll(
+            wordBookWords,
+            links.skip(offset).take(400),
+            mode: InsertMode.insertOrReplace,
+          ));
+    }
+    return ImportWriteResult(inserted: additions.length, reused: drafts.length - additions.length);
   }
 
   Future<ReviewWriteResult> persistReview({
@@ -684,41 +696,96 @@ class AppDatabase extends _$AppDatabase {
       return ReviewWriteResult(leechSuspended: becameLeech, lapses: lapses);
     });
   }
-  Future<List<LibraryWordEntry>> searchLibraryWords({
+  ({String where, List<Variable> variables}) _libraryClause({
+    required String query,
+    required LibraryFilter filter,
+    int? bookId,
+  }) {
+    final normalized = normalizeLookup(query);
+    final where = <String>['1=1'];
+    final variables = <Variable>[];
+    if (normalized.isNotEmpty) {
+      where.add(
+        '(lower(w.korean) LIKE ? OR lower(w.meaning_zh) LIKE ? OR lower(w.base_form) LIKE ? OR lower(coalesce(w.tags, \'\')) LIKE ? OR lower(coalesce(w.part_of_speech, \'\')) LIKE ?)',
+      );
+      final like = '%$normalized%';
+      variables.addAll([for (var i = 0; i < 5; i++) Variable<String>(like)]);
+    }
+    switch (filter) {
+      case LibraryFilter.favorites:
+        where.add('u.is_favorite = 1');
+      case LibraryFilter.wrong:
+        where.add('u.is_difficult = 1');
+      case LibraryFilter.missingMeaning:
+        final list = missingMeaningPlaceholders
+            .map((item) => "'${item.replaceAll("'", "''")}'")
+            .join(',');
+        where.add(
+          "replace(replace(lower(trim(w.meaning_zh)), ' ', ''), '　', '') IN ($list) OR trim(w.meaning_zh) = ''",
+        );
+      case LibraryFilter.all:
+        break;
+    }
+    if (bookId != null) {
+      where.add(
+        'EXISTS (SELECT 1 FROM word_book_words b WHERE b.word_id = w.id AND b.word_book_id = ?)',
+      );
+      variables.add(Variable<int>(bookId));
+    }
+    return (where: where.join(' AND '), variables: variables);
+  }
+
+  String get _libraryFrom =>
+      'FROM words w LEFT JOIN user_words u ON u.word_id = w.id';
+
+  Future<int> countLibraryWords({
     required String query,
     required LibraryFilter filter,
     int? bookId,
   }) async {
-    final normalized = normalizeLookup(query);
-    final search = normalized.isEmpty
-        ? const Constant<bool>(true)
-        : words.korean.lower().like('%$normalized%') |
-            words.meaningZh.lower().like('%$normalized%') |
-            words.baseForm.lower().like('%$normalized%') |
-            words.tags.lower().like('%$normalized%') | words.partOfSpeech.lower().like('%$normalized%');
-    final filterExpression = switch (filter) {
-      LibraryFilter.all => const Constant<bool>(true),
-      LibraryFilter.favorites => userWords.isFavorite.equals(true),
-      LibraryFilter.wrong => userWords.isDifficult.equals(true),
-      LibraryFilter.missingMeaning => const Constant<bool>(true),
-    };
-    final queryBuilder = select(words).join([
-      leftOuterJoin(userWords, userWords.wordId.equalsExp(words.id)),
-      if (bookId != null)
-        innerJoin(wordBookWords, wordBookWords.wordId.equalsExp(words.id) & wordBookWords.wordBookId.equals(bookId)),
-    ])
-      ..where(search & filterExpression)
-      ..orderBy([OrderingTerm.asc(words.korean)])
-      ;
-    final rows = await queryBuilder.get();
-    return rows.where((row) => filter != LibraryFilter.missingMeaning || isMissingMeaning(row.readTable(words).meaningZh)).map((row) {
-      final userWord = row.readTableOrNull(userWords);
-      return LibraryWordEntry(
-        word: row.readTable(words),
-        isFavorite: userWord?.isFavorite ?? false,
-        wrongCount: userWord?.wrongCount ?? 0,
-      );
-    }).toList();
+    final clause = _libraryClause(query: query, filter: filter, bookId: bookId);
+    final row = await customSelect(
+      'SELECT COUNT(*) AS amount $_libraryFrom WHERE ${clause.where}',
+      variables: clause.variables,
+      readsFrom: {words, userWords, wordBookWords},
+    ).getSingle();
+    return row.read<int>('amount');
+  }
+
+  Future<List<LibraryWordEntry>> searchLibraryWords({
+    required String query,
+    required LibraryFilter filter,
+    int? bookId,
+    int? limit,
+    int offset = 0,
+  }) async {
+    final clause = _libraryClause(query: query, filter: filter, bookId: bookId);
+    final variables = [...clause.variables];
+    var sql = 'SELECT w.id $_libraryFrom WHERE ${clause.where} ORDER BY w.korean, w.id';
+    if (limit != null) {
+      sql += ' LIMIT ? OFFSET ?';
+      variables.addAll([Variable<int>(limit), Variable<int>(offset)]);
+    }
+    final idRows = await customSelect(
+      sql,
+      variables: variables,
+      readsFrom: {words, userWords, wordBookWords},
+    ).get();
+    final ids = [for (final row in idRows) row.read<int>('id')];
+    if (ids.isEmpty) return const [];
+    final loaded = await (select(words)..where((word) => word.id.isIn(ids))).get();
+    final users = await (select(userWords)..where((row) => row.wordId.isIn(ids))).get();
+    final byId = {for (final word in loaded) word.id: word};
+    final userById = {for (final row in users) row.wordId: row};
+    return [
+      for (final id in ids)
+        if (byId[id] != null)
+          LibraryWordEntry(
+            word: byId[id]!,
+            isFavorite: userById[id]?.isFavorite ?? false,
+            wrongCount: userById[id]?.wrongCount ?? 0,
+          ),
+    ];
   }
 
   Future<void> setFavorite(int id, bool value) => customStatement(
@@ -759,6 +826,8 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> deleteWord(int id) => transaction(() async {
     await (delete(aiWordContents)..where((r) => r.wordId.equals(id))).go();
+    await (delete(aiSuggestions)..where((r) => r.wordId.equals(id))).go();
+    await (delete(aiTaskItems)..where((r) => r.wordId.equals(id))).go();
     await (delete(appSettings)..where((r)=>r.key.isIn(['word_status:$id','word_forms:$id','correct_streak:$id']))).go();
     final undo=await loadSetting('last_review_undo');
     if(undo!=null&&(jsonDecode(undo) as Map)['wordId']==id)await saveSetting('last_review_undo',null);
@@ -780,60 +849,6 @@ class AppDatabase extends _$AppDatabase {
     return List.generate(days, (i) { final d = start.add(Duration(days:i)), r = values[d.millisecondsSinceEpoch];
       return DailyStatisticsSummary(date:d,newWords:r?.newWords??0,reviews:r?.reviewWords??0,
         correct:r?.correctCount??0,wrong:r?.wrongCount??0,durationMs:r?.studyDurationMs??0); });
-  }
-
-  Future<Map<String,Object?>> createBackupSnapshot({bool includeAi = false}) => transaction(() async {
-    final tables=['words','word_books','word_book_words','study_cards','review_logs','user_words','daily_statistics','app_settings',
-      if(includeAi) ...['ai_suggestions','ai_tasks','ai_task_items','ai_word_contents']];
-    final data=<String,List<Map<String,Object?>>>{};
-    for(final t in tables){ final rows=await customSelect('SELECT * FROM $t').get(); data[t]=rows.where((r)=>t!='app_settings'||(!(r.data['key'] as String).startsWith('cloud_') && !const {'ai_access_token','ai_credential','model_api_key','last_backup_at','backup_snoozed_until','backup_reminders_enabled'}.contains(r.data['key']))).map((r)=>Map<String,Object?>.from(r.data)).toList(); }
-    return {'format':'korean-memo-backup','version':1,'createdAt':DateTime.now().toUtc().toIso8601String(),'tables':data};
-  });
-
-  Future<void> restoreBackupSnapshot(Map<String,dynamic> snapshot, {bool captureRecovery = true}) async {
-    final columns=<String,List<String>>{
-      'words':['id','korean','normalized_korean','base_form','normalized_base_form','meaning_zh','pronunciation','part_of_speech','example_ko','example_zh','topik_level','category','tags','note','hanja','etymology','source','created_at','updated_at'],
-      'word_books':['id','name','description','source_file_name','created_at','updated_at'],
-      'word_book_words':['word_book_id','word_id','sort_order'],
-      'study_cards':['id','word_id','state','due','stability','difficulty','elapsed_days','scheduled_days','reps','lapses','last_review','fsrs_json','created_at','updated_at'],
-      'review_logs':['id','word_id','submission_token','rating','reviewed_at','state_before','state_after','elapsed_days','scheduled_days','duration_ms','fsrs_review_log_json'],
-      'user_words':['word_id','is_favorite','is_difficult','note','correct_count','wrong_count','last_seen_at'],
-      'daily_statistics':['date','new_words','review_words','correct_count','wrong_count','study_duration_ms'],
-      'app_settings':['key','value','updated_at'],
-    };
-    if(snapshot['format']!='korean-memo-backup'||snapshot['version']!=1) throw const FormatException('不支持的备份格式');
-    final payload=snapshot['tables']; if(payload is! Map) throw const FormatException('备份缺少数据');
-    const aiColumns=<String,List<String>>{
-      'ai_suggestions':['id','word_id','original_snapshot','cache_key','task_type','context','payload','saved_fields','created_at'],
-      'ai_tasks':['id','context','status','created_at','updated_at'],
-      'ai_task_items':['id','task_id','word_id','original_snapshot','status','suggestion_id','error_code','attempts'],
-      'ai_word_contents':['word_id','field','value','request_id','model','prompt_version','original_snapshot','generated_at','confirmed_at'],
-    };
-    if(aiColumns.keys.any(payload.containsKey)) {
-      if(!aiColumns.keys.every(payload.containsKey)) throw const FormatException('AI 备份表不完整');
-      columns.addAll(aiColumns);
-    }
-    for(final e in columns.entries){ final list=payload[e.key]; if(list is! List||list.length>maxBackupRowsPerTable) throw FormatException('备份表无效：${e.key}');
-      for(final r in list){if(r is! Map||r.keys.toSet().length!=e.value.length||!e.value.every(r.containsKey)) throw FormatException('备份字段无效：${e.key}');}}
-    if (columns.containsKey('ai_suggestions')) validateAiBackup(payload);
-    await transaction(() async {
-      final localBackupSettings = {for(final key in ['last_backup_at','backup_snoozed_until','backup_reminders_enabled']) key: await loadSetting(key)};
-      if(captureRecovery) await into(recoverySnapshots).insertOnConflictUpdate(
-        RecoverySnapshotsCompanion.insert(id:const Value(1),payload:jsonEncode(await createBackupSnapshot(includeAi: true)),createdAt:DateTime.now().toUtc()));
-      final clearAi = columns.containsKey('ai_suggestions');
-      for(final t in [if(clearAi)...['ai_word_contents','ai_task_items','ai_tasks','ai_suggestions'],'review_logs','study_cards','word_book_words','user_words','daily_statistics','app_settings','words','word_books']) await customStatement('DELETE FROM $t');
-      for(final t in columns.keys){for(final raw in payload[t] as List){final row=Map<String,Object?>.from(raw as Map), names=columns[t]!;
-        await customStatement('INSERT INTO $t (${names.join(',')}) VALUES (${List.filled(names.length,'?').join(',')})',[for(final n in names) row[n]]);}}
-      for(final entry in localBackupSettings.entries) await saveSetting(entry.key, entry.value);
-      // An undo snapshot is valid only for the transaction that produced it on
-      // this device; imported files must never provide executable row snapshots.
-      await saveSetting('last_review_undo',null);
-      // Restoring a file never imports a different device's cloud binding.
-      await customStatement("DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'");
-      await customStatement("DELETE FROM app_settings WHERE key IN ('ai_access_token','ai_credential','model_api_key')");
-      await customStatement("UPDATE ai_tasks SET status = 'paused' WHERE status = 'running'");
-      await customStatement("UPDATE ai_task_items SET status = 'queued' WHERE status = 'running'");
-    });
   }
 
 }
