@@ -305,6 +305,31 @@ void main() {
     },
   );
 
+  test('a 50 MB review-log backup stays under the per-table row cap', () {
+    final row = jsonEncode({
+      'id': 100000,
+      'word_id': 20000,
+      'submission_token': '550e8400-e29b-41d4-a716-446655440000',
+      'rating': 3,
+      'reviewed_at': 1762700000,
+      'state_before': 2,
+      'state_after': 2,
+      'elapsed_days': 15,
+      'scheduled_days': 40,
+      'duration_ms': 4200,
+      'fsrs_review_log_json': jsonEncode({
+        'cardId': 20000,
+        'rating': 3,
+        'reviewDateTime': '2026-11-09T08:00:00.000Z',
+        'reviewDuration': 4200,
+      }),
+    });
+    final rowsInLimit = maxBackupBytes ~/ (utf8.encode(row).length + 1);
+    expect(rowsInLimit, greaterThan(100000));
+    expect(maxBackupRowsPerTable, greaterThanOrEqualTo(rowsInLimit));
+    expect(maxBackupBytes, 50 * 1024 * 1024);
+  });
+
   test('export refuses a file the app cannot restore', () {
     final snapshot = {'notes': List<String>.filled(6, 'ab')};
     final pretty = utf8

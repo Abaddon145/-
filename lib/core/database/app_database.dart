@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import '../text/cloze_target.dart';
+import 'backup_limits.dart';
 import '../../services/fsrs_service.dart';
 import 'missing_meaning.dart';
 import 'ai_backup_validation.dart';
@@ -812,7 +813,7 @@ class AppDatabase extends _$AppDatabase {
       if(!aiColumns.keys.every(payload.containsKey)) throw const FormatException('AI 备份表不完整');
       columns.addAll(aiColumns);
     }
-    for(final e in columns.entries){ final list=payload[e.key]; if(list is! List||list.length>100000) throw FormatException('备份表无效：${e.key}');
+    for(final e in columns.entries){ final list=payload[e.key]; if(list is! List||list.length>maxBackupRowsPerTable) throw FormatException('备份表无效：${e.key}');
       for(final r in list){if(r is! Map||r.keys.toSet().length!=e.value.length||!e.value.every(r.containsKey)) throw FormatException('备份字段无效：${e.key}');}}
     if (columns.containsKey('ai_suggestions')) validateAiBackup(payload);
     await transaction(() async {

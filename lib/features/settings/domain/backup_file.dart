@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-/// Export and restore share this ceiling so a saved file can be read back.
-const maxBackupBytes = 20 * 1024 * 1024;
+import '../../../core/database/backup_limits.dart';
+
+export '../../../core/database/backup_limits.dart';
 
 /// Pretty JSON when it fits; compact JSON if that is what keeps the file
 /// restorable. Throws when even the compact form is over [maxBytes].
