@@ -15,6 +15,8 @@ class StudyUiState {
     this.isRevealed = false,
     this.isSubmitting = false,
     this.error,
+    this.notice,
+    this.intervals = const {},
   });
 
   final Word? word;
@@ -22,6 +24,8 @@ class StudyUiState {
   final bool isRevealed;
   final bool isSubmitting;
   final Object? error;
+  final String? notice;
+  final Map<StudyRating, String> intervals;
 
   bool get isComplete => !isLoading && word == null && error == null;
 
@@ -33,6 +37,10 @@ class StudyUiState {
     bool? isSubmitting,
     Object? error,
     bool clearError = false,
+    String? notice,
+    bool clearNotice = false,
+    Map<StudyRating, String>? intervals,
+    bool clearIntervals = false,
   }) {
     return StudyUiState(
       word: clearWord ? null : (word ?? this.word),
@@ -40,6 +48,8 @@ class StudyUiState {
       isRevealed: isRevealed ?? this.isRevealed,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       error: clearError ? null : (error ?? this.error),
+      notice: clearNotice ? null : (notice ?? this.notice),
+      intervals: clearIntervals ? const {} : (intervals ?? this.intervals),
     );
   }
 }
@@ -67,6 +77,13 @@ class StudyController extends StateNotifier<StudyUiState> {
     } else { _clock.stop(); }
   }
   int _loadVersion = 0;
+  int? _preparedWordId;
+  Map<StudyRating, FsrsReviewResult>? _prepared;
+
+  void _clearPrepared() {
+    _preparedWordId = null;
+    _prepared = null;
+  }
 
   Future<void> load() async {
     if (!mounted) return;
@@ -79,6 +96,7 @@ class StudyController extends StateNotifier<StudyUiState> {
       final word = await _repository.nextWord();
       if (!mounted || version != _loadVersion) return;
       _clock.reset();
+      _clearPrepared();
       state = StudyUiState(word: word);
       _syncClock();
     } catch (error) {
@@ -106,7 +124,30 @@ class StudyController extends StateNotifier<StudyUiState> {
   }
 
   void reveal() {
-    if (state.word != null) state = state.copyWith(isRevealed: true);
+    if (state.word == null || state.isRevealed) return;
+    state = state.copyWith(isRevealed: true);
+    prepareRatings();
+  }
+
+  Future<void> prepareRatings() async {
+    final word = state.word;
+    if (word == null) return;
+    try {
+      final preview = await _repository.preview(word);
+      if (!mounted || state.word?.id != word.id) return;
+      _preparedWordId = word.id;
+      _prepared = preview.ratings;
+      state = state.copyWith(
+        intervals: {
+          for (final entry in preview.ratings.entries)
+            entry.key: entry.value.intervalLabel,
+        },
+      );
+    } catch (_) {
+      if (!mounted) return;
+      _clearPrepared();
+      state = state.copyWith(clearIntervals: true);
+    }
   }
 
   Future<void> undo() async {
@@ -115,6 +156,7 @@ class StudyController extends StateNotifier<StudyUiState> {
       final word = await _repository.undo();
       if (!mounted || word == null) return;
       _clock..stop()..reset();
+      _clearPrepared();
       state = StudyUiState(word: word);
       _syncClock();
       onRatingSaved?.call();
@@ -128,17 +170,29 @@ class StudyController extends StateNotifier<StudyUiState> {
     if (word == null || state.isLoading || state.isSubmitting || !state.isRevealed) {
       return;
     }
-    state = state.copyWith(isSubmitting: true, clearError: true);
+    state = state.copyWith(isSubmitting: true, clearError: true, clearNotice: true);
     _clock.stop();
     try {
-      await _repository.submitRating(
+      if (_preparedWordId != word.id || _prepared == null || !_prepared!.containsKey(rating)) {
+        await prepareRatings();
+      }
+      final FsrsReviewResult? prepared = _preparedWordId == word.id && _prepared != null
+          ? _prepared![rating]
+          : null;
+      final outcome = await _repository.submitRating(
         word: word,
         rating: rating,
         duration: _clock.elapsed,
+        prepared: prepared,
       );
       if (!mounted) return;
+      final notice = outcome.leechSuspended
+          ? '「${word.korean}」已忘记 ${outcome.lapses} 次，已暂停并列入待强化。打开词条详情，点「恢复正常学习」即可继续。'
+          : null;
       onRatingSaved?.call();
       await load();
+      if (!mounted || notice == null) return;
+      state = state.copyWith(notice: notice);
     } catch (error) {
       if (!mounted) return;
       state = state.copyWith(isSubmitting: false, error: error);

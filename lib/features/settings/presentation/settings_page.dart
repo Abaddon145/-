@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
+import '../domain/backup_file.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/reading_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -128,9 +129,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final data = await ref
           .read(databaseProvider)
           .createBackupSnapshot(includeAi: _includeAi);
-      final bytes = Uint8List.fromList(
-        utf8.encode(const JsonEncoder.withIndent('  ').convert(data)),
-      );
+      final bytes = encodeBackupFile(data);
       final saved = await FilePicker.saveFile(
         fileName:
             'korean-memo-${DateTime.now().toUtc().toIso8601String().replaceAll(':', '-').split('.').first}.json',
@@ -197,8 +196,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       );
       if (file == null) return;
       final bytes = await file.readAsBytes();
-      if (bytes.isEmpty || bytes.length > 20 * 1024 * 1024) {
-        throw const FormatException('备份文件为空或超过 20 MB');
+      if (bytes.isEmpty || bytes.length > maxBackupBytes) {
+        final cap = maxBackupBytes ~/ (1024 * 1024);
+        throw FormatException('备份文件为空或超过 $cap MB，无法恢复');
       }
       final decoded = jsonDecode(utf8.decode(bytes));
       if (decoded is! Map<String, dynamic>) {
@@ -216,13 +216,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final created = DateTime.tryParse(
         decoded['createdAt']?.toString() ?? '',
       )?.toLocal();
+      final replacesAi = const [
+        'ai_suggestions',
+        'ai_tasks',
+        'ai_task_items',
+        'ai_word_contents',
+      ].every((name) => tables[name] is List);
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('恢复备份？'),
           content: SingleChildScrollView(
             child: Text(
-              '词条：${(tables['words'] as List).length} 个\n学习记录：${(tables['review_logs'] as List).length} 条\n备份时间：${created?.toString().split('.').first ?? '未记录'}\n\n恢复会替换此设备上的整个词库、学习进度和设置。建议先导出当前备份。',
+              '词条：${(tables['words'] as List).length} 个\n学习记录：${(tables['review_logs'] as List).length} 条\n备份时间：${created?.toString().split('.').first ?? '未记录'}\n\n恢复会替换此设备上的词库、学习进度和设置。${replacesAi ? '这份备份包含 AI 数据，会替换本机的 AI 建议、任务和已确认内容。' : '这份备份不含 AI 数据，本机的 AI 建议、任务和已确认内容会保留。'}\n建议先导出当前备份。',
             ),
           ),
           actions: [

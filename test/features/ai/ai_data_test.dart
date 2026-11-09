@@ -326,7 +326,9 @@ void main() {
       expect((legacy['tables'] as Map).containsKey('ai_tasks'), false);
       expect(jsonEncode(modern), isNot(contains('unit-test-secret')));
       await db.restoreBackupSnapshot(legacy);
-      expect(await db.select(db.aiSuggestions).get(), isEmpty);
+      expect(await db.select(db.aiSuggestions).get(), hasLength(1));
+      expect(await db.select(db.aiTasks).get(), hasLength(1));
+      await (db.delete(db.aiSuggestions)).go();
       expect(await db.recoverPreviousRestore(), true);
       expect(await db.select(db.aiSuggestions).get(), hasLength(1));
       expect(await db.select(db.aiTasks).get(), hasLength(1));

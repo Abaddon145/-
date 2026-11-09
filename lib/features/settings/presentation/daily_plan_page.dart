@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../services/fsrs_service.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 
@@ -19,6 +20,7 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
   final _form = GlobalKey<FormState>();
   final _newWords = TextEditingController();
   final _reviews = TextEditingController();
+  double _retention = 0.9;
   bool _initialized = false;
 
   @override
@@ -31,7 +33,9 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
   String? _validateCount(String? value, int? maximum) {
     final count = int.tryParse(value ?? '');
     return count == null || count < 1 || (maximum != null && count > maximum)
-        ? maximum == null ? '请输入大于 0 的整数' : '请输入 1–$maximum 之间的整数'
+        ? maximum == null
+              ? '请输入大于 0 的整数'
+              : '请输入 1–$maximum 之间的整数'
         : null;
   }
 
@@ -41,7 +45,12 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
   @override
   void initState() {
     super.initState();
-    _settingsFuture = ref.read(databaseProvider).loadDailyPlanSettings();
+    final database = ref.read(databaseProvider);
+    _settingsFuture = database.loadDailyPlanSettings();
+    database.loadSetting(retentionSettingKey).then((value) {
+      if (!mounted) return;
+      setState(() => _retention = normalizeDesiredRetention(value));
+    });
   }
 
   Future<void> _save() async {
@@ -51,27 +60,29 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
 
     setState(() => _saving = true);
     try {
-      await ref.read(databaseProvider).saveDailyPlanSettings(
-            DailyPlanSettings(
-              newWordsPerDay: newWords,
-              reviewsPerDay: reviews,
-            ),
-          );
+      final database = ref.read(databaseProvider);
+      await database.saveDailyPlanSettings(
+        DailyPlanSettings(newWordsPerDay: newWords, reviewsPerDay: reviews),
+      );
+      await database.saveSetting(
+        retentionSettingKey,
+        _retention.toStringAsFixed(2),
+      );
       ref.invalidate(dailyPlanSettingsProvider);
       ref.invalidate(dailyPlanProgressProvider);
       ref.invalidate(studyRoundProgressProvider);
       ref.invalidate(homeCountsProvider);
       ref.invalidate(studyControllerProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('每日学习计划已保存')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('每日学习计划已保存')));
       context.pop();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('保存失败：$error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('保存失败：$error')));
       setState(() => _saving = false);
     }
   }
@@ -118,7 +129,9 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
                         controller: _newWords,
                         enabled: !_saving,
                         keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                         validator: (value) => _validateCount(value, null),
                         decoration: const InputDecoration(
                           labelText: '每日新词',
@@ -131,20 +144,49 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
                         controller: _reviews,
                         enabled: !_saving,
                         keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
                         validator: (value) => _validateCount(value, 500),
                         decoration: const InputDecoration(
                           labelText: '每日复习上限',
-                          helperText: '1–500 次，只安排已到期的内容',
+                          helperText: '1–500 次。只限制已毕业的卡片',
                           prefixIcon: Icon(Icons.replay_rounded),
                         ),
+                      ),
+                      const SizedBox(height: 18),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '记忆保留率',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          for (final choice in retentionChoices)
+                            ChoiceChip(
+                              label: Text('${(choice * 100).round()}%'),
+                              selected: _retention == choice,
+                              onSelected: _saving
+                                  ? null
+                                  : (_) => setState(() => _retention = choice),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '越高，到期越勤。默认 90%。',
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  '学习时会优先安排已经到期的复习词，然后加入今日新词。完成计划后，可以点击“再学一轮”继续学习新词。',
+                  '学习时会先安排到期的复习，再加入今日新词。学习中和重学中的短步骤（例如 1 分钟、10 分钟）当天仍会出现，并且不计入复习上限。完成今日新词后，可以在学习页点击「再学一轮」继续。',
                 ),
                 const SizedBox(height: 28),
                 FilledButton.icon(

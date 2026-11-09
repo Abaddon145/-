@@ -4,7 +4,12 @@ import '../../../core/database/app_database.dart';
 import '../../../services/fsrs_service.dart';
 
 class StudyRepository {
-  StudyRepository(this._database, this._fsrsService, {this.bookId, this.options = const SessionOptions()});
+  StudyRepository(
+    this._database,
+    this._fsrsService, {
+    this.bookId,
+    this.options = const SessionOptions(),
+  });
 
   final int? bookId;
   final SessionOptions options;
@@ -23,25 +28,39 @@ class StudyRepository {
 
   Future<Word?> undo() => _database.undoLastReview(DateTime.now());
 
-  Future<void> submitRating({
+  Future<double> desiredRetention() async => normalizeDesiredRetention(
+    await _database.loadSetting(retentionSettingKey),
+  );
+
+  /// One scheduler and one UTC timestamp for every button, so the label the
+  /// learner taps is the schedule that gets stored.
+  Future<({DateTime reviewedAt, Map<StudyRating, FsrsReviewResult> ratings})>
+  preview(Word word) async {
+    final reviewedAt = DateTime.now().toUtc();
+    final currentCard = await _database.cardForWord(word.id);
+    final ratings = _fsrsService.preview(
+      wordId: word.id,
+      storedCardJson: currentCard?.fsrsJson,
+      reviewDateTime: reviewedAt,
+      desiredRetention: await desiredRetention(),
+    );
+    return (reviewedAt: reviewedAt, ratings: ratings);
+  }
+
+  Future<ReviewWriteResult> submitRating({
     required Word word,
     required StudyRating rating,
     required Duration duration,
+    FsrsReviewResult? prepared,
   }) async {
-    final now = DateTime.now();
-    final currentCard = await _database.cardForWord(word.id);
-    final result = _fsrsService.review(
-      wordId: word.id,
-      storedCardJson: currentCard?.fsrsJson,
-      rating: rating,
-    );
-    await _database.persistReview(
+    final result = prepared ?? (await preview(word)).ratings[rating]!;
+    return _database.persistReview(
       wordId: word.id,
       submissionToken: _uuid.v4(),
       rating: result.ratingValue,
-      reviewedAt: now.toUtc(),
+      reviewedAt: result.reviewedAt,
       durationMs: duration.inMilliseconds,
-      localDay: now,
+      localDay: result.reviewedAt.toLocal(),
       cardMap: result.card,
       reviewLogMap: result.reviewLog,
       session: options,

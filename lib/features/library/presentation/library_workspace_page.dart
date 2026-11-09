@@ -192,7 +192,14 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
   @override
   Widget build(BuildContext context) {
     final words = ref.watch(libraryWordsProvider),
-        filter = ref.watch(libraryFilterProvider);
+        filter = ref.watch(libraryFilterProvider),
+        bookId = ref.watch(libraryBookProvider);
+    final books =
+        ref.watch(wordBooksProvider).valueOrNull ?? const <WordBook>[];
+    String? bookName;
+    for (final book in books) {
+      if (book.id == bookId) bookName = book.name;
+    }
     final items = words.valueOrNull ?? [],
         selectable = items
             .where((e) => isMissingMeaning(e.word.meaningZh))
@@ -291,6 +298,30 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    DropdownButtonFormField<int?>(
+                      initialValue: bookId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: '词书范围',
+                        prefixIcon: Icon(Icons.library_books_outlined),
+                      ),
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('全部词书'),
+                        ),
+                        for (final book in books)
+                          DropdownMenuItem<int?>(
+                            value: book.id,
+                            child: Text(book.name),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        ref.read(libraryBookProvider.notifier).state = value;
+                        setState(_selected.clear);
+                      },
+                    ),
+                    const SizedBox(height: 12),
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -325,7 +356,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                           child: Text(
                             words.isLoading
                                 ? '正在读取词库…'
-                                : '当前结果 ${items.length} 个词',
+                                : '${bookName == null ? '全部词书' : '「$bookName」'} · ${items.length} 个词',
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ),

@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import '../text/cloze_target.dart';
+import '../../services/fsrs_service.dart';
 import 'missing_meaning.dart';
 import 'ai_backup_validation.dart';
 
@@ -584,7 +586,7 @@ class AppDatabase extends _$AppDatabase {
     return ImportWriteResult(inserted: inserted, reused: reused);
   }
 
-  Future<void> persistReview({
+  Future<ReviewWriteResult> persistReview({
     required int wordId,
     required String submissionToken,
     required int rating,
@@ -600,6 +602,13 @@ class AppDatabase extends _$AppDatabase {
       final previous = await cardForWord(wordId);
       final now = reviewedAt.toUtc();
       final due = _dateTime(cardMap['due']) ?? now;
+      final isNewWord = previous == null;
+      // Learning and relearning steps stay inside the day and do not spend the review cap.
+      final isShortTerm = previous != null && (previous.state == 1 || previous.state == 3);
+      final countsAsReview = previous != null && !isShortTerm;
+      final isWrong = rating == 1;
+      final lapses = (previous?.lapses ?? 0) + (previous != null && previous.state == 2 && isWrong ? 1 : 0);
+      final becameLeech = lapses >= leechLapseThreshold && previous != null && previous.state == 2 && isWrong;
       final companion = StudyCardsCompanion(
         wordId: Value(wordId),
         state: Value(_integer(cardMap['state'])),
@@ -609,7 +618,7 @@ class AppDatabase extends _$AppDatabase {
         elapsedDays: Value(_integer(cardMap['elapsed_days'])),
         scheduledDays: Value(_integer(cardMap['scheduled_days'])),
         reps: Value(_integer(cardMap['reps'])),
-        lapses: Value(_integer(cardMap['lapses'])),
+        lapses: Value(lapses),
         lastReview: Value(_dateTime(cardMap['last_review'])),
         fsrsJson: Value(jsonEncode(cardMap)),
         createdAt: Value(previous?.createdAt ?? now),
@@ -640,14 +649,12 @@ class AppDatabase extends _$AppDatabase {
       final statistics = await (select(dailyStatistics)
             ..where((row) => row.date.equals(day)))
           .getSingleOrNull();
-      final isNewWord = previous == null;
-      final isWrong = rating == 1;
       if (statistics == null) {
         await into(dailyStatistics).insert(
           DailyStatisticsCompanion.insert(
             date: day,
             newWords: Value(isNewWord ? 1 : 0),
-            reviewWords: Value(isNewWord ? 0 : 1),
+            reviewWords: Value(countsAsReview ? 1 : 0),
             correctCount: Value(isWrong ? 0 : 1),
             wrongCount: Value(isWrong ? 1 : 0),
             studyDurationMs: Value(durationMs),
@@ -658,7 +665,7 @@ class AppDatabase extends _$AppDatabase {
             .write(
           DailyStatisticsCompanion(
             newWords: Value(statistics.newWords + (isNewWord ? 1 : 0)),
-            reviewWords: Value(statistics.reviewWords + (isNewWord ? 0 : 1)),
+            reviewWords: Value(statistics.reviewWords + (countsAsReview ? 1 : 0)),
             correctCount:
                 Value(statistics.correctCount + (isWrong ? 0 : 1)),
             wrongCount: Value(statistics.wrongCount + (isWrong ? 1 : 0)),
@@ -672,6 +679,8 @@ class AppDatabase extends _$AppDatabase {
         'correct_count=user_words.correct_count+excluded.correct_count, wrong_count=user_words.wrong_count+excluded.wrong_count, last_seen_at=excluded.last_seen_at',
         [wordId,isWrong?1:0,isWrong?0:1,isWrong?1:0,now.millisecondsSinceEpoch ~/ 1000]);
       await finishLearningReview(wordId, rating, localDay, submissionToken, undo, session);
+      if (becameLeech) await saveSetting('word_status:$wordId', 'suspended');
+      return ReviewWriteResult(leechSuspended: becameLeech, lapses: lapses);
     });
   }
   Future<List<LibraryWordEntry>> searchLibraryWords({
@@ -810,7 +819,8 @@ class AppDatabase extends _$AppDatabase {
       final localBackupSettings = {for(final key in ['last_backup_at','backup_snoozed_until','backup_reminders_enabled']) key: await loadSetting(key)};
       if(captureRecovery) await into(recoverySnapshots).insertOnConflictUpdate(
         RecoverySnapshotsCompanion.insert(id:const Value(1),payload:jsonEncode(await createBackupSnapshot(includeAi: true)),createdAt:DateTime.now().toUtc()));
-      for(final t in ['ai_word_contents','ai_task_items','ai_tasks','ai_suggestions','review_logs','study_cards','word_book_words','user_words','daily_statistics','app_settings','words','word_books']) await customStatement('DELETE FROM $t');
+      final clearAi = columns.containsKey('ai_suggestions');
+      for(final t in [if(clearAi)...['ai_word_contents','ai_task_items','ai_tasks','ai_suggestions'],'review_logs','study_cards','word_book_words','user_words','daily_statistics','app_settings','words','word_books']) await customStatement('DELETE FROM $t');
       for(final t in columns.keys){for(final raw in payload[t] as List){final row=Map<String,Object?>.from(raw as Map), names=columns[t]!;
         await customStatement('INSERT INTO $t (${names.join(',')}) VALUES (${List.filled(names.length,'?').join(',')})',[for(final n in names) row[n]]);}}
       for(final entry in localBackupSettings.entries) await saveSetting(entry.key, entry.value);
@@ -825,6 +835,12 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+}
+
+class ReviewWriteResult {
+  const ReviewWriteResult({required this.leechSuspended, required this.lapses});
+  final bool leechSuspended;
+  final int lapses;
 }
 
 class DailyPlanSettings {

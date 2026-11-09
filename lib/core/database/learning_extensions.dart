@@ -8,7 +8,7 @@ class SessionOptions {
   const SessionOptions({this.daily = true, this.target = 20,
     this.queue = QueueKind.mixed, this.filter = LibraryFilter.all,
     this.mode = PracticeMode.cards, this.direction = StudyDirection.forward,
-    this.partOfSpeech = '', this.tag = ''});
+    this.partOfSpeech = '', this.tag = '', this.bookId});
   final bool daily;
   final int target;
   final QueueKind queue;
@@ -17,19 +17,21 @@ class SessionOptions {
   final StudyDirection direction;
   final String partOfSpeech;
   final String tag;
+  final int? bookId;
   String get key => jsonEncode([daily, queue.name, filter.name, mode.name,
-    direction.name, partOfSpeech, tag]);
+    direction.name, partOfSpeech, tag, bookId]);
   String get storageKey => 'learning_session:$key';
-  Map<String, Object> toJson() => {'daily': daily, 'target': target,
+  Map<String, Object?> toJson() => {'daily': daily, 'target': target,
     'queue': queue.index, 'filter': filter.index, 'mode': mode.index,
-    'direction': direction.index, 'pos': partOfSpeech, 'tag': tag};
+    'direction': direction.index, 'pos': partOfSpeech, 'tag': tag, 'bookId': bookId};
   factory SessionOptions.fromJson(Map<String, dynamic> data) => SessionOptions(
     daily: data['daily'] == true, target: (data['target'] as int? ?? 20)<1 ? 20 : (data['target'] as int? ?? 20),
     queue: QueueKind.values[(data['queue'] as int? ?? 0).clamp(0, QueueKind.values.length - 1)],
     filter: LibraryFilter.values[(data['filter'] as int? ?? 0).clamp(0, LibraryFilter.values.length - 1)],
     mode: PracticeMode.values[(data['mode'] as int? ?? 0).clamp(0, PracticeMode.values.length - 1)],
     direction: StudyDirection.values[(data['direction'] as int? ?? 0).clamp(0, 1)],
-    partOfSpeech: data['pos'] as String? ?? '', tag: data['tag'] as String? ?? '');
+    partOfSpeech: data['pos'] as String? ?? '', tag: data['tag'] as String? ?? '',
+    bookId: data['bookId'] as int?);
 }
 
 class SessionProgress {
@@ -94,8 +96,12 @@ extension LearningDatabase on AppDatabase {
       where.add('w.id NOT IN (${List.filled(session.seen.length, '?').join(',')})');
       variables.addAll(session.seen.map(Variable<int>.new));
     }
+    if (options.bookId != null) {
+      where.add('EXISTS (SELECT 1 FROM word_book_words b WHERE b.word_id=w.id AND b.word_book_id=?)');
+      variables.add(Variable<int>(options.bookId!));
+    }
     if (options.mode == PracticeMode.cloze) {
-      where.add("w.example_ko IS NOT NULL AND instr(w.example_ko,CASE WHEN instr(w.korean,' / ')>0 THEN substr(w.korean,instr(w.korean,' / ')+3) ELSE w.korean END)>0");
+      where.add("w.example_ko IS NOT NULL AND length(trim(w.example_ko))>0");
     }
     if (options.mode == PracticeMode.forms) {
       where.add("EXISTS (SELECT 1 FROM app_settings a WHERE a.key='word_forms:' || w.id AND a.value!='')");
@@ -106,21 +112,34 @@ extension LearningDatabase on AppDatabase {
       final round = await loadStudyRoundProgress(now);
       final fresh = plan.newWordsDone < round.baseline + round.target;
       final review = plan.reviewsDone < plan.settings.reviewsPerDay;
-      where.add('(${fresh ? 's.id IS NULL' : '0'} OR ${review ? 's.due<=?' : '0'})');
+      where.add('(${fresh ? 's.id IS NULL' : '0'} OR (s.state IN (1, 3) AND s.due<=?) OR ${review ? '(s.state = 2 AND s.due<=?)' : '0'})');
+      variables.add(Variable<DateTime>(due));
       if (review) variables.add(Variable<DateTime>(due));
     } else if (options.queue == QueueKind.newWords) {
       where.add('s.id IS NULL');
     } else if (options.queue == QueueKind.reviews) {
       where.add('s.due<=?'); variables.add(Variable<DateTime>(due));
-    } else if (options.filter == LibraryFilter.all && options.partOfSpeech.isEmpty &&
-        options.tag.isEmpty && options.mode == PracticeMode.cards) {
+    } else {
       where.add('(s.id IS NULL OR s.due<=?)'); variables.add(Variable<DateTime>(due));
     }
+    final order = 'ORDER BY CASE WHEN s.id IS NULL THEN 1 ELSE 0 END, s.due, w.id';
+    final from = 'FROM words w LEFT JOIN study_cards s ON s.word_id=w.id '
+      'LEFT JOIN user_words u ON u.word_id=w.id WHERE ${where.join(' AND ')} $order';
+    if (options.mode == PracticeMode.cloze) {
+      final rows = await customSelect(
+        'SELECT w.id, w.korean, w.example_ko $from',
+        variables: variables, readsFrom: {words, studyCards, userWords, appSettings, wordBookWords},
+      ).get();
+      for (final row in rows) {
+        final example = row.data['example_ko'] as String?;
+        if (!exampleContainsClozeTarget(row.read<String>('korean'), example)) { continue; }
+        return (select(words)..where((w) => w.id.equals(row.read<int>('id')))).getSingle();
+      }
+      return null;
+    }
     final row = await customSelect(
-      'SELECT w.id FROM words w LEFT JOIN study_cards s ON s.word_id=w.id '
-      'LEFT JOIN user_words u ON u.word_id=w.id WHERE ${where.join(' AND ')} '
-      'ORDER BY CASE WHEN s.id IS NULL THEN 1 ELSE 0 END, s.due, w.id LIMIT 1',
-      variables: variables, readsFrom: {words, studyCards, userWords, appSettings},
+      'SELECT w.id $from LIMIT 1',
+      variables: variables, readsFrom: {words, studyCards, userWords, appSettings, wordBookWords},
     ).getSingleOrNull();
     if (row == null) return null;
     return (select(words)..where((w) => w.id.equals(row.read<int>('id')))).getSingle();
@@ -136,7 +155,7 @@ extension LearningDatabase on AppDatabase {
       'card': await row('study_cards', 'word_id', wordId),
       'user': await row('user_words', 'word_id', wordId),
       'statistics': await row('daily_statistics', 'date', _dailyStatKey(date)),
-      'settings': {for (final key in ['correct_streak:$wordId', 'checkin:${dayKey(date)}',
+      'settings': {for (final key in ['correct_streak:$wordId', 'word_status:$wordId', 'checkin:${dayKey(date)}',
         'objective:${dayKey(date)}', if (options != null) options.storageKey]) key: await loadSetting(key)}};
   }
 

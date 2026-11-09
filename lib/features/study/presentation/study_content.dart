@@ -10,30 +10,32 @@ class StudyActions extends StatelessWidget {
     required this.busy,
     required this.onReveal,
     required this.onRate,
-    this.quiz = false,
-    this.onContinue,
+    this.hold = false,
+    this.intervals = const {},
   });
-  final bool revealed, busy, quiz;
+  final bool revealed, busy, hold;
   final VoidCallback onReveal;
   final ValueChanged<StudyRating> onRate;
-  final VoidCallback? onContinue;
+  final Map<StudyRating, String> intervals;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) {
       final scaled = MediaQuery.textScalerOf(context).scale(15);
       final columns = bounds.maxWidth < 340 || scaled > 20 ? 2 : 4;
-      final height = math.max(52.0, scaled * 1.4 + 24);
+      final hasIntervals = intervals.isNotEmpty;
+      final height =
+          math.max(52.0, scaled * 1.4 + 24) +
+          (hasIntervals ? math.max(16.0, scaled * 0.8) : 0);
       final total = columns == 2 ? height * 2 + 8 : height;
       // Reserve the same space before and after revealing, so the card stays put.
       return SizedBox(
         height: total,
         child: Center(
-          child: quiz
-              ? PressFeedback(
-                  child: FilledButton(
-                    onPressed: busy ? null : onContinue,
-                    child: const Text('保存结果并继续'),
-                  ),
+          child: hold
+              ? Text(
+                  '先检查答案，再选择熟悉程度',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
                 )
               : !revealed
               ? PressFeedback(
@@ -63,7 +65,21 @@ class StudyActions extends StatelessWidget {
                                 horizontal: 4,
                               ),
                             ),
-                            child: Text(rating.$2),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(rating.$2),
+                                if (intervals[rating.$1] != null)
+                                  Text(
+                                    intervals[rating.$1]!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelSmall,
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

@@ -18,7 +18,7 @@ void main(){
   var token=0;
   Future<void> rate(int id,int rating,{DateTime? date,SessionOptions? options})=>db.persistReview(wordId:id,submissionToken:'token-${token++}',rating:rating,
     reviewedAt:(date??day).toUtc(),localDay:date??day,durationMs:1000,
-    cardMap:{'state':1,'due':(date??day).toUtc().add(const Duration(days:1)).toIso8601String(),'reps':1,'stability':1.0,'difficulty':4.0},reviewLogMap:{},session:options);
+    cardMap:{'state':2,'due':(date??day).toUtc().add(const Duration(days:1)).toIso8601String(),'reps':1,'stability':1.0,'difficulty':4.0},reviewLogMap:{},session:options);
 
   test('unified queue includes untranslated sources and skips paused words',()async{
     final id=await add('curl',category:'工业术语·待补中文');
