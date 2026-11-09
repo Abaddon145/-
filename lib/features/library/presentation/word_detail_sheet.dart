@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
+import '../../../services/fsrs_service.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 import '../domain/providers.dart';
@@ -70,6 +71,10 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
             child: AiPlainText(entry.value, term: word.korean))]),
         const Divider(),
         Text(card == null ? '尚未学习' : '下次复习：${card.due.toLocal().toString().substring(0,16)}'),
+        if (card != null && card.lapses > 0) Text('累计忘记 ${card.lapses} 次'),
+        if (card != null && card.lapses >= leechLapseThreshold) Text(status == 'suspended'
+            ? '已达到暂停线（$leechLapseThreshold 次）。点「恢复正常学习」即可继续，之后再忘记仍会暂停。'
+            : '曾达到暂停线（$leechLapseThreshold 次）。当前已恢复，可以继续学习。'),
         Text('历史认识 ${user?.correctCount ?? 0} 次 · 忘记 ${user?.wrongCount ?? 0} 次'),
         Text(user?.isDifficult == true ? '当前待强化（连续 3 次认识/简单后移出）' : '当前不在待强化队列'),
         const SizedBox(height: 14),

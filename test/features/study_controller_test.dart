@@ -7,8 +7,10 @@ import 'package:korean_memo/features/study/presentation/study_controller.dart';
 import 'package:korean_memo/services/fsrs_service.dart';
 
 class _Repository implements StudyRepository {
-  @override SessionOptions get options => const SessionOptions();
-  @override Future<Word?> undo() async => null;
+  @override
+  SessionOptions get options => const SessionOptions();
+  @override
+  Future<Word?> undo() async => null;
   @override
   int? get bookId => null;
 
@@ -25,46 +27,66 @@ class _Repository implements StudyRepository {
   }
 
   @override
-  Future<void> submitRating({
+  Future<ReviewWriteResult> submitRating({
     required Word word,
     required StudyRating rating,
     required Duration duration,
-  }) async {}
+    FsrsReviewResult? prepared,
+  }) async => const ReviewWriteResult(leechSuspended: false, lapses: 0);
+
+  @override
+  Future<double> desiredRetention() async => 0.9;
+
+  @override
+  Future<({DateTime reviewedAt, Map<StudyRating, FsrsReviewResult> ratings})>
+  preview(Word word) async => (
+    reviewedAt: DateTime.utc(2026),
+    ratings: <StudyRating, FsrsReviewResult>{},
+  );
 }
 
 void main() {
-  test('study waits for bundled word import before querying the queue', () async {
-    final repository = _Repository();
-    final ready = Completer<void>();
-    final controller = StudyController(repository, beforeLoad: () => ready.future);
-    addTearDown(controller.dispose);
-    final loading = controller.load();
-    expect(repository.requests, isEmpty);
-    ready.complete();
-    await Future<void>.delayed(Duration.zero);
-    expect(repository.requests, hasLength(1));
-    repository.requests.single.complete(null);
-    await loading;
-  });
+  test(
+    'study waits for bundled word import before querying the queue',
+    () async {
+      final repository = _Repository();
+      final ready = Completer<void>();
+      final controller = StudyController(
+        repository,
+        beforeLoad: () => ready.future,
+      );
+      addTearDown(controller.dispose);
+      final loading = controller.load();
+      expect(repository.requests, isEmpty);
+      ready.complete();
+      await Future<void>.delayed(Duration.zero);
+      expect(repository.requests, hasLength(1));
+      repository.requests.single.complete(null);
+      await loading;
+    },
+  );
 
-  test('an older failed request does not overwrite a newer loaded queue', () async {
-    final repository = _Repository();
-    final controller = StudyController(repository);
-    addTearDown(controller.dispose);
-    var latest = const StudyUiState();
-    final removeListener = controller.addListener((value) => latest = value);
-    addTearDown(removeListener);
-    final first = controller.load();
-    await Future<void>.delayed(Duration.zero);
-    final second = controller.load();
-    await Future<void>.delayed(Duration.zero);
-    repository.requests[1].complete(null);
-    await second;
-    repository.requests[0].completeError(StateError('old request'));
-    await first;
-    expect(latest.error, isNull);
-    expect(latest.isComplete, isTrue);
-  });
+  test(
+    'an older failed request does not overwrite a newer loaded queue',
+    () async {
+      final repository = _Repository();
+      final controller = StudyController(repository);
+      addTearDown(controller.dispose);
+      var latest = const StudyUiState();
+      final removeListener = controller.addListener((value) => latest = value);
+      addTearDown(removeListener);
+      final first = controller.load();
+      await Future<void>.delayed(Duration.zero);
+      final second = controller.load();
+      await Future<void>.delayed(Duration.zero);
+      repository.requests[1].complete(null);
+      await second;
+      repository.requests[0].completeError(StateError('old request'));
+      await first;
+      expect(latest.error, isNull);
+      expect(latest.isComplete, isTrue);
+    },
+  );
 
   test('a request completing after disposal is ignored', () async {
     final repository = _Repository();

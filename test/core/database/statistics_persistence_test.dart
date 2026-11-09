@@ -39,7 +39,7 @@ void main() {
     Future<void> rate(int rating, String token) => db.persistReview(
       wordId: id, submissionToken: token, rating: rating,
       reviewedAt: now.toUtc(), localDay: now, durationMs: 1500,
-      cardMap: {'due': now.toUtc().toIso8601String(), 'state': 1},
+      cardMap: {'due': now.toUtc().toIso8601String(), 'state': 2},
       reviewLogMap: {},
     );
     await rate(3, 'first');

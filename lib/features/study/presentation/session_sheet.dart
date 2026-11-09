@@ -16,6 +16,7 @@ class SessionSheet extends ConsumerStatefulWidget {
   @override ConsumerState<SessionSheet> createState() => _SessionSheetState();
 }
 class _SessionSheetState extends ConsumerState<SessionSheet> {
+  int? _bookId;
   QueueKind _queue = QueueKind.mixed;
   PracticeMode _mode = PracticeMode.cards;
   StudyDirection _direction = StudyDirection.forward;
@@ -33,7 +34,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
     setState(() { _saving = true; _error = null; });
     try {
       await ref.read(sessionOptionsProvider.notifier).start(SessionOptions(daily: false, target: count,
-        queue: _queue, filter: _filter, mode: _mode, direction: _direction, partOfSpeech: _pos.text.trim(), tag: _tag.text.trim()));
+        queue: _queue, filter: _filter, mode: _mode, direction: _direction, partOfSpeech: _pos.text.trim(), tag: _tag.text.trim(), bookId: _bookId));
       ref.invalidate(sessionProgressProvider);
       if (mounted) Navigator.pop(context);
     } catch (error) { if (mounted) { setState(() { _error = '$error'; _saving = false; }); } }
@@ -44,6 +45,12 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
       child: ListView(children: [
         Text('开始一轮练习', style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 16),
+        DropdownButtonFormField<int?>(initialValue: _bookId, isExpanded: true, decoration: const InputDecoration(labelText: '词书'),
+          items: [const DropdownMenuItem<int?>(value: null, child: Text('全部词书')),
+            for (final book in ref.watch(wordBooksProvider).valueOrNull ?? const <WordBook>[])
+              DropdownMenuItem<int?>(value: book.id, child: Text(book.name))],
+          onChanged: (value) => setState(() => _bookId = value)),
+        const SizedBox(height: 12),
         DropdownButtonFormField<QueueKind>(initialValue: _queue, decoration: const InputDecoration(labelText: '学习内容'),
           items: const [DropdownMenuItem(value: QueueKind.mixed, child: Text('混合学习')), DropdownMenuItem(value: QueueKind.newWords, child: Text('只学新词')), DropdownMenuItem(value: QueueKind.reviews, child: Text('只复习到期词'))], onChanged: (v) => setState(() => _queue = v!)),
         const SizedBox(height: 12),

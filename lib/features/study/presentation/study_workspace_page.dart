@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/reading_preferences.dart';
-import '../../../services/fsrs_service.dart';
 import '../../library/domain/providers.dart';
 import '../../library/presentation/word_editor_sheet.dart';
 import '../../library/presentation/word_detail_sheet.dart';
@@ -104,6 +103,14 @@ class _StudyPageState extends ConsumerState<StudyPage>
       _answer.clear();
       _correct = null;
     }
+    ref.listen(studyControllerProvider, (previous, next) {
+      final notice = next.notice;
+      if (notice == null || notice == previous?.notice) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(notice)));
+    });
+    final quiz = options.mode != PracticeMode.cards;
     return Scaffold(
       appBar: AppBar(
         title: Text(options.daily ? '今日学习' : '本轮练习'),
@@ -176,7 +183,24 @@ class _StudyPageState extends ConsumerState<StudyPage>
                             error: (_, _) => const SizedBox(),
                           ),
                       const SizedBox(height: 24),
-                      FilledButton(
+                      if (options.daily)
+                        FilledButton(
+                          onPressed: state.isLoading
+                              ? null
+                              : () async {
+                                  final count =
+                                      ref
+                                          .read(dailyPlanProgressProvider)
+                                          .valueOrNull
+                                          ?.settings
+                                          .newWordsPerDay ??
+                                      DailyPlanSettings.defaultNewWords;
+                                  await controller.startExtraRound(count);
+                                },
+                          child: const Text('再学一轮'),
+                        ),
+                      if (options.daily) const SizedBox(height: 8),
+                      FilledButton.tonal(
                         onPressed: _configure,
                         child: const Text('继续新词 / 复习 / 混合练习'),
                       ),
@@ -234,7 +258,17 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                         ?.done ??
                                     0,
                               );
-                              final quiz = options.mode != PracticeMode.cards;
+                              Future<void> grade() async {
+                                FocusScope.of(context).unfocus();
+                                setState(
+                                  () => _correct = answerMatches(
+                                    _answer.text,
+                                    item.answer,
+                                  ),
+                                );
+                                controller.reveal();
+                              }
+
                               return Column(
                                 children: [
                                   Row(
@@ -358,28 +392,12 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                       decoration: const InputDecoration(
                                         labelText: '输入答案',
                                       ),
-                                      onSubmitted: (_) {
-                                        FocusScope.of(context).unfocus();
-                                        setState(
-                                          () => _correct = answerMatches(
-                                            _answer.text,
-                                            item.answer,
-                                          ),
-                                        );
-                                      },
+                                      onSubmitted: (_) => grade(),
                                     ),
                                     const SizedBox(height: 12),
                                     if (_correct == null)
                                       OutlinedButton(
-                                        onPressed: () {
-                                          FocusScope.of(context).unfocus();
-                                          setState(
-                                            () => _correct = answerMatches(
-                                              _answer.text,
-                                              item.answer,
-                                            ),
-                                          );
-                                        },
+                                        onPressed: grade,
                                         child: const Text('检查答案'),
                                       )
                                     else ...[
@@ -393,6 +411,13 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                       ),
                                       Text(
                                         '参考答案：${item.answer}',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        _correct!
+                                            ? '建议记为「认识」。记得很吃力可选「困难」，毫不费力可选「简单」。'
+                                            : '如果只是差一点，可选「困难」，不必把整张卡片记成忘记。',
                                         textAlign: TextAlign.center,
                                       ),
                                       if (!_correct!)
@@ -480,25 +505,16 @@ class _StudyPageState extends ConsumerState<StudyPage>
                     ),
                     const SizedBox(height: 12),
                     StudyActions(
-                      revealed: state.isRevealed,
+                      revealed: quiz ? _correct != null : state.isRevealed,
                       busy: state.isSubmitting,
-                      quiz: options.mode != PracticeMode.cards,
+                      hold: quiz && _correct == null,
+                      intervals: state.intervals,
                       onReveal: controller.reveal,
                       onRate: (rating) {
                         FocusScope.of(context).unfocus();
+                        if (quiz && !state.isRevealed) controller.reveal();
                         controller.rate(rating);
                       },
-                      onContinue: _correct == null
-                          ? null
-                          : () {
-                              FocusScope.of(context).unfocus();
-                              controller.reveal();
-                              controller.rate(
-                                _correct!
-                                    ? StudyRating.good
-                                    : StudyRating.again,
-                              );
-                            },
                     ),
                   ],
                 ),

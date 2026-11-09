@@ -17,7 +17,7 @@ final libraryWordsProvider =
   return database.searchLibraryWords(
         query: query,
         filter: filter,
-        bookId: null,
+        bookId: ref.watch(libraryBookProvider),
       );
 });
 

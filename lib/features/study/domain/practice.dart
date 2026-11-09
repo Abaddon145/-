@@ -1,5 +1,6 @@
 import '../../../core/database/app_database.dart';
 import '../../../core/database/missing_meaning.dart';
+import '../../../core/text/cloze_target.dart';
 
 class PracticeItem {
   const PracticeItem(this.question, this.answer, this.spoken);
@@ -16,7 +17,7 @@ PracticeItem practiceItem(Word word, SessionOptions options, {String forms = '',
   final front = ko.isNotEmpty ? ko : word.korean;
   final back = translated ? word.meaningZh : en.isNotEmpty && ko.isNotEmpty ? en : '暂无翻译，请在编辑中补充';
   if (options.mode == PracticeMode.cloze) {
-    final target=front.split('/').first.trim();
+    final target = clozeTarget(word.korean);
     return PracticeItem((word.exampleKo ?? '').replaceAll(target, '＿＿＿'), target, word.exampleKo ?? target);
   }
   if (options.mode == PracticeMode.forms) {
