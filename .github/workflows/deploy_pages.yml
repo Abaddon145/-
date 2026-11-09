@@ -2,7 +2,7 @@ name: Deploy PWA
 
 on:
   push:
-    branches: [main, "codex/milestone-1-ios-foundation"]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -21,14 +21,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: "3.47.9"
           cache: true
       - run: flutter pub get
       - run: dart run build_runner build --delete-conflicting-outputs
       - name: Download Drift web runtime
         run: |
-          curl -L --fail https://github.com/simolus3/drift/releases/download/drift-2.35.2/sqlite3.wasm -o web/sqlite3.wasm
-          curl -L --fail https://github.com/simolus3/drift/releases/download/drift-2.35.2/drift_worker.js -o web/drift_worker.js
+          bash tool/retry.sh curl -L --fail https://github.com/simolus3/drift/releases/download/drift-2.35.2/sqlite3.wasm -o web/sqlite3.wasm
+          bash tool/retry.sh curl -L --fail https://github.com/simolus3/drift/releases/download/drift-2.35.2/drift_worker.js -o web/drift_worker.js
       - name: Build installable PWA
         run: flutter build web --release --base-href "/-/" --pwa-strategy offline-first
       - uses: actions/configure-pages@v5

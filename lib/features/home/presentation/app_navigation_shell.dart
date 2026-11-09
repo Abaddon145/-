@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/reading_preferences.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../study/domain/providers.dart';
+import 'visible_tab.dart';
 
 class AppNavigationShell extends ConsumerWidget {
   const AppNavigationShell({super.key, required this.navigationShell});
@@ -12,9 +13,14 @@ class AppNavigationShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final active = navigationShell.currentIndex == 2;
+    final index = navigationShell.currentIndex;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (context.mounted && ref.read(studyVisibleProvider) != active) {
+      if (!context.mounted) return;
+      if (ref.read(studyVisibleProvider) != active) {
         ref.read(studyVisibleProvider.notifier).state = active;
+      }
+      if (ref.read(visibleTabProvider) != index) {
+        ref.read(visibleTabProvider.notifier).state = index;
       }
     });
     return Scaffold(
@@ -46,10 +52,14 @@ class AppNavigationShell extends ConsumerWidget {
               child: NavigationBar(
                 animationDuration: AppMotion.duration(context, 240),
                 selectedIndex: navigationShell.currentIndex,
-                onDestinationSelected: (index) => navigationShell.goBranch(
-                  index,
-                  initialLocation: index == navigationShell.currentIndex,
-                ),
+                onDestinationSelected: (index) {
+                  navigationShell.goBranch(
+                    index,
+                    initialLocation: index == navigationShell.currentIndex,
+                  );
+                  ref.read(visibleTabProvider.notifier).state = index;
+                  refreshVisibleTab(ref, index);
+                },
                 destinations: const [
                   NavigationDestination(
                     icon: Icon(Icons.home_outlined),

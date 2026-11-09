@@ -168,16 +168,36 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           .take(20)
           .toList();
       if (words.isEmpty) throw const AiException('batch_limit');
+      final today = await ref.read(aiDailyRequestCountProvider.future);
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('发送 AI 请求？'),
+          content: Text(
+            '这一批会发送 ${words.length} 次请求，每个词一次。直连模式下今天已经发送 $today 次。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('发送'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
       final initial = await ref.read(aiContextProvider.future);
       if (!mounted) return;
-      final context = await chooseAiContext(this.context, initial);
-      if (!mounted || context == null) return;
-      final id = await ref
-          .read(aiRepositoryProvider)
-          .createTask(words, context);
+      final chosen = await chooseAiContext(context, initial);
+      if (!mounted || chosen == null) return;
+      final id = await ref.read(aiRepositoryProvider).createTask(words, chosen);
       if (!mounted) return;
       setState(() => _selected.removeAll(words.map((w) => w.id)));
-      await this.context.push('/ai/tasks/$id');
+      await context.push('/ai/tasks/$id');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -191,9 +211,25 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final words = ref.watch(libraryWordsProvider),
-        filter = ref.watch(libraryFilterProvider),
-        bookId = ref.watch(libraryBookProvider);
+    ref.listen(librarySearchProvider, (previous, next) {
+      if (previous != next) {
+        ref.read(libraryLimitProvider.notifier).state = libraryPageSize;
+      }
+    });
+    ref.listen(libraryFilterProvider, (previous, next) {
+      if (previous != next) {
+        ref.read(libraryLimitProvider.notifier).state = libraryPageSize;
+      }
+    });
+    ref.listen(libraryBookProvider, (previous, next) {
+      if (previous != next) {
+        ref.read(libraryLimitProvider.notifier).state = libraryPageSize;
+      }
+    });
+    final words = ref.watch(libraryWordsProvider);
+    final total = ref.watch(libraryCountProvider).valueOrNull;
+    final filter = ref.watch(libraryFilterProvider);
+    final bookId = ref.watch(libraryBookProvider);
     final books =
         ref.watch(wordBooksProvider).valueOrNull ?? const <WordBook>[];
     String? bookName;
@@ -272,263 +308,295 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
               label: const Text('录入单词'),
             ),
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
-                child: Column(
-                  children: [
-                    TextField(
-                      controller: _search,
-                      onChanged: _searchChanged,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search),
-                        hintText: '搜索单词、中文或标签',
-                        suffixIcon: _search.text.isEmpty
-                            ? null
-                            : IconButton(
-                                tooltip: '清除搜索',
-                                onPressed: () {
-                                  _search.clear();
-                                  _searchChanged('');
-                                },
-                                icon: const Icon(Icons.close),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int?>(
-                      initialValue: bookId,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: '词书范围',
-                        prefixIcon: Icon(Icons.library_books_outlined),
-                      ),
-                      items: [
-                        const DropdownMenuItem<int?>(
-                          value: null,
-                          child: Text('全部词书'),
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification.metrics.pixels <
+                notification.metrics.maxScrollExtent - 480) {
+              return false;
+            }
+            final shown = words.valueOrNull?.length ?? 0;
+            final limit = ref.read(libraryLimitProvider);
+            final amount = ref.read(libraryCountProvider).valueOrNull ?? shown;
+            if (shown >= limit && shown < amount) {
+              ref.read(libraryLimitProvider.notifier).state =
+                  limit + libraryPageSize;
+            }
+            return false;
+          },
+          child: CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: _search,
+                        onChanged: _searchChanged,
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.search),
+                          hintText: '搜索单词、中文或标签',
+                          suffixIcon: _search.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: '清除搜索',
+                                  onPressed: () {
+                                    _search.clear();
+                                    _searchChanged('');
+                                  },
+                                  icon: const Icon(Icons.close),
+                                ),
                         ),
-                        for (final book in books)
-                          DropdownMenuItem<int?>(
-                            value: book.id,
-                            child: Text(book.name),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int?>(
+                        initialValue: bookId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: '词书范围',
+                          prefixIcon: Icon(Icons.library_books_outlined),
+                        ),
+                        items: [
+                          const DropdownMenuItem<int?>(
+                            value: null,
+                            child: Text('全部词书'),
                           ),
-                      ],
-                      onChanged: (value) {
-                        ref.read(libraryBookProvider.notifier).state = value;
-                        setState(_selected.clear);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (final entry in const [
-                            (LibraryFilter.all, '全部'),
-                            (LibraryFilter.favorites, '收藏'),
-                            (LibraryFilter.wrong, '错词本'),
-                            (LibraryFilter.missingMeaning, '待补中文'),
-                          ])
-                            Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: ChoiceChip(
-                                label: Text(entry.$2),
-                                selected: filter == entry.$1,
-                                onSelected: (_) {
-                                  ref
-                                          .read(libraryFilterProvider.notifier)
-                                          .state =
-                                      entry.$1;
-                                  setState(_selected.clear);
-                                },
-                              ),
+                          for (final book in books)
+                            DropdownMenuItem<int?>(
+                              value: book.id,
+                              child: Text(book.name),
                             ),
                         ],
+                        onChanged: (value) {
+                          ref.read(libraryBookProvider.notifier).state = value;
+                          setState(_selected.clear);
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            words.isLoading
-                                ? '正在读取词库…'
-                                : '${bookName == null ? '全部词书' : '「$bookName」'} · ${items.length} 个词',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                        if (filter == LibraryFilter.missingMeaning &&
-                            selectable.isNotEmpty)
-                          TextButton(
-                            onPressed: () => setState(
-                              () => _selected.addAll(
-                                selectable.map((e) => e.word.id),
-                              ),
-                            ),
-                            child: const Text('选择当前结果'),
-                          ),
-                      ],
-                    ),
-                    if (filter == LibraryFilter.missingMeaning)
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 8),
-                        child: Text('勾选要补中文的词，底部即可创建 AI 任务；生成后仍需审核。'),
-                      ),
-                    ExpansionTile(
-                      tilePadding: EdgeInsets.zero,
-                      title: const Text('学习范围与场景'),
-                      subtitle: const Text('按当前筛选或工作场景开始练习'),
-                      children: [
-                        FilledButton.icon(
-                          onPressed: () async {
-                            await showSessionSheet(
-                              context,
-                              filter: filter == LibraryFilter.missingMeaning
-                                  ? LibraryFilter.all
-                                  : filter,
-                            );
-                            if (context.mounted) context.go('/study');
-                          },
-                          icon: const Icon(Icons.play_arrow),
-                          label: const Text('学习当前范围'),
-                        ),
-                        Wrap(
-                          spacing: 6,
+                      const SizedBox(height: 12),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
                           children: [
-                            for (final tag in const ['工业术语', '物流', '邮件', '日常'])
-                              ActionChip(
-                                label: Text(tag),
-                                onPressed: () async {
-                                  await showSessionSheet(context, tag: tag);
-                                  if (context.mounted) context.go('/study');
-                                },
+                            for (final entry in const [
+                              (LibraryFilter.all, '全部'),
+                              (LibraryFilter.favorites, '收藏'),
+                              (LibraryFilter.wrong, '错词本'),
+                              (LibraryFilter.missingMeaning, '待补中文'),
+                            ])
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ChoiceChip(
+                                  label: Text(entry.$2),
+                                  selected: filter == entry.$1,
+                                  onSelected: (_) {
+                                    ref
+                                        .read(libraryFilterProvider.notifier)
+                                        .state = entry
+                                        .$1;
+                                    setState(_selected.clear);
+                                  },
+                                ),
                               ),
                           ],
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            ...words.when(
-              loading: () => [
-                const SliverToBoxAdapter(
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              ],
-              error: (e, _) => [SliverToBoxAdapter(child: Text('读取词库失败：$e'))],
-              data: (items) => items.isEmpty
-                  ? [
-                      SliverToBoxAdapter(
-                        child: Center(
-                          child: TextButton(
-                            onPressed: () => _edit(),
-                            child: const Text('没有找到单词，录入一个单词'),
-                          ),
-                        ),
                       ),
-                    ]
-                  : [
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(14, 6, 14, 96),
-                        sliver: SliverList.builder(
-                          itemCount: items.length,
-                          itemBuilder: (context, index) {
-                            final item = items[index],
-                                missing = isMissingMeaning(item.word.meaningZh);
-                            return Card(
-                              child: ListTile(
-                                onTap: () => showWordDetail(context, item.word),
-                                leading: missing
-                                    ? Checkbox(
-                                        value: _selected.contains(item.word.id),
-                                        onChanged: (v) => setState(() {
-                                          if (v == true) {
-                                            _selected.add(item.word.id);
-                                          } else {
-                                            _selected.remove(item.word.id);
-                                          }
-                                        }),
-                                      )
-                                    : null,
-                                title: Text(item.word.korean),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      missing
-                                          ? '待补中文 · 可用 AI 生成建议'
-                                          : item.word.meaningZh,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      item.word.partOfSpeech?.isNotEmpty == true
-                                          ? item.word.partOfSpeech!
-                                          : '未标注词性',
-                                    ),
-                                    if (item.word.tags?.isNotEmpty == true)
-                                      Text(item.word.tags!),
-                                    if (item.wrongCount > 0)
-                                      Text('错词 ×${item.wrongCount}'),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      tooltip: item.isFavorite ? '取消收藏' : '收藏',
-                                      icon: Icon(
-                                        item.isFavorite
-                                            ? Icons.star
-                                            : Icons.star_border,
-                                      ),
-                                      onPressed: () async {
-                                        await ref
-                                            .read(databaseProvider)
-                                            .setFavorite(
-                                              item.word.id,
-                                              !item.isFavorite,
-                                            );
-                                        if (mounted) {
-                                          ref.invalidate(libraryWordsProvider);
-                                        }
-                                      },
-                                    ),
-                                    PopupMenuButton<String>(
-                                      tooltip: '更多操作',
-                                      onSelected: (v) {
-                                        if (v == 'edit') {
-                                          _edit(word: item.word);
-                                        } else {
-                                          _delete(item);
-                                        }
-                                      },
-                                      itemBuilder: (_) => const [
-                                        PopupMenuItem(
-                                          value: 'edit',
-                                          child: Text('编辑 / 标记词性'),
-                                        ),
-                                        PopupMenuItem(
-                                          value: 'delete',
-                                          child: Text('删除'),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              words.isLoading
+                                  ? '正在读取词库…'
+                                  : '${bookName == null ? '全部词书' : '「$bookName」'} · 已显示 ${items.length}${total == null ? '' : ' / $total'} 个词',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          if (filter == LibraryFilter.missingMeaning &&
+                              selectable.isNotEmpty)
+                            TextButton(
+                              onPressed: () => setState(
+                                () => _selected.addAll(
+                                  selectable.map((e) => e.word.id),
                                 ),
                               ),
-                            );
-                          },
+                              child: const Text('选择当前结果'),
+                            ),
+                        ],
+                      ),
+                      if (filter == LibraryFilter.missingMeaning)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 8),
+                          child: Text('勾选要补中文的词，底部即可创建 AI 任务；生成后仍需审核。'),
                         ),
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        title: const Text('学习范围与场景'),
+                        subtitle: const Text('按当前筛选或工作场景开始练习'),
+                        children: [
+                          FilledButton.icon(
+                            onPressed: () async {
+                              await showSessionSheet(
+                                context,
+                                filter: filter == LibraryFilter.missingMeaning
+                                    ? LibraryFilter.all
+                                    : filter,
+                              );
+                              if (context.mounted) context.go('/study');
+                            },
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('学习当前范围'),
+                          ),
+                          Wrap(
+                            spacing: 6,
+                            children: [
+                              for (final tag in const [
+                                '工业术语',
+                                '物流',
+                                '邮件',
+                                '日常',
+                              ])
+                                ActionChip(
+                                  label: Text(tag),
+                                  onPressed: () async {
+                                    await showSessionSheet(context, tag: tag);
+                                    if (context.mounted) context.go('/study');
+                                  },
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
-            ),
-          ],
+                  ),
+                ),
+              ),
+              ...words.when(
+                loading: () => [
+                  const SliverToBoxAdapter(
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ],
+                error: (e, _) => [SliverToBoxAdapter(child: Text('读取词库失败：$e'))],
+                data: (items) => items.isEmpty
+                    ? [
+                        SliverToBoxAdapter(
+                          child: Center(
+                            child: TextButton(
+                              onPressed: () => _edit(),
+                              child: const Text('没有找到单词，录入一个单词'),
+                            ),
+                          ),
+                        ),
+                      ]
+                    : [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(14, 6, 14, 96),
+                          sliver: SliverList.builder(
+                            itemCount: items.length,
+                            itemBuilder: (context, index) {
+                              final item = items[index],
+                                  missing = isMissingMeaning(
+                                    item.word.meaningZh,
+                                  );
+                              return Card(
+                                child: ListTile(
+                                  onTap: () =>
+                                      showWordDetail(context, item.word),
+                                  leading: missing
+                                      ? Checkbox(
+                                          value: _selected.contains(
+                                            item.word.id,
+                                          ),
+                                          onChanged: (v) => setState(() {
+                                            if (v == true) {
+                                              _selected.add(item.word.id);
+                                            } else {
+                                              _selected.remove(item.word.id);
+                                            }
+                                          }),
+                                        )
+                                      : null,
+                                  title: Text(item.word.korean),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        missing
+                                            ? '待补中文 · 可用 AI 生成建议'
+                                            : item.word.meaningZh,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        item.word.partOfSpeech?.isNotEmpty ==
+                                                true
+                                            ? item.word.partOfSpeech!
+                                            : '未标注词性',
+                                      ),
+                                      if (item.word.tags?.isNotEmpty == true)
+                                        Text(item.word.tags!),
+                                      if (item.wrongCount > 0)
+                                        Text('错词 ×${item.wrongCount}'),
+                                    ],
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        tooltip: item.isFavorite
+                                            ? '取消收藏'
+                                            : '收藏',
+                                        icon: Icon(
+                                          item.isFavorite
+                                              ? Icons.star
+                                              : Icons.star_border,
+                                        ),
+                                        onPressed: () async {
+                                          await ref
+                                              .read(databaseProvider)
+                                              .setFavorite(
+                                                item.word.id,
+                                                !item.isFavorite,
+                                              );
+                                          if (mounted) {
+                                            ref.invalidate(
+                                              libraryWordsProvider,
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      PopupMenuButton<String>(
+                                        tooltip: '更多操作',
+                                        onSelected: (v) {
+                                          if (v == 'edit') {
+                                            _edit(word: item.word);
+                                          } else {
+                                            _delete(item);
+                                          }
+                                        },
+                                        itemBuilder: (_) => const [
+                                          PopupMenuItem(
+                                            value: 'edit',
+                                            child: Text('编辑 / 标记词性'),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 'delete',
+                                            child: Text('删除'),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+              ),
+            ],
+          ),
         ),
       ),
     );

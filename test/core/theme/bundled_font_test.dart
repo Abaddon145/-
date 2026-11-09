@@ -95,7 +95,13 @@ void main() {
     'all six themes use the packaged font and Flutter can load it',
     () async {
       final loader = FontLoader(AppTheme.fontFamily)
-        ..addFont(rootBundle.load('assets/fonts/KoreanMemoSans-Regular.otf'));
+        ..addFont(
+          Future.value(
+            ByteData.sublistView(
+              File('assets/fonts/KoreanMemoSans-Regular.otf').readAsBytesSync(),
+            ),
+          ),
+        );
       await loader.load();
       for (final preset in AppTheme.presets) {
         final theme = AppTheme.forPreset(preset);

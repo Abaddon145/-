@@ -106,6 +106,22 @@ void main() {
     },
   );
 
+  test('a future learning card stays hidden while a due one ignores the review cap', () async {
+    final database = await open();
+    final now = DateTime(2026, 11, 9, 12);
+    final due = await add(database, '지금');
+    final later = await add(database, '나중');
+    await card(database, due, state: 1, due: now.toUtc().subtract(const Duration(minutes: 1)));
+    await card(database, later, state: 1, due: now.toUtc().add(const Duration(minutes: 10)));
+    await database.into(database.dailyStatistics).insert(
+      DailyStatisticsCompanion.insert(
+        date: DateTime.utc(2026, 11, 9),
+        reviewWords: const Value(100),
+      ),
+    );
+    expect((await database.nextTrainingWord(const SessionOptions(), now))?.id, due);
+  });
+
   test('mixed spelling never pulls a future-due card', () async {
     final database = await open();
     final now = DateTime(2026, 11, 9, 12);

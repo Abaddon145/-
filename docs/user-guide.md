@@ -2,7 +2,7 @@
 
 更新：2026-10-15。AI 截图均为 Mock 演示，未调用真实计费模型。
 
-[在线配图指南](https://abaddon145.github.io/-/guide.html) · [PDF](https://abaddon145.github.io/-/guide/KoreanMemo-v0.7.0-guide.pdf)
+[在线配图指南](https://abaddon145.github.io/-/guide.html)
 
 
 ## 先从今天的学习开始
