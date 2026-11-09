@@ -19,7 +19,8 @@ jobs:
           cp pubspec.lock /tmp/pubspec.lock
           flutter create --platforms=android --org com.abaddon145 .
           cp /tmp/pubspec.lock pubspec.lock
-      - run: dart run tool/configure_device_storage.dart
+      - name: Configure device storage
+        run: bash tool/retry.sh dart run tool/configure_device_storage.dart
       - name: Remove generated sample test
         run: rm -f test/widget_test.dart
       - run: flutter pub get
@@ -27,7 +28,7 @@ jobs:
         with:
           name: dependency-lock
           path: pubspec.lock
-      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: bash tool/retry.sh dart run build_runner build --delete-conflicting-outputs
       - run: dart format lib test
       - run: flutter analyze
       - run: flutter test
@@ -49,10 +50,12 @@ jobs:
           cp pubspec.lock /tmp/pubspec.lock
           flutter create --platforms=ios --org com.abaddon145 .
           cp /tmp/pubspec.lock pubspec.lock
-      - run: dart run tool/configure_device_storage.dart
+      - name: Configure device storage
+        run: bash tool/retry.sh dart run tool/configure_device_storage.dart
       - run: flutter pub get
-      - run: dart run build_runner build --delete-conflicting-outputs
-      - run: flutter build ios --simulator --no-codesign
+      - run: bash tool/retry.sh dart run build_runner build --delete-conflicting-outputs
+      - name: Build iOS simulator
+        run: bash tool/retry.sh flutter build ios --simulator --no-codesign
 
   web-build:
     runs-on: ubuntu-latest
