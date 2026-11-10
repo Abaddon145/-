@@ -17,6 +17,7 @@ class StudyUiState {
     this.error,
     this.notice,
     this.intervals = const {},
+    this.canUndo = false,
   });
 
   final Word? word;
@@ -26,6 +27,7 @@ class StudyUiState {
   final Object? error;
   final String? notice;
   final Map<StudyRating, String> intervals;
+  final bool canUndo;
 
   bool get isComplete => !isLoading && word == null && error == null;
 
@@ -41,6 +43,7 @@ class StudyUiState {
     bool clearNotice = false,
     Map<StudyRating, String>? intervals,
     bool clearIntervals = false,
+    bool? canUndo,
   }) {
     return StudyUiState(
       word: clearWord ? null : (word ?? this.word),
@@ -50,6 +53,7 @@ class StudyUiState {
       error: clearError ? null : (error ?? this.error),
       notice: clearNotice ? null : (notice ?? this.notice),
       intervals: clearIntervals ? const {} : (intervals ?? this.intervals),
+      canUndo: canUndo ?? this.canUndo,
     );
   }
 }
@@ -95,9 +99,16 @@ class StudyController extends StateNotifier<StudyUiState> {
       if (!mounted || version != _loadVersion) return;
       final word = await _repository.nextWord();
       if (!mounted || version != _loadVersion) return;
+      var canUndo = false;
+      try {
+        canUndo = await _repository.canUndo();
+      } catch (_) {
+        canUndo = false;
+      }
+      if (!mounted || version != _loadVersion) return;
       _clock.reset();
       _clearPrepared();
-      state = StudyUiState(word: word);
+      state = StudyUiState(word: word, canUndo: canUndo);
       _syncClock();
     } catch (error) {
       if (!mounted || version != _loadVersion) return;
@@ -150,18 +161,28 @@ class StudyController extends StateNotifier<StudyUiState> {
     }
   }
 
-  Future<void> undo() async {
-    if (state.isSubmitting || state.isLoading) return;
+  /// Restores the previous card. Failures stay on the current card and return
+  /// a short message instead of replacing the page with a load error.
+  Future<String> undo() async {
+    if (state.isSubmitting || state.isLoading) return '';
     try {
       final word = await _repository.undo();
-      if (!mounted || word == null) return;
+      if (!mounted) return '';
+      if (word == null) {
+        state = state.copyWith(canUndo: false);
+        return '没有可以撤销的评分';
+      }
       _clock..stop()..reset();
       _clearPrepared();
-      state = StudyUiState(word: word);
+      state = StudyUiState(word: word, canUndo: false);
       _syncClock();
       onRatingSaved?.call();
+      return '已撤销最近一次评分';
     } catch (error) {
-      if (mounted) state = state.copyWith(error: error);
+      if (!mounted) return '';
+      state = state.copyWith(canUndo: false);
+      if (error is FormatException && error.message.isNotEmpty) return error.message;
+      return '撤销没有完成，当前词卡仍保留';
     }
   }
 

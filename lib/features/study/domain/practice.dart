@@ -36,3 +36,61 @@ PracticeItem practiceItem(Word word, SessionOptions options, {String forms = '',
 String normalizeAnswer(String value) => value.toLowerCase().replaceAll(RegExp(r'[\s.,!?，。！？·;；]'), '').trim();
 bool answerMatches(String input, String expected) => expected.split(RegExp(r'[/；;]'))
   .any((part) => normalizeAnswer(part) == normalizeAnswer(input));
+
+class AnswerMark {
+  const AnswerMark(this.text, this.match);
+  final String text;
+  final bool match;
+}
+
+class AnswerDiff {
+  const AnswerDiff(this.input, this.expected);
+  final List<AnswerMark> input;
+  final List<AnswerMark> expected;
+}
+
+/// Aligns graphemes so a shorter or shifted answer is not colored by raw index.
+/// This does not decide whether the answer is correct.
+List<String> _answerUnits(String value) =>
+    value.runes.map(String.fromCharCode).toList();
+
+AnswerDiff diffAnswer(String input, String expected) {
+  final a = _answerUnits(input);
+  final b = _answerUnits(expected);
+  final rows = a.length + 1;
+  final cols = b.length + 1;
+  final dp = List.generate(rows, (_) => List<int>.filled(cols, 0));
+  for (var i = a.length - 1; i >= 0; i--) {
+    for (var j = b.length - 1; j >= 0; j--) {
+      dp[i][j] = a[i] == b[j]
+          ? dp[i + 1][j + 1] + 1
+          : (dp[i + 1][j] > dp[i][j + 1] ? dp[i + 1][j] : dp[i][j + 1]);
+    }
+  }
+  final inputMarks = <AnswerMark>[];
+  final expectedMarks = <AnswerMark>[];
+  var i = 0, j = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] == b[j]) {
+      inputMarks.add(AnswerMark(a[i], true));
+      expectedMarks.add(AnswerMark(b[j], true));
+      i++;
+      j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      inputMarks.add(AnswerMark(a[i], false));
+      i++;
+    } else {
+      expectedMarks.add(AnswerMark(b[j], false));
+      j++;
+    }
+  }
+  while (i < a.length) {
+    inputMarks.add(AnswerMark(a[i], false));
+    i++;
+  }
+  while (j < b.length) {
+    expectedMarks.add(AnswerMark(b[j], false));
+    j++;
+  }
+  return AnswerDiff(inputMarks, expectedMarks);
+}

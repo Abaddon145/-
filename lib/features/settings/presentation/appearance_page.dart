@@ -20,6 +20,26 @@ class AppearancePage extends ConsumerStatefulWidget {
 class _AppearancePageState extends ConsumerState<AppearancePage> {
   bool _busy = false;
 
+  Future<void> _setFollowSystem(bool value) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(databaseProvider).saveSetting(
+        AppearanceSettings.followSystemKey,
+        value ? 'true' : 'false',
+      );
+      ref.invalidate(appearanceProvider);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('切换深色模式失败：$error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _selectStyle(String id) async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -114,6 +134,24 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
             Text(
               '选择配色，也可以使用自己的照片作为背景。',
               style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 20),
+            Text('深色模式', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: false, label: Text('跟随风格')),
+                ButtonSegment(value: true, label: Text('跟随系统')),
+              ],
+              selected: {selected?.followSystem ?? false},
+              onSelectionChanged: _busy
+                  ? null
+                  : (value) => _setFollowSystem(value.first),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '跟随风格时，只有「深夜」是深色。跟随系统后，当前这套颜色会随 iPhone 的浅色或深色外观切换。',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 24),
             Text('预设风格', style: Theme.of(context).textTheme.titleMedium),

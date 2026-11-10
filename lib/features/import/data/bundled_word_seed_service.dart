@@ -19,6 +19,7 @@ class BundledWordSeedService {
     var existingBooks = 0;
 
     for (final book in books) {
+      await Future<void>.delayed(Duration.zero);
       final result = await database.importWordBookIfMissing(
         name: book.name,
         sourceFileName: book.sourceFileName,

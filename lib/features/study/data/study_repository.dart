@@ -28,6 +28,8 @@ class StudyRepository {
 
   Future<Word?> undo() => _database.undoLastReview(DateTime.now());
 
+  Future<bool> canUndo() => _database.canUndoReview(DateTime.now());
+
   Future<double> desiredRetention() async => normalizeDesiredRetention(
     await _database.loadSetting(retentionSettingKey),
   );

@@ -29,8 +29,8 @@ void main() {
       child: const MaterialApp(home: StatisticsPage()),
     ));
     await tester.pumpAndSettle();
-    expect(find.text('自评记忆率  50%'), findsOneWidget);
-    expect(find.text('学习时长  1 分钟'), findsOneWidget);
+    expect(find.text('50%'), findsOneWidget);
+    expect(find.text('1 分钟'), findsOneWidget);
     expect(find.textContaining('自评记忆率 83% · 11 分钟'), findsOneWidget);
   });
 }

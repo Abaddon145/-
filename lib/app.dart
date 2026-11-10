@@ -15,11 +15,15 @@ class KoreanMemoApp extends ConsumerWidget {
     ref.watch(aiApiKeyProvider);
     final appearance = ref.watch(appearanceProvider).valueOrNull;
     final preset = AppTheme.preset(appearance?.styleId ?? 'porcelain');
+    final followSystem = appearance?.followSystem ?? false;
     return MaterialApp.router(
       title: 'KoreanMemo',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.forPreset(preset),
-      themeMode: preset.dark ? ThemeMode.dark : ThemeMode.light,
+      theme: AppTheme.forPreset(preset, brightness: Brightness.light),
+      darkTheme: AppTheme.forPreset(preset, brightness: Brightness.dark),
+      themeMode: followSystem
+          ? ThemeMode.system
+          : (preset.dark ? ThemeMode.dark : ThemeMode.light),
       routerConfig: appRouter,
       builder: (context, child) =>
           LocalDayObserver(child: child ?? const SizedBox.shrink()),

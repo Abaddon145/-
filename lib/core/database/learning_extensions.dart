@@ -41,6 +41,17 @@ class SessionProgress {
   final List<int> seen;
 }
 
+/// Why [LearningDatabase.nextTrainingWord] returned nothing.
+/// Diagnostic only: it does not change which word is scheduled.
+enum EmptyQueueKind {
+  roundComplete,
+  dailyPlanDone,
+  libraryEmpty,
+  filteredEmpty,
+  modeNeedsContent,
+  nothingLeft,
+}
+
 class CheckinSummary {
   const CheckinSummary(this.days, this.streak, this.longest);
   final Set<String> days;
@@ -143,6 +154,88 @@ extension LearningDatabase on AppDatabase {
     ).getSingleOrNull();
     if (row == null) return null;
     return (select(words)..where((w) => w.id.equals(row.read<int>('id')))).getSingle();
+  }
+
+  /// Explains an empty training queue without changing FSRS or the queue itself.
+  Future<EmptyQueueKind> explainEmptyTrainingQueue(SessionOptions options, DateTime now) async {
+    final session = await loadSession(options, now);
+    if (!options.daily && session.target > 0 && session.done >= session.target) {
+      return EmptyQueueKind.roundComplete;
+    }
+    if (await _countTrainingScope(const SessionOptions(), ignoreScope: true) == 0) {
+      return EmptyQueueKind.libraryEmpty;
+    }
+    if (options.daily) {
+      final plan = await loadDailyPlanProgress(now);
+      final round = await loadStudyRoundProgress(now);
+      final newOpen = plan.newWordsDone < round.baseline + round.target;
+      final reviewOpen = plan.reviewsDone < plan.settings.reviewsPerDay;
+      if (!newOpen && !reviewOpen) return EmptyQueueKind.dailyPlanDone;
+    }
+    if (await _countTrainingScope(options) == 0) return EmptyQueueKind.filteredEmpty;
+    if (options.mode == PracticeMode.cloze || options.mode == PracticeMode.forms) {
+      if (await _countTrainingScope(options, applyMode: true) == 0) {
+        return EmptyQueueKind.modeNeedsContent;
+      }
+    }
+    return EmptyQueueKind.nothingLeft;
+  }
+
+  Future<int> _countTrainingScope(
+    SessionOptions options, {
+    bool ignoreScope = false,
+    bool applyMode = false,
+  }) async {
+    final variables = <Variable>[];
+    final where = <String>[];
+    if (!ignoreScope) {
+      where.add(
+        "NOT EXISTS (SELECT 1 FROM app_settings a WHERE a.key = 'word_status:' || w.id AND a.value IN ('suspended', 'known'))",
+      );
+      if (options.filter == LibraryFilter.favorites) where.add('u.is_favorite = 1');
+      if (options.filter == LibraryFilter.wrong) where.add('u.is_difficult = 1');
+      if (options.partOfSpeech.isNotEmpty) {
+        where.add('w.part_of_speech = ?');
+        variables.add(Variable<String>(options.partOfSpeech));
+      }
+      if (options.tag.isNotEmpty) {
+        where.add('(w.tags LIKE ? OR w.category LIKE ?)');
+        variables.add(Variable<String>('%${options.tag}%'));
+        variables.add(Variable<String>('%${options.tag}%'));
+      }
+      if (options.bookId != null) {
+        where.add(
+          'EXISTS (SELECT 1 FROM word_book_words b WHERE b.word_id = w.id AND b.word_book_id = ?)',
+        );
+        variables.add(Variable<int>(options.bookId!));
+      }
+      if (applyMode && options.mode == PracticeMode.cloze) {
+        where.add("w.example_ko IS NOT NULL AND length(trim(w.example_ko)) > 0");
+      }
+      if (applyMode && options.mode == PracticeMode.forms) {
+        where.add(
+          "EXISTS (SELECT 1 FROM app_settings a WHERE a.key = 'word_forms:' || w.id AND length(a.value) > 0)",
+        );
+      }
+    }
+    if (where.isEmpty) where.add('1 = 1');
+    final row = await customSelect(
+      'SELECT COUNT(*) AS amount FROM words w LEFT JOIN user_words u ON u.word_id = w.id WHERE ${where.join(' AND ')}',
+      variables: variables,
+      readsFrom: {words, userWords, appSettings, wordBookWords},
+    ).getSingle();
+    return row.read<int>('amount');
+  }
+
+  Future<bool> canUndoReview(DateTime now) async {
+    final raw = await loadSetting('last_review_undo');
+    if (raw == null || raw.isEmpty) return false;
+    try {
+      final undo = jsonDecode(raw);
+      return undo is Map && undo['day'] == dayKey(now);
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<Map<String, Object?>> captureReviewUndo(int wordId, DateTime date, SessionOptions? options) async {

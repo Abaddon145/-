@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../../services/fsrs_service.dart';
 
@@ -58,28 +59,17 @@ class StudyActions extends StatelessWidget {
                         width: (bounds.maxWidth - 8 * (columns - 1)) / columns,
                         height: height,
                         child: PressFeedback(
-                          child: FilledButton.tonal(
-                            onPressed: busy ? null : () => onRate(rating.$1),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(rating.$2),
-                                if (intervals[rating.$1] != null)
-                                  Text(
-                                    intervals[rating.$1]!,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.labelSmall,
-                                  ),
-                              ],
-                            ),
+                          child: _RatingButton(
+                            label: rating.$2,
+                            interval: intervals[rating.$1],
+                            busy: busy,
+                            style: _ratingStyle(context, rating.$1),
+                            onPressed: () {
+                              if (!AppMotion.reduced(context)) {
+                                HapticFeedback.selectionClick().ignore();
+                              }
+                              onRate(rating.$1);
+                            },
                           ),
                         ),
                       ),
@@ -89,6 +79,66 @@ class StudyActions extends StatelessWidget {
       );
     },
   );
+}
+
+ButtonStyle _ratingStyle(BuildContext context, StudyRating rating) {
+  final colors = Theme.of(context).colorScheme;
+  final (background, foreground) = switch (rating) {
+    StudyRating.again => (colors.errorContainer, colors.onErrorContainer),
+    StudyRating.hard => (colors.tertiaryContainer, colors.onTertiaryContainer),
+    StudyRating.good => (colors.primary, colors.onPrimary),
+    StudyRating.easy => (colors.primaryContainer, colors.onPrimaryContainer),
+  };
+  return FilledButton.styleFrom(
+    backgroundColor: background,
+    foregroundColor: foreground,
+    padding: const EdgeInsets.symmetric(horizontal: 4),
+  );
+}
+
+class _RatingButton extends StatelessWidget {
+  const _RatingButton({
+    required this.label,
+    required this.interval,
+    required this.busy,
+    required this.style,
+    required this.onPressed,
+  });
+  final String label;
+  final String? interval;
+  final bool busy;
+  final ButtonStyle style;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final spoken = interval == null ? '评为$label' : '评为$label，间隔 $interval';
+    return Semantics(
+      button: true,
+      label: spoken,
+      child: FilledButton(
+        onPressed: busy ? null : onPressed,
+        style: style,
+        child: ExcludeSemantics(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(label),
+              if (interval != null)
+                Text(
+                  interval!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: DefaultTextStyle.of(context).style.color,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class StudyMeaning extends StatefulWidget {

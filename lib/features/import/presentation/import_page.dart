@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/database/app_database.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 import '../../library/domain/providers.dart';
@@ -24,9 +25,10 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   Object? _error;
   bool _busy=false,_all=false,_enrich=true,_parsing=false;
   String _stage='';
-  int _duplicates=0,_version=0;
+  int _duplicates=0,_version=0,_previewLimit=20,_skipped=0;
+  ImportWriteResult? _result;
   Future<void> _pickFile()async {
-    setState((){_busy=true;_error=null;_preview=null;_bytes=null;_fileName=null;_sheets=[];_headers=[];_mapping={};_stage='请选择文件';});
+    setState((){_busy=true;_error=null;_preview=null;_result=null;_bytes=null;_fileName=null;_sheets=[];_headers=[];_mapping={};_stage='请选择文件';_previewLimit=20;});
     try{
       final file=await FilePicker.pickFile(type:FileType.any);
       if(file==null || !mounted)return;
@@ -45,7 +47,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       await _parse();
     }catch(e){
       _bytes=null;
-      if(mounted){setState(()=>_error=e is TimeoutException ? '读取文件超时，请先将文件下载到本机再重试' : e);}
+      if(mounted){setState(()=>_error=_friendlyImportError(e));}
     }
     finally{if(mounted){setState((){_busy=false;_stage='';});}}
   }
@@ -63,8 +65,8 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       final existing=words.map((w)=>'${w.normalizedKorean}\u0000${w.normalizedBaseForm}').toSet();
       var duplicates=0;
       for(final draft in preview.drafts){final key='${draft.normalizedKorean}\u0000${draft.normalizedBaseForm}';if(!existing.add(key))duplicates++;}
-      if(mounted&&version==_version){setState((){_preview=preview;_duplicates=duplicates;_error=null;});}
-    }catch(e){if(mounted&&version==_version){setState((){_error=e;_preview=null;});}}
+      if(mounted&&version==_version){setState((){_preview=preview;_duplicates=duplicates;_error=null;_previewLimit=20;});}
+    }catch(e){if(mounted&&version!=_version)return;if(mounted&&version==_version){setState((){_error=_friendlyImportError(e);_preview=null;});}}
     finally{if(mounted&&version==_version){setState(()=>_parsing=false);}}
   }
   Future<void> _import()async{
@@ -78,8 +80,8 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       });
       ref.invalidate(studyBookCountsProvider);ref.invalidate(sessionProgressProvider);ref.invalidate(studyRoundProgressProvider);ref.invalidate(homeCountsProvider);ref.invalidate(wordBooksProvider);ref.invalidate(libraryWordsProvider);
       ref.invalidate(studyControllerProvider);ref.invalidate(dailyPlanProgressProvider);
-      if(mounted){ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('统一词库新增 ${result.inserted} · 复用 ${result.reused}')));context.go('/library');}
-    }catch(e){if(mounted)setState(()=>_error=e);}
+      if(mounted){setState((){_result=result;_skipped=preview.invalidRows;_preview=null;});}
+    }catch(e){if(mounted)setState(()=>_error=_friendlyImportError(e));}
     finally{if(mounted){setState(()=>_busy=false);}}
   }
   @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('导入统一词库')),body:SafeArea(child:ListView(padding:const EdgeInsets.all(20),children:[
@@ -99,10 +101,27 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       SwitchListTile(title:const Text('补齐重复词的缺失字段'),subtitle:const Text('保留已有释义、例句、词性和学习状态'),value:_enrich,onChanged:_busy||_parsing?null:(v)=>setState(()=>_enrich=v)),
     ],
     if(_error!=null)Text('$_error',style:TextStyle(color:Theme.of(context).colorScheme.error)),
+    if(_result!=null)...[
+      const SizedBox(height:16),
+      Text('导入完成',style:Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height:8),
+      Text('新增 ${_result!.inserted}'),
+      Text('复用 ${_result!.reused}'),
+      Text('跳过 $_skipped'),
+      const SizedBox(height:12),
+      FilledButton(onPressed:()=>context.go('/library'),child:const Text('去词库')),
+    ],
     if(_preview!=null)...[
       const SizedBox(height:16),Text('有效 ${_preview!.drafts.length} · 重复 $_duplicates · 跳过/异常 ${_preview!.invalidRows}'),
-      for(final word in _preview!.drafts.take(8))ListTile(title:Text(word.korean),subtitle:Text('${word.meaningZh} · ${word.tags??''}')),
+      for(final word in _preview!.drafts.take(_previewLimit))ListTile(title:Text(word.korean),subtitle:Text('${word.meaningZh} · ${word.tags??''}')),
+      if(_preview!.drafts.length>_previewLimit)TextButton(onPressed:()=>setState(()=>_previewLimit+=20),child:Text('再看 ${(_preview!.drafts.length-_previewLimit).clamp(0,20)} 行')),
       FilledButton(onPressed:_busy||_parsing||_preview!.drafts.isEmpty?null:_import,child:Text(_busy?'正在导入…':'确认合并到统一词库')),
     ],
   ])));
+}
+
+String _friendlyImportError(Object error) {
+  if (error is FormatException && error.message.isNotEmpty) return error.message;
+  if (error is TimeoutException) return '读取文件超时，请先将文件下载到本机再重试';
+  return '导入没有完成，请检查文件后重试';
 }

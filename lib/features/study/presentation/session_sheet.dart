@@ -5,9 +5,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../domain/providers.dart';
 
-Future<void> showSessionSheet(BuildContext context, {LibraryFilter filter = LibraryFilter.all, String tag = ''}) =>
-  showModalBottomSheet<void>(sheetAnimationStyle: AppMotion.sheet(context), useRootNavigator: true,context: context, isScrollControlled: true, useSafeArea: true,
-    showDragHandle: true, builder: (_) => SessionSheet(filter: filter, tag: tag));
+Future<bool> showSessionSheet(BuildContext context, {LibraryFilter filter = LibraryFilter.all, String tag = ''}) async {
+  final started = await showModalBottomSheet<bool>(
+    sheetAnimationStyle: AppMotion.sheet(context),
+    useRootNavigator: true,
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: true,
+    builder: (_) => SessionSheet(filter: filter, tag: tag),
+  );
+  return started == true;
+}
+
+String practiceModeHint(PracticeMode mode) => switch (mode) {
+  PracticeMode.cards => '翻开卡片后，按自己的熟悉程度评分。',
+  PracticeMode.spelling => '根据释义输入答案，检查后再评分。',
+  PracticeMode.listening => '听发音后输入单词，检查后再评分。',
+  PracticeMode.cloze => '只用例句里含有原词的词。没有这样的例句时，这一轮会是空的。',
+  PracticeMode.forms => '只用详情页里保存过活用表的词。没有活用表时，这一轮会是空的。',
+};
 
 class SessionSheet extends ConsumerStatefulWidget {
   const SessionSheet({super.key, required this.filter, this.tag = ''});
@@ -36,7 +53,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
       await ref.read(sessionOptionsProvider.notifier).start(SessionOptions(daily: false, target: count,
         queue: _queue, filter: _filter, mode: _mode, direction: _direction, partOfSpeech: _pos.text.trim(), tag: _tag.text.trim(), bookId: _bookId));
       ref.invalidate(sessionProgressProvider);
-      if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context, true);
     } catch (error) { if (mounted) { setState(() { _error = '$error'; _saving = false; }); } }
   }
   @override Widget build(BuildContext context) => Padding(
@@ -59,6 +76,8 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
         const SizedBox(height: 12),
         DropdownButtonFormField<PracticeMode>(initialValue: _mode, decoration: const InputDecoration(labelText: '练习方式'),
           items: const [DropdownMenuItem(value: PracticeMode.cards, child: Text('翻卡自评')), DropdownMenuItem(value: PracticeMode.spelling, child: Text('拼写')), DropdownMenuItem(value: PracticeMode.listening, child: Text('听写')), DropdownMenuItem(value: PracticeMode.cloze, child: Text('例句填空')), DropdownMenuItem(value: PracticeMode.forms, child: Text('词形活用'))], onChanged: (v) => setState(() => _mode = v!)),
+        const SizedBox(height: 6),
+        Text(practiceModeHint(_mode), style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 12),
         DropdownButtonFormField<StudyDirection>(initialValue: _direction, decoration: const InputDecoration(labelText: '方向'),
           items: const [DropdownMenuItem(value: StudyDirection.forward, child: Text('韩语→释义 / 英语')), DropdownMenuItem(value: StudyDirection.reverse, child: Text('释义 / 英语→韩语（英韩拼写可练英文）'))], onChanged: (v) => setState(() => _direction = v!)),
