@@ -77,9 +77,11 @@ flutter run
 
 ## iPhone 安装说明
 
-iOS 构建必须在安装了 Xcode 的 Mac 上执行。连接 iPhone、启用 Developer Mode，并在 Xcode 中选择自己的 Signing Team 后即可运行。未付费的 Personal Team 可用于个人设备测试，但配置文件会定期到期；App Store / TestFlight 分发需要 Apple Developer Program。
+没有 Mac、也没有付费开发者账号时，用 GitHub Actions 打一个未签名安装包，再在 Windows 上用 Sideloadly 和免费 Apple ID 装到 iPhone。Bundle ID 固定为 `com.abaddon145.koreanMemo`，不能改，否则重装会变成另一个空 App。步骤、7 天重新签名和备份见 [iPhone 侧载安装](docs/ios-sideload.md)。
 
-不使用苹果签名时，可以打开 GitHub Pages 上的 PWA，在 Safari 分享菜单中选择“添加到主屏幕”。词库和学习进度保存在当前浏览器的本地数据库中。
+有 Mac 和 Xcode 时，也可以连接 iPhone、打开开发者模式，并在 Xcode 里选择自己的 Signing Team 后运行。未付费的 Personal Team 配置文件会定期到期；App Store / TestFlight 需要 Apple Developer Program。
+
+不安装这个包时，可以打开 GitHub Pages 上的 PWA，在 Safari 分享菜单中选择“添加到主屏幕”。词库和学习进度保存在当前浏览器的本地数据库中，和这个 App 不互通，换过去之前要先导出备份。
 
 ## 验证
 

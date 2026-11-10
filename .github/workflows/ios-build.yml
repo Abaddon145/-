@@ -1,0 +1,48 @@
+name: iOS IPA
+
+# Manual unsigned iPhone package for Sideloadly. No certificates and no secrets.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unsigned-ipa:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.9"
+          cache: true
+      - name: Generate iOS scaffolding
+        run: |
+          set -euo pipefail
+          cp pubspec.lock /tmp/pubspec.lock
+          flutter create --platforms=ios --org com.abaddon145 .
+          cp /tmp/pubspec.lock pubspec.lock
+      - name: Configure device storage
+        run: bash tool/retry.sh dart run tool/configure_device_storage.dart
+      - name: Prepare the sideload build
+        run: bash tool/ios_unsigned_ipa.sh prepare
+      - name: Resolve packages
+        run: bash tool/retry.sh flutter pub get
+      - name: Generate Drift code
+        run: bash tool/retry.sh dart run build_runner build --delete-conflicting-outputs
+      - name: Build unsigned iOS release
+        run: bash tool/retry.sh flutter build ios --release --no-codesign
+      - name: Package IPA
+        id: ipa
+        run: |
+          set -euo pipefail
+          bash tool/ios_unsigned_ipa.sh package
+          echo "name=$(cat build/ipa-artifact-name.txt)" >> "$GITHUB_OUTPUT"
+          echo "path=$(cat build/ipa-path.txt)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.ipa.outputs.name }}
+          path: ${{ steps.ipa.outputs.path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90

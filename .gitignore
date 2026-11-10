@@ -5,6 +5,7 @@
 .pub-cache/
 .pub/
 build/
+*.ipa
 coverage/
 ios/Flutter/ephemeral/
 ios/Pods/
