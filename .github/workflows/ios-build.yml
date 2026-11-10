@@ -1,12 +1,8 @@
 name: iOS IPA
 
 # Manual unsigned iPhone package for Sideloadly. No certificates and no secrets.
-# The push trigger is temporary so this branch can be built. The agent token
-# cannot call workflow_dispatch. Remove it after this verification run.
 on:
   workflow_dispatch:
-  push:
-    branches: [cursor/iphone-ux-842e]
 
 permissions:
   contents: read
