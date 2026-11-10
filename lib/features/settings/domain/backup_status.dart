@@ -21,6 +21,11 @@ class BackupStatus {
   }
 }
 
+final sideloadHintProvider = FutureProvider.autoDispose<bool>((ref) async {
+  final value = await ref.watch(databaseProvider).loadSetting('sideload_hint_dismissed');
+  return value == 'true';
+});
+
 final backupStatusProvider = FutureProvider.autoDispose<BackupStatus>((
   ref,
 ) async {

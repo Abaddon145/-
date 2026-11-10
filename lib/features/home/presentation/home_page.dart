@@ -59,19 +59,24 @@ class HomePage extends ConsumerWidget {
                 style: TextStyle(color: colors.onSurfaceVariant),
               ),
               const SizedBox(height: 20),
-              plan.when(
-                data: (p) => _TodayCard(
-                  progress: p,
-                  ready: seed.hasValue,
-                  onStart: start,
-                  onPlan: () => context.push('/settings/daily-plan'),
+              if (seed.hasError)
+                _SeedFailureCard(
+                  onRetry: () => ref.invalidate(bundledWordSeedProvider),
+                )
+              else
+                plan.when(
+                  data: (p) => _TodayCard(
+                    progress: p,
+                    ready: seed.hasValue,
+                    onStart: start,
+                    onPlan: () => context.push('/settings/daily-plan'),
+                  ),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, _) => _PlanFailureCard(
+                    onStart: seed.hasValue ? start : null,
+                    onRetry: () => ref.invalidate(dailyPlanProgressProvider),
+                  ),
                 ),
-                loading: () => const LinearProgressIndicator(),
-                error: (_, _) => FilledButton(
-                  onPressed: seed.hasValue ? start : null,
-                  child: const Text('开始今天的学习'),
-                ),
-              ),
               const SizedBox(height: 12),
               Card(
                 margin: EdgeInsets.zero,
@@ -131,6 +136,7 @@ class HomePage extends ConsumerWidget {
                 error: (_, _) => const Text('暂时无法读取统计，下拉可重试。'),
               ),
               const SizedBox(height: 24),
+              const IosSideloadHint(),
               const BackupReminderCard(),
               const SizedBox(height: 20),
               Text('常用入口', style: Theme.of(context).textTheme.titleLarge),
@@ -170,13 +176,62 @@ class HomePage extends ConsumerWidget {
                     ),
                   ),
                 ),
-              if (seed.hasError)
-                Text(
-                  '内置词库未准备完成，请保持此页并重试。',
-                  style: TextStyle(color: colors.error),
-                ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SeedFailureCard extends StatelessWidget {
+  const _SeedFailureCard({required this.onRetry});
+  final VoidCallback onRetry;
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('内置词库没有准备完成', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            Text(
+              '今天的学习要等词库准备好才能开始。可以重试，不必重装 App。',
+              style: TextStyle(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onRetry, child: const Text('重试准备词库')),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanFailureCard extends StatelessWidget {
+  const _PlanFailureCard({required this.onStart, required this.onRetry});
+  final VoidCallback? onStart;
+  final VoidCallback onRetry;
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('今天的计划暂时没有读出来', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 8),
+            const Text('可以先开始学习，进度数字会在读取成功后恢复。也可以重试。'),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onStart, child: const Text('开始今天的学习')),
+            TextButton(onPressed: onRetry, child: const Text('重试读取计划')),
+          ],
         ),
       ),
     );

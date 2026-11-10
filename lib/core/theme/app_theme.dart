@@ -77,10 +77,11 @@ abstract final class AppTheme {
   static AppearancePreset preset(String id) =>
       presets.where((item) => item.id == id).firstOrNull ?? presets.first;
 
-  static ThemeData forPreset(AppearancePreset preset) {
+  static ThemeData forPreset(AppearancePreset preset, {Brightness? brightness}) {
+    final dark = brightness != null ? brightness == Brightness.dark : preset.dark;
     final scheme = ColorScheme.fromSeed(
       seedColor: preset.seed,
-      brightness: preset.dark ? Brightness.dark : Brightness.light,
+      brightness: dark ? Brightness.dark : Brightness.light,
     );
     return ThemeData(
       useMaterial3: true,
@@ -88,7 +89,7 @@ abstract final class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: Colors.transparent,
       visualDensity: VisualDensity.standard,
-      textTheme: Typography.material2021().black.apply(
+      textTheme: (dark ? Typography.material2021().white : Typography.material2021().black).apply(
         fontFamily: fontFamily,
         bodyColor: scheme.onSurface,
         displayColor: scheme.onSurface,
@@ -134,12 +135,14 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 1,
-        shadowColor: scheme.shadow.withValues(alpha: preset.dark ? .12 : .035),
+        shadowColor: scheme.shadow.withValues(alpha: dark ? .12 : .035),
         surfaceTintColor: Colors.transparent,
-        color: Color.alphaBlend(
-          scheme.surface.withValues(alpha: .96),
-          preset.start,
-        ),
+        color: dark
+            ? scheme.surface
+            : Color.alphaBlend(
+                scheme.surface.withValues(alpha: .96),
+                preset.start,
+              ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: BorderSide(

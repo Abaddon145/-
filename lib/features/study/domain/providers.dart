@@ -24,6 +24,13 @@ final ttsServiceProvider = Provider<TtsService>((ref) {
 
 final studyBookProvider = StateProvider<int?>((ref) => null);
 final studyVisibleProvider = StateProvider<bool>((ref) => false);
+final studyTypingProvider = StateProvider<bool>((ref) => false);
+
+final emptyQueueReasonProvider = FutureProvider.autoDispose<EmptyQueueKind>((ref) async {
+  ref.watch(localDayProvider);
+  final options = ref.watch(sessionOptionsProvider);
+  return ref.watch(databaseProvider).explainEmptyTrainingQueue(options, DateTime.now());
+});
 
 class SessionOptionsController extends StateNotifier<SessionOptions> {
   SessionOptionsController(this.database) : super(const SessionOptions()) { _restore(); }

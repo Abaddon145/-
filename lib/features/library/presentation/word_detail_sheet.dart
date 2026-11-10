@@ -1,4 +1,5 @@
 import '../../../core/theme/app_motion.dart';
+import '../../../core/time/review_format.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,7 +71,7 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
           ExpansionTile(title: Text(aiFieldLabels[entry.key] ?? (entry.key == 'spelling' ? '已确认拼写' : entry.key)), children: [Padding(padding: const EdgeInsets.all(12),
             child: AiPlainText(entry.value, term: word.korean))]),
         const Divider(),
-        Text(card == null ? '尚未学习' : '下次复习：${card.due.toLocal().toString().substring(0,16)}'),
+        Text(card == null ? '尚未学习' : '下次复习：${formatReviewMoment(card.due)}'),
         if (card != null && card.lapses > 0) Text('累计忘记 ${card.lapses} 次'),
         if (card != null && card.lapses >= leechLapseThreshold) Text(status == 'suspended'
             ? '已达到暂停线（$leechLapseThreshold 次）。点「恢复正常学习」即可继续，之后再忘记仍会暂停。'
@@ -79,9 +80,14 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
         Text(user?.isDifficult == true ? '当前待强化（连续 3 次认识/简单后移出）' : '当前不在待强化队列'),
         const SizedBox(height: 14),
         Wrap(spacing: 8, children: [
-          ActionChip(label: Text(status == 'known' ? '已设为熟词' : '设为熟词'), onPressed: () => _status('known')),
-          ActionChip(label: Text(status == 'suspended' ? '已暂停' : '暂时停学'), onPressed: () => _status('suspended')),
-          ActionChip(label: const Text('恢复正常学习'), onPressed: () => _status(null)),
+          ActionChip(
+            label: Text(status == 'known' ? '已是熟词 · 点按恢复' : '设为熟词'),
+            onPressed: () => _status(status == 'known' ? null : 'known'),
+          ),
+          ActionChip(
+            label: Text(status == 'suspended' ? '已暂停 · 点按恢复' : '暂时停学'),
+            onPressed: () => _status(status == 'suspended' ? null : 'suspended'),
+          ),
         ]),
         const SizedBox(height: 18),
         Text('词形活用表', style: Theme.of(context).textTheme.titleMedium),
@@ -100,7 +106,7 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
         const Divider(), Text('最近复习', style: Theme.of(context).textTheme.titleMedium),
         for (final log in logs) ListTile(contentPadding: EdgeInsets.zero,
           title: Text(const ['','忘记','困难','认识','简单'][log.rating.clamp(1,4)]),
-          subtitle: Text(log.reviewedAt.toLocal().toString().substring(0,16)), trailing: Text('${log.durationMs ~/ 1000} 秒')),
+          subtitle: Text(formatReviewMoment(log.reviewedAt)), trailing: Text('${log.durationMs ~/ 1000} 秒')),
       ]);
     }),
   );

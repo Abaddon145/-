@@ -27,7 +27,7 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     Text('$label · ${_values[key]!.toStringAsFixed(2)}'),Slider(value:_values[key]!.clamp(min,max),min:min,max:max,
       onChanged:(v)=>setState(()=>_values[key]=v),onChangeEnd:(v)=>_save(key,v)),
   ]);
-  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('阅读与背景')),body:!_ready?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.all(22),children:[
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('阅读与背景')),body:SafeArea(top:false,child:!_ready?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.all(22),children:[
     Card(child:Padding(padding:const EdgeInsets.all(20),child:Column(children:[
       Text('안녕하세요',style:TextStyle(fontSize:_values['word_size'],height:_values['line_height'])),
       Text('每天让记忆更清晰',style:TextStyle(fontSize:_values['meaning_size'],height:_values['line_height'])),
@@ -39,6 +39,6 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     }),const Divider(),Text('背景图片调整',style:Theme.of(context).textTheme.titleLarge),
     const Text('在“外观风格”中上传图片后生效。缩放与位置调整可裁掉多余画面。'),
     _slider('background_blur','模糊程度',0,12),_slider('background_opacity','阅读遮罩强度',.2,.9),
-    _slider('background_zoom','图片缩放',1,2),_slider('background_x','水平位置',-1,1),_slider('background_y','垂直位置',-1,1),
-  ]));
+    _slider('background_zoom','图片缩放',1,2),    _slider('background_x','水平位置',-1,1),_slider('background_y','垂直位置',-1,1),
+  ])));
 }

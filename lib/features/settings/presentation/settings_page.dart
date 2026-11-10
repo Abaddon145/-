@@ -444,7 +444,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 ),
                 const Padding(
                   padding: EdgeInsets.fromLTRB(16, 4, 16, 16),
-                  child: Text('将备份保存到“文件”或 iCloud Drive，即可在另一台设备导入。'),
+                  child: Text('点保存后，可以在系统面板里选「文件」或 iCloud Drive。这是你选的位置，不是自动同步；侧载包没有 iCloud 容器权限。免费证书大约 7 天要重新签名，覆盖安装时不要先删除 App。'),
                 ),
               ]),
               TextButton.icon(

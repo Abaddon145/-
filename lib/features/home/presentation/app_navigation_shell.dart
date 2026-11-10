@@ -14,6 +14,10 @@ class AppNavigationShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final active = navigationShell.currentIndex == 2;
     final index = navigationShell.currentIndex;
+    final typing = ref.watch(studyTypingProvider);
+    final focus = ref.watch(readingProvider).valueOrNull?.focus == true;
+    final hideBar = active && (focus || typing);
+    final homeInset = MediaQuery.viewPaddingOf(context).bottom;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
       if (ref.read(studyVisibleProvider) != active) {
@@ -25,11 +29,10 @@ class AppNavigationShell extends ConsumerWidget {
     });
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar:
-          active && ref.watch(readingProvider).valueOrNull?.focus == true
+      bottomNavigationBar: hideBar
           ? null
           : Container(
-              margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              margin: EdgeInsets.fromLTRB(12, 0, 12, homeInset == 0 ? 8 : homeInset),
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,

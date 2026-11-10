@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_backdrop.dart';
 import 'package:go_router/go_router.dart';
+import 'ios_edge_back.dart';
 import '../../features/home/presentation/app_navigation_shell.dart';
 import '../../features/home/presentation/home_page.dart';
 import '../../features/import/presentation/import_page.dart';
@@ -19,10 +20,14 @@ Page<void> appPage(
   GoRouterState state,
   Widget child, {
   bool backdrop = false,
-}) => NoTransitionPage<void>(
-  key: state.pageKey,
-  child: backdrop ? AppBackdrop(child: child) : RepaintBoundary(child: child),
-);
+  bool edgePop = false,
+}) {
+  final page = backdrop ? AppBackdrop(child: child) : RepaintBoundary(child: child);
+  return NoTransitionPage<void>(
+    key: state.pageKey,
+    child: edgePop ? IosEdgeBack(child: page) : page,
+  );
+}
 
 final appRouter = GoRouter(
   redirect: (context, state) =>
@@ -85,23 +90,39 @@ final appRouter = GoRouter(
               routes: [
                 GoRoute(
                   path: 'daily-plan',
-                  pageBuilder: (context, state) =>
-                      appPage(state, const DailyPlanPage(), backdrop: true),
+                  pageBuilder: (context, state) => appPage(
+                    state,
+                    const DailyPlanPage(),
+                    backdrop: true,
+                    edgePop: true,
+                  ),
                 ),
                 GoRoute(
                   path: 'appearance',
-                  pageBuilder: (context, state) =>
-                      appPage(state, const AppearancePage(), backdrop: true),
+                  pageBuilder: (context, state) => appPage(
+                    state,
+                    const AppearancePage(),
+                    backdrop: true,
+                    edgePop: true,
+                  ),
                 ),
                 GoRoute(
                   path: 'reading',
-                  pageBuilder: (context, state) =>
-                      appPage(state, const ReadingPage(), backdrop: true),
+                  pageBuilder: (context, state) => appPage(
+                    state,
+                    const ReadingPage(),
+                    backdrop: true,
+                    edgePop: true,
+                  ),
                 ),
                 GoRoute(
                   path: 'ai',
-                  pageBuilder: (context, state) =>
-                      appPage(state, const AiSettingsPage(), backdrop: true),
+                  pageBuilder: (context, state) => appPage(
+                    state,
+                    const AiSettingsPage(),
+                    backdrop: true,
+                    edgePop: true,
+                  ),
                 ),
               ],
             ),
@@ -112,12 +133,12 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/checkin',
       pageBuilder: (context, state) =>
-          appPage(state, const CheckinPage(), backdrop: true),
+          appPage(state, const CheckinPage(), backdrop: true, edgePop: true),
     ),
     GoRoute(
       path: '/ai/tasks',
       pageBuilder: (context, state) =>
-          appPage(state, const AiTasksPage(), backdrop: true),
+          appPage(state, const AiTasksPage(), backdrop: true, edgePop: true),
     ),
     GoRoute(
       path: '/ai/tasks/:id',
@@ -125,12 +146,13 @@ final appRouter = GoRouter(
         state,
         AiTaskPage(taskId: state.pathParameters['id']!),
         backdrop: true,
+        edgePop: true,
       ),
     ),
     GoRoute(
       path: '/import',
       pageBuilder: (context, state) =>
-          appPage(state, const ImportPage(), backdrop: true),
+          appPage(state, const ImportPage(), backdrop: true, edgePop: true),
     ),
   ],
 );

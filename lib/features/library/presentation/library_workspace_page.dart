@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../../core/database/missing_meaning.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
@@ -67,6 +69,83 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     }
   }
 
+  Widget _emptyLibrary(LibraryFilter filter, String? bookName) {
+    final query = ref.watch(librarySearchProvider).trim();
+    if (query.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 12),
+        child: Column(
+          children: [
+            Text('没有和「$query」匹配的词', textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            const Text('可以换个关键词，或清除搜索后再看当前筛选。', textAlign: TextAlign.center),
+            TextButton(
+              onPressed: () {
+                _search.clear();
+                _searchChanged('');
+              },
+              child: const Text('清除搜索'),
+            ),
+          ],
+        ),
+      );
+    }
+    if (filter != LibraryFilter.all || bookName != null) {
+      final scope = [
+        if (bookName != null) '「$bookName」',
+        if (filter != LibraryFilter.all) _filterLabel(filter),
+      ].join(' · ');
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 12),
+        child: Column(
+          children: [
+            Text('$scope下没有词', textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            const Text('这不一定是词库空了。可以改筛选，或录入一个新词。', textAlign: TextAlign.center),
+            TextButton(
+              onPressed: () {
+                ref.read(libraryFilterProvider.notifier).state = LibraryFilter.all;
+                ref.read(libraryBookProvider.notifier).state = null;
+                setState(_selected.clear);
+              },
+              child: const Text('查看全部词书'),
+            ),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 28, 24, 12),
+      child: Column(
+        children: [
+          const Text('词库里还没有单词', textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          const Text('可以录入一个，或从 Excel 导入一整张词表。', textAlign: TextAlign.center),
+          Wrap(
+            alignment: WrapAlignment.center,
+            children: [
+              TextButton(onPressed: () => _edit(), child: const Text('录入一个单词')),
+              TextButton(onPressed: () => context.push('/import'), child: const Text('导入 Excel')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _filterLabel(LibraryFilter filter) => switch (filter) {
+    LibraryFilter.all => '全部',
+    LibraryFilter.favorites => '收藏',
+    LibraryFilter.wrong => '错词本',
+    LibraryFilter.missingMeaning => '待补中文',
+  };
+
+  Future<void> _toggleFavorite(LibraryWordEntry item) async {
+    if (!AppMotion.reduced(context)) HapticFeedback.selectionClick().ignore();
+    await ref.read(databaseProvider).setFavorite(item.word.id, !item.isFavorite);
+    if (mounted) ref.invalidate(libraryWordsProvider);
+  }
+
   Future<void> _delete(LibraryWordEntry item) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -86,6 +165,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       ),
     );
     if (!mounted || confirmed != true) return;
+    if (!AppMotion.reduced(context)) HapticFeedback.mediumImpact().ignore();
     try {
       await ref.read(databaseProvider).deleteWord(item.word.id);
       if (!mounted) return;
@@ -435,13 +515,15 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                         children: [
                           FilledButton.icon(
                             onPressed: () async {
-                              await showSessionSheet(
+                              final started = await showSessionSheet(
                                 context,
                                 filter: filter == LibraryFilter.missingMeaning
                                     ? LibraryFilter.all
                                     : filter,
                               );
-                              if (context.mounted) context.go('/study');
+                              if (started && context.mounted) {
+                                context.go('/study');
+                              }
                             },
                             icon: const Icon(Icons.play_arrow),
                             label: const Text('学习当前范围'),
@@ -458,8 +540,10 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                                 ActionChip(
                                   label: Text(tag),
                                   onPressed: () async {
-                                    await showSessionSheet(context, tag: tag);
-                                    if (context.mounted) context.go('/study');
+                                    final started = await showSessionSheet(context, tag: tag);
+                                    if (started && context.mounted) {
+                                      context.go('/study');
+                                    }
                                   },
                                 ),
                             ],
@@ -479,14 +563,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 error: (e, _) => [SliverToBoxAdapter(child: Text('读取词库失败：$e'))],
                 data: (items) => items.isEmpty
                     ? [
-                        SliverToBoxAdapter(
-                          child: Center(
-                            child: TextButton(
-                              onPressed: () => _edit(),
-                              child: const Text('没有找到单词，录入一个单词'),
-                            ),
-                          ),
-                        ),
+                        SliverToBoxAdapter(child: _emptyLibrary(filter, bookName)),
                       ]
                     : [
                         SliverPadding(
@@ -540,53 +617,12 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                                         Text('错词 ×${item.wrongCount}'),
                                     ],
                                   ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        tooltip: item.isFavorite
-                                            ? '取消收藏'
-                                            : '收藏',
-                                        icon: Icon(
-                                          item.isFavorite
-                                              ? Icons.star
-                                              : Icons.star_border,
-                                        ),
-                                        onPressed: () async {
-                                          await ref
-                                              .read(databaseProvider)
-                                              .setFavorite(
-                                                item.word.id,
-                                                !item.isFavorite,
-                                              );
-                                          if (mounted) {
-                                            ref.invalidate(
-                                              libraryWordsProvider,
-                                            );
-                                          }
-                                        },
-                                      ),
-                                      PopupMenuButton<String>(
-                                        tooltip: '更多操作',
-                                        onSelected: (v) {
-                                          if (v == 'edit') {
-                                            _edit(word: item.word);
-                                          } else {
-                                            _delete(item);
-                                          }
-                                        },
-                                        itemBuilder: (_) => const [
-                                          PopupMenuItem(
-                                            value: 'edit',
-                                            child: Text('编辑 / 标记词性'),
-                                          ),
-                                          PopupMenuItem(
-                                            value: 'delete',
-                                            child: Text('删除'),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                  trailing: _WordActions(
+                                    favorite: item.isFavorite,
+                                    compact: MediaQuery.sizeOf(context).width < 400,
+                                    onFavorite: () => _toggleFavorite(item),
+                                    onEdit: () => _edit(word: item.word),
+                                    onDelete: () => _delete(item),
                                   ),
                                 ),
                               );
@@ -599,6 +635,50 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _WordActions extends StatelessWidget {
+  const _WordActions({
+    required this.favorite,
+    required this.compact,
+    required this.onFavorite,
+    required this.onEdit,
+    required this.onDelete,
+  });
+  final bool favorite;
+  final bool compact;
+  final VoidCallback onFavorite;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!compact)
+          IconButton(
+            tooltip: favorite ? '取消收藏' : '收藏',
+            icon: Icon(favorite ? Icons.star : Icons.star_border),
+            onPressed: onFavorite,
+          ),
+        PopupMenuButton<String>(
+          tooltip: '更多操作',
+          onSelected: (value) {
+            if (value == 'favorite') onFavorite();
+            if (value == 'edit') onEdit();
+            if (value == 'delete') onDelete();
+          },
+          itemBuilder: (_) => [
+            if (compact)
+              PopupMenuItem(value: 'favorite', child: Text(favorite ? '取消收藏' : '收藏')),
+            const PopupMenuItem(value: 'edit', child: Text('编辑 / 标记词性')),
+            const PopupMenuItem(value: 'delete', child: Text('删除')),
+          ],
+        ),
+      ],
     );
   }
 }

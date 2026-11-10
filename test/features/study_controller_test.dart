@@ -10,7 +10,16 @@ class _Repository implements StudyRepository {
   @override
   SessionOptions get options => const SessionOptions();
   @override
-  Future<Word?> undo() async => null;
+  Future<Word?> undo() async {
+    if (undoError != null) throw undoError!;
+    return undoWord;
+  }
+
+  Object? undoError;
+  Word? undoWord;
+
+  @override
+  Future<bool> canUndo() async => false;
   @override
   int? get bookId => null;
 
