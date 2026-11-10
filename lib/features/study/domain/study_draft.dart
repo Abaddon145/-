@@ -34,7 +34,9 @@ class StudyDraft {
       final wordId = data['wordId'];
       final sessionKey = data['sessionKey'];
       final answer = data['answer'];
-      if (wordId is! int || sessionKey is! String || answer is! String) return null;
+      if (wordId is! int || sessionKey is! String || answer is! String) {
+        return null;
+      }
       final correct = data['correct'];
       return StudyDraft(
         wordId: wordId,

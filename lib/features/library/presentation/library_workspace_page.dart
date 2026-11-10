@@ -521,7 +521,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                                     ? LibraryFilter.all
                                     : filter,
                               );
-                              if (started && context.mounted) context.go('/study');
+                              if (started && context.mounted) {
+                                context.go('/study');
+                              }
                             },
                             icon: const Icon(Icons.play_arrow),
                             label: const Text('学习当前范围'),
@@ -539,7 +541,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                                   label: Text(tag),
                                   onPressed: () async {
                                     final started = await showSessionSheet(context, tag: tag);
-                                    if (started && context.mounted) context.go('/study');
+                                    if (started && context.mounted) {
+                                      context.go('/study');
+                                    }
                                   },
                                 ),
                             ],

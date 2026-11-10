@@ -172,7 +172,9 @@ extension LearningDatabase on AppDatabase {
       final reviewOpen = plan.reviewsDone < plan.settings.reviewsPerDay;
       if (!newOpen && !reviewOpen) return EmptyQueueKind.dailyPlanDone;
     }
-    if (await _countTrainingScope(options) == 0) return EmptyQueueKind.filteredEmpty;
+    if (await _countTrainingScope(options) == 0) {
+      return EmptyQueueKind.filteredEmpty;
+    }
     if (options.mode == PracticeMode.cloze || options.mode == PracticeMode.forms) {
       if (await _countTrainingScope(options, applyMode: true) == 0) {
         return EmptyQueueKind.modeNeedsContent;
@@ -192,8 +194,12 @@ extension LearningDatabase on AppDatabase {
       where.add(
         "NOT EXISTS (SELECT 1 FROM app_settings a WHERE a.key = 'word_status:' || w.id AND a.value IN ('suspended', 'known'))",
       );
-      if (options.filter == LibraryFilter.favorites) where.add('u.is_favorite = 1');
-      if (options.filter == LibraryFilter.wrong) where.add('u.is_difficult = 1');
+      if (options.filter == LibraryFilter.favorites) {
+        where.add('u.is_favorite = 1');
+      }
+      if (options.filter == LibraryFilter.wrong) {
+        where.add('u.is_difficult = 1');
+      }
       if (options.partOfSpeech.isNotEmpty) {
         where.add('w.part_of_speech = ?');
         variables.add(Variable<String>(options.partOfSpeech));

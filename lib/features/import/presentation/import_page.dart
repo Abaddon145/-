@@ -121,7 +121,9 @@ class _ImportPageState extends ConsumerState<ImportPage> {
 }
 
 String _friendlyImportError(Object error) {
-  if (error is FormatException && error.message.isNotEmpty) return error.message;
+  if (error is FormatException && error.message.isNotEmpty) {
+    return error.message;
+  }
   if (error is TimeoutException) return '读取文件超时，请先将文件下载到本机再重试';
   return '导入没有完成，请检查文件后重试';
 }

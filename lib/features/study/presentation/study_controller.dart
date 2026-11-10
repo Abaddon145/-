@@ -181,7 +181,9 @@ class StudyController extends StateNotifier<StudyUiState> {
     } catch (error) {
       if (!mounted) return '';
       state = state.copyWith(canUndo: false);
-      if (error is FormatException && error.message.isNotEmpty) return error.message;
+      if (error is FormatException && error.message.isNotEmpty) {
+        return error.message;
+      }
       return '撤销没有完成，当前词卡仍保留';
     }
   }

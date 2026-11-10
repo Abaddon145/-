@@ -88,7 +88,9 @@ class _StudyPageState extends ConsumerState<StudyPage>
     final raw = await ref.read(databaseProvider).loadSetting(StudyDraft.storageKey);
     if (!mounted || _wordId != wordId || _answer.text.isNotEmpty) return;
     final draft = StudyDraft.decode(raw);
-    if (draft == null || draft.wordId != wordId || draft.sessionKey != sessionKey) return;
+    if (draft == null || draft.wordId != wordId || draft.sessionKey != sessionKey) {
+      return;
+    }
     _answer.text = draft.answer;
     _answer.selection = TextSelection.collapsed(offset: _answer.text.length);
     setState(() => _correct = draft.correct);
