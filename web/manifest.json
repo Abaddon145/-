@@ -1,11 +1,11 @@
 {
-  "name": "韩语记忆 KoreanMemo",
-  "short_name": "韩语记忆",
+  "name": "词忆",
+  "short_name": "词忆",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#F7F7FC",
   "theme_color": "#5B6CFF",
-  "description": "支持 Excel 自定义词库与 FSRS 复习的离线韩语学习应用。",
+  "description": "离线学习韩语和英语，支持 Excel 词库与 FSRS 复习。",
   "orientation": "portrait-primary",
   "prefer_related_applications": false,
   "icons": [

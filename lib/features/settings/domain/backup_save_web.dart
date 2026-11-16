@@ -68,7 +68,7 @@ Future<BackupDelivery?> _shareFile(Uint8List bytes, String fileName) async {
       fileName,
       web.FilePropertyBag(type: 'application/json'),
     );
-    final data = web.ShareData(files: [file].toJS, title: '韩语记忆备份');
+    final data = web.ShareData(files: [file].toJS, title: '词忆备份');
     if (!web.window.navigator.canShare(data)) return null;
     await web.window.navigator.share(data).toDart;
     return BackupDelivery.shared;

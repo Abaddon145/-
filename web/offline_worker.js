@@ -1,5 +1,5 @@
 // Own the app cache explicitly instead of relying on Flutter's deprecated worker.
-const CACHE = 'korean-memo-0.13.0';
+const CACHE = 'korean-memo-0.13.1';
 function canvasKitFiles() {
   const nav = self.navigator || {};
   const ua = nav.userAgent || '';

@@ -483,7 +483,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 icon: const Icon(Icons.open_in_new),
                 label: const Text('查看更新记录'),
               ),
-              const Center(child: Text('KoreanMemo · v$appVersion')),
+              const Center(child: Text('词忆 · v$appVersion')),
               if (_busy)
                 const Padding(
                   padding: EdgeInsets.all(12),

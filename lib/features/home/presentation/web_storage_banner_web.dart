@@ -98,7 +98,7 @@ class _WebStorageBannerState extends ConsumerState<WebStorageBanner> {
         kind == WebDatabaseKind.unsafe || kind == WebDatabaseKind.memory;
     final messages = <Widget>[
       if (unsafe && _otherTab)
-        const Text('这个浏览器开着多个韩语记忆。当前存储不能同时写入，请关掉其他标签后再学习。'),
+        const Text('这个浏览器开着多个词忆。当前存储不能同时写入，请关掉其他标签后再学习。'),
       if (_showSplit)
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
