@@ -296,7 +296,7 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                 .when(
                                   data: (p) =>
                                       _progress('每日新词', p.done, p.target),
-                                  loading: () => const SizedBox(),
+                                  loading: () => const SizedBox(height: 41),
                                   error: (_, _) => const SizedBox(),
                                 )
                           : ref
@@ -304,7 +304,7 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                 .when(
                                   data: (p) =>
                                       _progress('本轮练习', p.done, p.target),
-                                  loading: () => const SizedBox(),
+                                  loading: () => const SizedBox(height: 41),
                                   error: (_, _) => const SizedBox(),
                                 ),
                       Expanded(

@@ -277,6 +277,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final appearance = ref.watch(appearanceProvider).valueOrNull;
     final style = AppTheme.preset(appearance?.styleId ?? 'porcelain');
     final colors = Theme.of(context).colorScheme;
+    final headerBase = Theme.of(context).brightness == Brightness.dark
+        ? colors.surfaceContainerHigh
+        : colors.surfaceContainerLowest;
+    final headerTint = Color.alphaBlend(
+      colors.primary.withValues(alpha: .14),
+      headerBase,
+    );
     final configured = ref.watch(aiApiKeyProvider).isNotEmpty;
     Widget tile(
       IconData icon,
@@ -315,30 +322,31 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Card(
-                color: colors.primaryContainer,
+                clipBehavior: Clip.antiAlias,
                 margin: const EdgeInsets.only(bottom: 24),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.devices_rounded,
-                        color: colors.onPrimaryContainer,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        '你的学习，保存在本机',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: colors.onPrimaryContainer,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [headerTint, headerBase],
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.devices_rounded, color: colors.onSurface),
+                        const SizedBox(height: 10),
+                        Text(
+                          '你的学习，保存在本机',
+                          style: Theme.of(context).textTheme.titleLarge,
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '无需账户。换设备时，用备份文件带走词库与进度。',
-                        style: TextStyle(color: colors.onPrimaryContainer),
-                      ),
-                    ],
+                        const SizedBox(height: 6),
+                        const Text('无需账户。换设备时，用备份文件带走词库与进度。'),
+                      ],
+                    ),
                   ),
                 ),
               ),
