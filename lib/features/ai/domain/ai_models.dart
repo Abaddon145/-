@@ -16,6 +16,7 @@ Map<String, Object?> aiWordSnapshot(Word word) => {
   'exampleKo': word.exampleKo ?? '',
   'exampleZh': word.exampleZh ?? '',
   'pronunciation': word.pronunciation,
+  'ipa': word.ipa,
   'tags': word.tags,
   'note': word.note,
   'source': word.source,
@@ -33,20 +34,8 @@ String aiCacheKey(
   String type,
   String style,
   int count,
-) => sha256
-    .convert(
-      utf8.encode(
-        jsonEncode([
-          aiWordSnapshot(word),
-          context,
-          type,
-          style,
-          count,
-          aiPromptVersion,
-        ]),
-      ),
-    )
-    .toString();
+) =>
+    '${word.language}:${aiPromptVersionFor(word.language)}:${sha256.convert(utf8.encode(jsonEncode([word.language, aiPromptVersionFor(word.language), aiWordSnapshot(word), context, type, style, count]))).toString()}';
 
 const aiFullMaxTokens = 2500;
 const aiMeaningMaxTokens = 2000;
@@ -72,6 +61,8 @@ class AiRequest implements AiRequestIdentity {
   int get maxTokens => meaningOnly ? aiMeaningMaxTokens : aiFullMaxTokens;
   @override
   int get wordId => word.id;
+  @override
+  String get learningLanguage => word.language;
   @override
   String get originalTerm => word.korean;
   final int exampleCount;

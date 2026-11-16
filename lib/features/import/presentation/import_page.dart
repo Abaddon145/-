@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 import '../../library/domain/providers.dart';
+import '../data/csv_import_service.dart';
 import '../data/excel_import_service.dart';
 import '../domain/import_models.dart';
 
@@ -186,127 +187,269 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('导入统一词库')),
-    body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          const Text('韩语、英文、英韩配对均可导入；只有中文的行跳过。不会覆盖原有学习进度。'),
-          const SizedBox(height: 16),
-          OutlinedButton.icon(
-            onPressed: _busy || _parsing ? null : _pickFile,
-            icon: const Icon(Icons.upload_file),
-            label: Text(_fileName ?? '选择.xlsx文件'),
-          ),
-          if (_busy || _parsing) ...[
-            const SizedBox(height: 12),
-            const LinearProgressIndicator(),
-            Text(_parsing ? '正在生成导入预览…' : _stage),
-          ],
-          if (_bytes != null) ...[
-            const SizedBox(height: 14),
-            DropdownButtonFormField<String>(
-              key: ValueKey('$_fileName-$_sheet'),
-              isExpanded: true,
-              initialValue: _sheet,
-              decoration: const InputDecoration(labelText: '工作表'),
-              items: [
-                for (final name in _sheets)
-                  DropdownMenuItem(value: name, child: Text(name)),
-              ],
-              onChanged: _busy || _parsing
-                  ? null
-                  : (v) {
-                      _sheet = v;
-                      _headers = _service.sheetHeaders(_bytes!, v!);
-                      _mapping = _service.guessMapping(_headers);
-                      _parse();
-                    },
+  Widget build(BuildContext context) {
+    if (ref.watch(activeLanguageProvider) == 'en') {
+      return const _EnglishCsvImportPage();
+    }
+    return Scaffold(
+      appBar: AppBar(title: const Text('导入韩语词库')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            const Text(
+              '请选择 .xlsx。英文列会和韩语列一起写入韩语词库，不会进入英语空间。只有中文的行跳过。不会覆盖原有学习进度。',
             ),
-            SwitchListTile(
-              title: const Text('读取全部自动识别的工作表'),
-              subtitle: const Text('无法识别的工作表计入跳过行；自定义列映射请逐表导入'),
-              value: _all,
-              onChanged: _busy || _parsing
-                  ? null
-                  : (v) {
-                      setState(() => _all = v);
-                      _parse();
-                    },
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _busy || _parsing ? null : _pickFile,
+              icon: const Icon(Icons.upload_file),
+              label: Text(_fileName ?? '选择.xlsx文件'),
             ),
-            if (!_all)
-              for (final field in const [
-                ImportField.korean,
-                ImportField.english,
-                ImportField.meaningZh,
-                ImportField.partOfSpeech,
-                ImportField.exampleKo,
-                ImportField.tags,
-              ])
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: DropdownButtonFormField<int>(
-                    isExpanded: true,
-                    key: ValueKey('$_sheet-${field.name}-${_mapping[field]}'),
-                    initialValue: _mapping[field] ?? -1,
-                    decoration: InputDecoration(labelText: field.label),
-                    items: [
-                      const DropdownMenuItem(value: -1, child: Text('未指定')),
-                      for (var i = 0; i < _headers.length; i++)
-                        DropdownMenuItem(
-                          value: i,
-                          child: Text(
-                            '${i + 1} · ${_headers[i]}',
-                            overflow: TextOverflow.ellipsis,
+            if (_busy || _parsing) ...[
+              const SizedBox(height: 12),
+              const LinearProgressIndicator(),
+              Text(_parsing ? '正在生成导入预览…' : _stage),
+            ],
+            if (_bytes != null) ...[
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                key: ValueKey('$_fileName-$_sheet'),
+                isExpanded: true,
+                initialValue: _sheet,
+                decoration: const InputDecoration(labelText: '工作表'),
+                items: [
+                  for (final name in _sheets)
+                    DropdownMenuItem(value: name, child: Text(name)),
+                ],
+                onChanged: _busy || _parsing
+                    ? null
+                    : (v) {
+                        _sheet = v;
+                        _headers = _service.sheetHeaders(_bytes!, v!);
+                        _mapping = _service.guessMapping(_headers);
+                        _parse();
+                      },
+              ),
+              SwitchListTile(
+                title: const Text('读取全部自动识别的工作表'),
+                subtitle: const Text('无法识别的工作表计入跳过行；自定义列映射请逐表导入'),
+                value: _all,
+                onChanged: _busy || _parsing
+                    ? null
+                    : (v) {
+                        setState(() => _all = v);
+                        _parse();
+                      },
+              ),
+              if (!_all)
+                for (final field in const [
+                  ImportField.korean,
+                  ImportField.english,
+                  ImportField.meaningZh,
+                  ImportField.partOfSpeech,
+                  ImportField.exampleKo,
+                  ImportField.tags,
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: DropdownButtonFormField<int>(
+                      isExpanded: true,
+                      key: ValueKey('$_sheet-${field.name}-${_mapping[field]}'),
+                      initialValue: _mapping[field] ?? -1,
+                      decoration: InputDecoration(labelText: field.label),
+                      items: [
+                        const DropdownMenuItem(value: -1, child: Text('未指定')),
+                        for (var i = 0; i < _headers.length; i++)
+                          DropdownMenuItem(
+                            value: i,
+                            child: Text(
+                              '${i + 1} · ${_headers[i]}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                    ],
-                    onChanged: _busy || _parsing
-                        ? null
-                        : (v) {
-                            if (v == -1) {
-                              _mapping.remove(field);
-                            } else {
-                              _mapping[field] = v!;
-                            }
-                            _parse();
-                          },
+                      ],
+                      onChanged: _busy || _parsing
+                          ? null
+                          : (v) {
+                              if (v == -1) {
+                                _mapping.remove(field);
+                              } else {
+                                _mapping[field] = v!;
+                              }
+                              _parse();
+                            },
+                    ),
+                  ),
+              SwitchListTile(
+                title: const Text('补齐重复词的缺失字段'),
+                subtitle: const Text('保留已有释义、例句、词性和学习状态'),
+                value: _enrich,
+                onChanged: _busy || _parsing
+                    ? null
+                    : (v) => setState(() => _enrich = v),
+              ),
+            ],
+            if (_error != null)
+              Text(
+                '$_error',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            if (_preview != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                '有效 ${_preview!.drafts.length} · 重复 $_duplicates · 跳过/异常 ${_preview!.invalidRows}',
+              ),
+              for (final word in _preview!.drafts.take(8))
+                ListTile(
+                  title: Text(word.korean),
+                  subtitle: Text('${word.meaningZh} · ${word.tags ?? ''}'),
+                ),
+              FilledButton(
+                onPressed: _busy || _parsing || _preview!.drafts.isEmpty
+                    ? null
+                    : _import,
+                child: Text(_busy ? '正在导入…' : '确认合并到统一词库'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EnglishCsvImportPage extends ConsumerStatefulWidget {
+  const _EnglishCsvImportPage();
+  @override
+  ConsumerState<_EnglishCsvImportPage> createState() =>
+      _EnglishCsvImportPageState();
+}
+
+class _EnglishCsvImportPageState extends ConsumerState<_EnglishCsvImportPage> {
+  final _service = CsvImportService();
+  CsvImportResult? _preview;
+  String? _fileName, _error;
+  bool _busy = false;
+
+  Future<void> _pick() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _preview = null;
+    });
+    try {
+      final file = await FilePicker.pickFile(type: FileType.any);
+      if (file == null || !mounted) return;
+      final name = file.name.toLowerCase();
+      if (!name.endsWith('.csv') &&
+          !name.endsWith('.tsv') &&
+          !name.endsWith('.txt')) {
+        throw const FormatException('请选择 .csv、.tsv 或 .txt');
+      }
+      final text = String.fromCharCodes(await file.readAsBytes());
+      if (text.length > 2 * 1024 * 1024) {
+        throw const FormatException('文件过大，请分成小于 2MB 的文件');
+      }
+      final preview = _service.parse(text);
+      if (!mounted) return;
+      setState(() {
+        _fileName = file.name;
+        _preview = preview;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = '$error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _import() async {
+    final preview = _preview;
+    if (preview == null || preview.drafts.isEmpty || _busy) return;
+    setState(() => _busy = true);
+    try {
+      final db = ref.read(databaseProvider);
+      final result = await db.transaction(() async {
+        final book = await db.createWordBook(
+          name: _fileName ?? '英语词表',
+          sourceFileName: _fileName ?? 'english.csv',
+          language: 'en',
+        );
+        return db.importWords(
+          wordBookId: book,
+          drafts: preview.drafts,
+          source: _fileName ?? 'english.csv',
+          language: 'en',
+        );
+      });
+      ref.invalidate(homeCountsProvider);
+      ref.invalidate(wordBooksProvider);
+      ref.invalidate(libraryWordsProvider);
+      ref.invalidate(studyControllerProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('英语词库新增 ${result.inserted} · 复用 ${result.reused}'),
+        ),
+      );
+      context.go('/library');
+    } catch (error) {
+      if (mounted) setState(() => _error = '$error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final preview = _preview;
+    return Scaffold(
+      appBar: AppBar(title: const Text('导入英语词表')),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            const Text(
+              '第一行是表头。需要「词头」和「中文」，可以带上 IPA、词性、例句、例句中文。支持 CSV 和 TSV。这些词只进入英语词库。',
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _pick,
+              icon: const Icon(Icons.upload_file),
+              label: Text(_fileName ?? '选择 CSV 或 TSV'),
+            ),
+            if (_busy) ...[
+              const SizedBox(height: 12),
+              const LinearProgressIndicator(),
+            ],
+            if (_error != null)
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            if (preview != null) ...[
+              const SizedBox(height: 16),
+              Text('有效 ${preview.drafts.length} · 跳过 ${preview.invalidRows}'),
+              for (final word in preview.drafts.take(8))
+                ListTile(
+                  title: Text(word.korean),
+                  subtitle: Text(
+                    [
+                      word.meaningZh,
+                      if (word.ipa != null) word.ipa,
+                      if (word.partOfSpeech != null) word.partOfSpeech,
+                    ].join(' · '),
                   ),
                 ),
-            SwitchListTile(
-              title: const Text('补齐重复词的缺失字段'),
-              subtitle: const Text('保留已有释义、例句、词性和学习状态'),
-              value: _enrich,
-              onChanged: _busy || _parsing
-                  ? null
-                  : (v) => setState(() => _enrich = v),
-            ),
-          ],
-          if (_error != null)
-            Text(
-              '$_error',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          if (_preview != null) ...[
-            const SizedBox(height: 16),
-            Text(
-              '有效 ${_preview!.drafts.length} · 重复 $_duplicates · 跳过/异常 ${_preview!.invalidRows}',
-            ),
-            for (final word in _preview!.drafts.take(8))
-              ListTile(
-                title: Text(word.korean),
-                subtitle: Text('${word.meaningZh} · ${word.tags ?? ''}'),
+              FilledButton(
+                onPressed: _busy || preview.drafts.isEmpty ? null : _import,
+                child: Text(_busy ? '正在导入…' : '导入到英语词库'),
               ),
-            FilledButton(
-              onPressed: _busy || _parsing || _preview!.drafts.isEmpty
-                  ? null
-                  : _import,
-              child: Text(_busy ? '正在导入…' : '确认合并到统一词库'),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

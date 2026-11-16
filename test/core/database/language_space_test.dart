@@ -98,6 +98,18 @@ void main() {
     final stats = await database.select(database.dailyStatistics).get();
     expect(stats.single.language, 'ko');
     expect(stats.single.newWords, 3);
+    final day = stats.single.date.toUtc();
+    final progress = await database.loadDailyPlanProgress(
+      DateTime.utc(day.year, day.month, day.day),
+    );
+    expect(progress.newWordsDone, 3);
+    final recent = await database.loadRecentStatistics(
+      DateTime.utc(day.year, day.month, day.day),
+      days: 1,
+    );
+    expect(recent.single.newWords, 3);
+    final ipa = await database.customSelect('PRAGMA table_info(words)').get();
+    expect(ipa.any((row) => row.read<String>('name') == 'ipa'), isTrue);
     final indexes = await database
         .customSelect(
           "SELECT name FROM sqlite_master WHERE name = 'idx_study_cards_language_due'",
@@ -183,17 +195,92 @@ void main() {
       const WordDraft(korean: '바다', meaningZh: '海', partOfSpeech: '名词'),
     );
     final snapshot = await database.createBackupSnapshot();
-    expect(snapshot['version'], 1);
+    expect(snapshot['version'], 2);
     final words = (snapshot['tables'] as Map)['words'] as List;
-    expect(words, hasLength(1));
-    expect(words.single.containsKey('language'), isFalse);
+    expect(words, hasLength(2));
+    expect(words.any((row) => row['language'] == 'en'), isTrue);
+    expect(words.every((row) => row.containsKey('ipa')), isTrue);
 
     final restored = AppDatabase(NativeDatabase.memory());
     addTearDown(restored.close);
     await restored.restoreBackupSnapshot(snapshot);
     final rows = await restored.select(restored.words).get();
-    expect(rows, hasLength(1));
-    expect(rows.single.korean, '바다');
-    expect(rows.single.language, 'ko');
+    expect(rows.map((row) => row.korean).toSet(), {'하늘', '바다'});
+
+    final legacy = {
+      'format': 'korean-memo-backup',
+      'version': 1,
+      'tables': {
+        'words': [
+          {
+            'id': 1,
+            'korean': '바다',
+            'normalized_korean': '바다',
+            'base_form': '',
+            'normalized_base_form': '',
+            'meaning_zh': '海',
+            'pronunciation': null,
+            'part_of_speech': '名词',
+            'example_ko': null,
+            'example_zh': null,
+            'topik_level': null,
+            'category': null,
+            'tags': null,
+            'note': null,
+            'hanja': null,
+            'etymology': null,
+            'source': null,
+            'created_at': 1,
+            'updated_at': 1,
+          },
+        ],
+        'word_books': <Map<String, Object?>>[],
+        'word_book_words': <Map<String, Object?>>[],
+        'study_cards': <Map<String, Object?>>[],
+        'review_logs': <Map<String, Object?>>[],
+        'user_words': <Map<String, Object?>>[],
+        'daily_statistics': <Map<String, Object?>>[],
+        'app_settings': [
+          {'key': 'checkin:2026-11-01', 'value': '1', 'updated_at': 1},
+        ],
+      },
+    };
+    final fromV1 = AppDatabase(NativeDatabase.memory());
+    addTearDown(fromV1.close);
+    await fromV1.addManualWord(
+      const WordDraft(korean: 'sky', meaningZh: '天'),
+      language: 'en',
+    );
+    await fromV1.restoreBackupSnapshot(legacy);
+    final koreanOnly = await fromV1.select(fromV1.words).get();
+    expect(koreanOnly, hasLength(1));
+    expect(koreanOnly.single.korean, '바다');
+    expect(koreanOnly.single.language, 'ko');
+    expect(koreanOnly.single.ipa, isNull);
+  });
+
+  test('restoring English keeps Korean words and check-ins', () async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    await database.addManualWord(
+      const WordDraft(korean: '바다', meaningZh: '海', partOfSpeech: '名词'),
+    );
+    await database.saveSetting('checkin:ko:2026-11-01', '1');
+    await database.addManualWord(
+      const WordDraft(korean: 'old', meaningZh: '旧'),
+      language: 'en',
+    );
+    final snapshot = await database.createBackupSnapshot();
+    await database.addManualWord(
+      const WordDraft(korean: 'sky', meaningZh: '天', ipa: 'skaɪ'),
+      language: 'en',
+    );
+    await database.restoreBackupSnapshot(snapshot, onlyLanguage: 'en');
+    final rows = await database.select(database.words).get();
+    expect(rows.map((row) => '${row.language}:${row.korean}').toSet(), {
+      'ko:바다',
+      'en:old',
+    });
+    expect(await database.loadSetting('checkin:ko:2026-11-01'), '1');
   });
 }

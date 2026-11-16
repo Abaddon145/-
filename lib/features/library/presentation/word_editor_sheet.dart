@@ -27,11 +27,22 @@ class _WordEditorSheet extends ConsumerStatefulWidget {
 }
 
 class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
-  static const _parts = ['名词', '动词', '形容词', '副词', '代词', '助词', '数词', '叹词'];
+  static const _koreanParts = ['名词', '动词', '形容词', '副词', '代词', '助词', '数词', '叹词'];
+  static const _englishParts = [
+    '名词',
+    '动词',
+    '形容词',
+    '副词',
+    '代词',
+    '介词',
+    '连词',
+    '感叹词',
+  ];
   final _form = GlobalKey<FormState>();
   late final TextEditingController _korean;
   late final TextEditingController _meaning;
   late final TextEditingController _partOfSpeech;
+  late final TextEditingController _ipa;
   final _exampleKo = TextEditingController(),
       _exampleZh = TextEditingController(),
       _tags = TextEditingController(),
@@ -47,6 +58,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
     _partOfSpeech = TextEditingController(
       text: widget.word?.partOfSpeech ?? '',
     );
+    _ipa = TextEditingController(text: widget.word?.ipa ?? '');
     _exampleKo.text = widget.word?.exampleKo ?? '';
     _exampleZh.text = widget.word?.exampleZh ?? '';
     _tags.text = widget.word?.tags ?? '';
@@ -58,6 +70,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
     _korean.dispose();
     _meaning.dispose();
     _partOfSpeech.dispose();
+    _ipa.dispose();
     _exampleKo.dispose();
     _exampleZh.dispose();
     _tags.dispose();
@@ -80,6 +93,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
             korean: _korean.text,
             meaningZh: _meaning.text,
             partOfSpeech: _partOfSpeech.text,
+            ipa: _ipa.text,
             exampleKo: _exampleKo.text,
             exampleZh: _exampleZh.text,
             tags: _tags.text,
@@ -93,6 +107,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
           korean: _korean.text,
           meaningZh: _meaning.text,
           partOfSpeech: _partOfSpeech.text,
+          ipa: _ipa.text,
           exampleKo: _exampleKo.text,
           exampleZh: _exampleZh.text,
           tags: _tags.text,
@@ -167,45 +182,55 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
                       prefixIcon: Icon(Icons.menu_book_outlined),
                     ),
                   ),
-                  if (!english) ...[
+                  if (english) ...[
                     const SizedBox(height: 14),
                     TextFormField(
-                      controller: _partOfSpeech,
+                      controller: _ipa,
+                      textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
-                        labelText: '词性',
-                        hintText: '例如：名词、动词',
-                        prefixIcon: Icon(Icons.label_outline),
+                        labelText: '音标',
+                        hintText: '例如：skɑɪ',
                       ),
-                      onChanged: (_) => setState(() {}),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? '请标记词性'
-                          : null,
                     ),
                   ],
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _partOfSpeech,
+                    decoration: const InputDecoration(
+                      labelText: '词性',
+                      hintText: '例如：名词、动词',
+                      prefixIcon: Icon(Icons.label_outline),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                    validator: english
+                        ? null
+                        : (value) => value == null || value.trim().isEmpty
+                              ? '请标记词性'
+                              : null,
+                  ),
                 ],
               ),
             ),
-            if (!english) ...[
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 2,
-                children: [
-                  for (final part in _parts)
-                    ChoiceChip(
-                      label: Text(part),
-                      selected: _partOfSpeech.text.trim() == part,
-                      onSelected: (_) =>
-                          setState(() => _partOfSpeech.text = part),
-                    ),
-                ],
-              ),
-            ],
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 2,
+              children: [
+                for (final part in english ? _englishParts : _koreanParts)
+                  ChoiceChip(
+                    label: Text(part),
+                    selected: _partOfSpeech.text.trim() == part,
+                    onSelected: (_) =>
+                        setState(() => _partOfSpeech.text = part),
+                  ),
+              ],
+            ),
             const SizedBox(height: 14),
             TextField(
               controller: _exampleKo,
-              decoration: const InputDecoration(labelText: '韩语例句（填空训练使用原词）'),
+              decoration: InputDecoration(
+                labelText: english ? '英文例句' : '韩语例句（填空训练使用原词）',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(

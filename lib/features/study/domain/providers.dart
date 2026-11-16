@@ -38,8 +38,14 @@ class ActiveLanguageController extends StateNotifier<String> {
 
   Future<void> select(String language) async {
     final next = normalizeLearningLanguage(language);
-    await database.saveSetting(activeLanguageSettingKey, next);
-    if (mounted) state = next;
+    if (next == state) return;
+    final previous = state;
+    state = next;
+    try {
+      await database.saveSetting(activeLanguageSettingKey, next);
+    } catch (_) {
+      if (mounted && state == next) state = previous;
+    }
   }
 }
 

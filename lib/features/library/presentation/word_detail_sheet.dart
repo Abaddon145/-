@@ -105,13 +105,23 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
           children: [
             Text(word.korean, style: Theme.of(context).textTheme.headlineSmall),
+            if (word.language == 'en' && word.ipa?.isNotEmpty == true)
+              Text(word.ipa!),
             Text(word.meaningZh),
             const SizedBox(height: 10),
             Text('${word.partOfSpeech ?? '未标词性'} · ${word.tags ?? '未标场景'}'),
+            if (word.language != 'en' && word.hanja?.isNotEmpty == true)
+              Text('汉字：${word.hanja}'),
+            if (word.language != 'en' && word.topikLevel?.isNotEmpty == true)
+              Text('TOPIK ${word.topikLevel}'),
             if (word.exampleKo != null)
               ListTile(
                 title: Text(word.exampleKo!),
-                subtitle: Text(word.exampleZh ?? ''),
+                subtitle: Text(
+                  word.language == 'en'
+                      ? '英文例句 · ${word.exampleZh ?? ''}'
+                      : (word.exampleZh ?? ''),
+                ),
               ),
             if (word.note != null) Text('笔记：${word.note}'),
             FilledButton.icon(
@@ -180,49 +190,51 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 18),
-            Text('词形活用表', style: Theme.of(context).textTheme.titleMedium),
-            const Text('每行“形式名称=答案”。请填写已核对的活用形式；应用不会自动推测不规则变化。'),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _forms,
-              minLines: 3,
-              maxLines: 8,
-              decoration: const InputDecoration(hintText: '敬语现在时=…\n过去时=…'),
-            ),
-            TextButton(
-              onPressed: () async {
-                final lines = _forms.text
-                    .trim()
-                    .split('\n')
-                    .where((s) => s.isNotEmpty)
-                    .toList();
-                if (lines.any(
-                  (s) =>
-                      !s.contains('=') ||
-                      s.split('=').first.trim().isEmpty ||
-                      s.substring(s.indexOf('=') + 1).trim().isEmpty,
-                )) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('每行必须有形式名称和答案，用 = 分隔')),
-                  );
-                  return;
-                }
-                await ref
-                    .read(databaseProvider)
-                    .saveSetting(
-                      'word_forms:${widget.word.id}',
-                      lines.isEmpty ? null : lines.join('\n'),
+            if (word.language != 'en') ...[
+              const SizedBox(height: 18),
+              Text('词形活用表', style: Theme.of(context).textTheme.titleMedium),
+              const Text('每行“形式名称=答案”。请填写已核对的活用形式；应用不会自动推测不规则变化。'),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _forms,
+                minLines: 3,
+                maxLines: 8,
+                decoration: const InputDecoration(hintText: '敬语现在时=…\n过去时=…'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final lines = _forms.text
+                      .trim()
+                      .split('\n')
+                      .where((s) => s.isNotEmpty)
+                      .toList();
+                  if (lines.any(
+                    (s) =>
+                        !s.contains('=') ||
+                        s.split('=').first.trim().isEmpty ||
+                        s.substring(s.indexOf('=') + 1).trim().isEmpty,
+                  )) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('每行必须有形式名称和答案，用 = 分隔')),
                     );
-                ref.invalidate(studyWordFormsProvider(widget.word.id));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('活用表已保存')));
-                }
-              },
-              child: const Text('保存活用表'),
-            ),
+                    return;
+                  }
+                  await ref
+                      .read(databaseProvider)
+                      .saveSetting(
+                        'word_forms:${widget.word.id}',
+                        lines.isEmpty ? null : lines.join('\n'),
+                      );
+                  ref.invalidate(studyWordFormsProvider(widget.word.id));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('活用表已保存')));
+                  }
+                },
+                child: const Text('保存活用表'),
+              ),
+            ],
             const Divider(),
             Text('最近复习', style: Theme.of(context).textTheme.titleMedium),
             for (final log in logs)

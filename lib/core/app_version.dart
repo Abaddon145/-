@@ -1,2 +1,2 @@
 /// Kept in sync with pubspec.yaml and the PWA cache version.
-const appVersion = '0.13.1';
+const appVersion = '0.14.0';

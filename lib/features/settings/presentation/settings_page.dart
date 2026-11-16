@@ -214,7 +214,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (!mounted) return;
       final tables = decoded['tables'];
       if (decoded['format'] != 'korean-memo-backup' ||
-          decoded['version'] != 1 ||
+          (decoded['version'] != 1 && decoded['version'] != 2) ||
           tables is! Map ||
           tables['words'] is! List ||
           tables['review_logs'] is! List) {
@@ -229,31 +229,42 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         'ai_task_items',
         'ai_word_contents',
       ].every((name) => tables[name] is List);
-      final confirmed = await showDialog<bool>(
+      final language = ref.read(activeLanguageProvider);
+      final languageName = language == 'en' ? '英语' : '韩语';
+      final confirmed = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('恢复备份？'),
           content: SingleChildScrollView(
             child: Text(
-              '词条：${(tables['words'] as List).length} 个\n学习记录：${(tables['review_logs'] as List).length} 条\n备份时间：${created?.toString().split('.').first ?? '未记录'}\n\n恢复会替换此设备上的词库、学习进度和设置。${replacesAi ? '这份备份包含 AI 数据，会替换本机的 AI 建议、任务和已确认内容。' : '这份备份不含 AI 数据，本机的 AI 建议、任务和已确认内容会保留。'}\n建议先导出当前备份。',
+              '词条：${(tables['words'] as List).length} 个\n学习记录：${(tables['review_logs'] as List).length} 条\n备份时间：${created?.toString().split('.').first ?? '未记录'}\n\n全部替换会清空这台设备上的韩语和英语，再写入这份备份。只恢复$languageName会保留另一种语言的词和打卡。${replacesAi ? '这份备份包含 AI 数据。' : '这份备份不含 AI 数据，本机 AI 内容会保留。'}\n建议先导出当前备份。',
             ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('取消'),
             ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, language),
+              child: Text('只恢复$languageName'),
+            ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('替换并恢复'),
+              onPressed: () => Navigator.pop(dialogContext, 'all'),
+              child: const Text('全部替换'),
             ),
           ],
         ),
       );
-      if (confirmed != true || !mounted) return;
+      if (confirmed == null || !mounted) return;
       setState(() => _busy = true);
       await ref.read(aiTaskRunnerProvider).cancelAll();
-      await ref.read(databaseProvider).restoreBackupSnapshot(decoded);
+      await ref
+          .read(databaseProvider)
+          .restoreBackupSnapshot(
+            decoded,
+            onlyLanguage: confirmed == 'all' ? null : confirmed,
+          );
       if (!mounted) return;
       _refreshData();
       if (mounted) {

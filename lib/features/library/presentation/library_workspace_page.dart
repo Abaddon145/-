@@ -273,7 +273,9 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         .length;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('统一词库'),
+        title: Text(
+          ref.watch(activeLanguageProvider) == 'en' ? '英语词库' : '韩语词库',
+        ),
         actions: [
           IconButton(
             tooltip: '本机 AI 任务',
@@ -294,8 +296,15 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 );
               }
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'import', child: Text('导入 Excel 词库')),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'import',
+                child: Text(
+                  ref.read(activeLanguageProvider) == 'en'
+                      ? '导入 CSV 词表'
+                      : '导入 Excel 词库',
+                ),
+              ),
               PopupMenuItem(value: 'annotate', child: Text('批量标记当前结果')),
               PopupMenuItem(value: 'practice', child: Text('学习当前范围')),
             ],
@@ -474,6 +483,8 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 ),
               ),
               ...words.when(
+                skipLoadingOnReload: true,
+                skipLoadingOnRefresh: true,
                 loading: () => [
                   const SliverToBoxAdapter(
                     child: Center(child: CircularProgressIndicator()),
@@ -483,10 +494,47 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                 data: (items) => items.isEmpty
                     ? [
                         SliverToBoxAdapter(
-                          child: Center(
-                            child: TextButton(
-                              onPressed: () => _edit(),
-                              child: const Text('没有找到单词，录入一个单词'),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
+                            child: Column(
+                              children: [
+                                Text(
+                                  ref.watch(activeLanguageProvider) == 'en' &&
+                                          _search.text.trim().isEmpty
+                                      ? '英语词库还是空的'
+                                      : '没有找到单词',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  ref.watch(activeLanguageProvider) == 'en' &&
+                                          _search.text.trim().isEmpty
+                                      ? '可以手动加一个单词，或导入 CSV / TSV。'
+                                      : '换个筛选条件，或录入一个新单词。',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                FilledButton(
+                                  onPressed: () => _edit(),
+                                  child: const Text('录入单词'),
+                                ),
+                                if (ref.watch(activeLanguageProvider) == 'en' &&
+                                    _search.text.trim().isEmpty) ...[
+                                  const SizedBox(height: 8),
+                                  TextButton(
+                                    onPressed: () => context.push('/import'),
+                                    child: const Text('导入 CSV 词表'),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ),

@@ -22,6 +22,7 @@ class Words extends Table {
   TextColumn get normalizedBaseForm => text().withDefault(const Constant(''))();
   TextColumn get meaningZh => text()();
   TextColumn get pronunciation => text().nullable()();
+  TextColumn get ipa => text().nullable()();
   TextColumn get partOfSpeech => text().nullable()();
   TextColumn get exampleKo => text().nullable()();
   TextColumn get exampleZh => text().nullable()();
@@ -229,7 +230,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -239,9 +240,16 @@ class AppDatabase extends _$AppDatabase {
       await saveSetting(activeLanguageSettingKey, 'ko');
     },
     // Retire only obsolete cloud markers; keep every local learning table.
-    beforeOpen: (_) => customStatement(
-      "DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'",
-    ),
+    beforeOpen: (_) async {
+      // Runs before any provider query. Drift sets user_version only after
+      // onUpgrade returns, and onCreate uses CREATE TABLE IF NOT EXISTS, so a
+      // database can already be at version 6 while daily_statistics is still
+      // the old table. Repair from the live columns, not from user_version.
+      await _repairLanguageColumns();
+      await customStatement(
+        "DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'",
+      );
+    },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         await migrator.createTable(appSettings);
@@ -259,6 +267,7 @@ class AppDatabase extends _$AppDatabase {
         );
       }
       if (from < 6) await _migrateToLanguageSpace();
+      if (from < 7) await _repairLanguageColumns();
     },
   );
 
@@ -305,47 +314,10 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _rebuildWordsForLanguage() async {
-    await customStatement('''
-      CREATE TABLE words__v6 (
-        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        korean TEXT NOT NULL,
-        normalized_korean TEXT NOT NULL,
-        base_form TEXT NOT NULL DEFAULT '',
-        normalized_base_form TEXT NOT NULL DEFAULT '',
-        meaning_zh TEXT NOT NULL,
-        pronunciation TEXT NULL,
-        part_of_speech TEXT NULL,
-        example_ko TEXT NULL,
-        example_zh TEXT NULL,
-        topik_level TEXT NULL,
-        category TEXT NULL,
-        tags TEXT NULL,
-        note TEXT NULL,
-        hanja TEXT NULL,
-        etymology TEXT NULL,
-        source TEXT NULL,
-        language TEXT NOT NULL DEFAULT 'ko',
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        UNIQUE (language, normalized_korean, normalized_base_form)
-      )
-    ''');
-    await customStatement('''
-      INSERT INTO words__v6 (
-        id, korean, normalized_korean, base_form, normalized_base_form,
-        meaning_zh, pronunciation, part_of_speech, example_ko, example_zh,
-        topik_level, category, tags, note, hanja, etymology, source,
-        language, created_at, updated_at
-      )
-      SELECT
-        id, korean, normalized_korean, base_form, normalized_base_form,
-        meaning_zh, pronunciation, part_of_speech, example_ko, example_zh,
-        topik_level, category, tags, note, hanja, etymology, source,
-        language, created_at, updated_at
-      FROM words
-    ''');
-    await customStatement('DROP TABLE words');
-    await customStatement('ALTER TABLE words__v6 RENAME TO words');
+    if (!await _hasColumn('words', 'ipa')) {
+      await customStatement('ALTER TABLE words ADD COLUMN ipa TEXT NULL');
+    }
+    await _rebuildWordsIncludingIpa();
   }
 
   Future<void> _rebuildDailyStatisticsForLanguage() async {
@@ -413,6 +385,188 @@ class AppDatabase extends _$AppDatabase {
         OR key LIKE 'learning_session:%'
       )
     ''');
+  }
+
+  /// Idempotent. Adds any missing `language` column, rebuilds an old
+  /// `daily_statistics` primary key, and adds optional `words.ipa`.
+  /// Existing rows default to Korean. Safe to run on every open.
+  Future<void> _repairLanguageColumns() async {
+    await customStatement('PRAGMA foreign_keys = OFF');
+    try {
+      await transaction(() async {
+        const languageTables = [
+          'words',
+          'word_books',
+          'study_cards',
+          'review_logs',
+          'ai_suggestions',
+          'ai_tasks',
+          'ai_task_items',
+          'ai_word_contents',
+        ];
+        for (final table in languageTables) {
+          if (!await _tableExists(table)) continue;
+          if (!await _hasColumn(table, 'language')) {
+            await customStatement(
+              "ALTER TABLE $table ADD COLUMN language TEXT NOT NULL DEFAULT 'ko'",
+            );
+          }
+        }
+        if (await _tableExists('words') && !await _hasColumn('words', 'ipa')) {
+          await customStatement('ALTER TABLE words ADD COLUMN ipa TEXT NULL');
+        }
+        if (await _tableExists('words') &&
+            !await _wordsUniqueIncludesLanguage()) {
+          final duplicate = await customSelect(
+            'SELECT 1 AS hit FROM words GROUP BY language, normalized_korean, normalized_base_form HAVING COUNT(*) > 1 LIMIT 1',
+          ).get();
+          if (duplicate.isEmpty) await _rebuildWordsIncludingIpa();
+        }
+        if (await _tableExists('daily_statistics')) {
+          await _repairDailyStatistics();
+        }
+        if (await _tableExists('study_cards')) {
+          await customStatement('DROP INDEX IF EXISTS idx_study_cards_due');
+          await _ensureStudyCardsDueIndex();
+        }
+        if (await _tableExists('app_settings')) {
+          await _prefixLearningSettings();
+          if (await loadSetting(activeLanguageSettingKey) == null) {
+            await saveSetting(activeLanguageSettingKey, 'ko');
+          }
+        }
+      });
+    } finally {
+      await customStatement('PRAGMA foreign_keys = ON');
+    }
+  }
+
+  Future<bool> _tableExists(String table) async {
+    final rows = await customSelect(
+      "SELECT 1 AS hit FROM sqlite_master WHERE type = 'table' AND name = ?",
+      variables: [Variable.withString(table)],
+    ).get();
+    return rows.isNotEmpty;
+  }
+
+  Future<bool> _hasColumn(String table, String column) async {
+    final rows = await customSelect('PRAGMA table_info($table)').get();
+    return rows.any((row) => row.read<String>('name') == column);
+  }
+
+  Future<bool> _wordsUniqueIncludesLanguage() async {
+    try {
+      final indexes = await customSelect('PRAGMA index_list(words)').get();
+      for (final index in indexes) {
+        if (index.read<int>('unique') != 1) continue;
+        final name = index.read<String>('name').replaceAll('"', '""');
+        final info = await customSelect('PRAGMA index_info("$name")').get();
+        final columns = [for (final row in info) row.read<String>('name')];
+        if (columns.contains('language') &&
+            columns.contains('normalized_korean')) {
+          return true;
+        }
+      }
+    } catch (_) {
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _repairDailyStatistics() async {
+    if (await _tableExists('daily_statistics__repair') &&
+        !await _tableExists('daily_statistics')) {
+      await customStatement(
+        'ALTER TABLE daily_statistics__repair RENAME TO daily_statistics',
+      );
+    }
+    await customStatement('DROP TABLE IF EXISTS daily_statistics__repair');
+    final info = await customSelect(
+      'PRAGMA table_info(daily_statistics)',
+    ).get();
+    final names = {for (final row in info) row.read<String>('name')};
+    final primaryKey = {
+      for (final row in info)
+        if (row.read<int>('pk') > 0) row.read<String>('name'),
+    };
+    if (names.contains('language') &&
+        primaryKey.contains('date') &&
+        primaryKey.contains('language')) {
+      return;
+    }
+    final languageExpr = names.contains('language') ? 'language' : "'ko'";
+    await customStatement('''
+      CREATE TABLE daily_statistics__repair (
+        date INTEGER NOT NULL,
+        new_words INTEGER NOT NULL DEFAULT 0,
+        review_words INTEGER NOT NULL DEFAULT 0,
+        correct_count INTEGER NOT NULL DEFAULT 0,
+        wrong_count INTEGER NOT NULL DEFAULT 0,
+        study_duration_ms INTEGER NOT NULL DEFAULT 0,
+        language TEXT NOT NULL DEFAULT 'ko',
+        PRIMARY KEY (date, language)
+      )
+    ''');
+    await customStatement('''
+      INSERT INTO daily_statistics__repair (
+        date, new_words, review_words, correct_count, wrong_count,
+        study_duration_ms, language
+      )
+      SELECT
+        date, new_words, review_words, correct_count, wrong_count,
+        study_duration_ms, $languageExpr
+      FROM daily_statistics
+    ''');
+    await customStatement('DROP TABLE daily_statistics');
+    await customStatement(
+      'ALTER TABLE daily_statistics__repair RENAME TO daily_statistics',
+    );
+  }
+
+  Future<void> _rebuildWordsIncludingIpa() async {
+    await customStatement('''
+      CREATE TABLE words__repair (
+        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        korean TEXT NOT NULL,
+        normalized_korean TEXT NOT NULL,
+        base_form TEXT NOT NULL DEFAULT '',
+        normalized_base_form TEXT NOT NULL DEFAULT '',
+        meaning_zh TEXT NOT NULL,
+        pronunciation TEXT NULL,
+        ipa TEXT NULL,
+        part_of_speech TEXT NULL,
+        example_ko TEXT NULL,
+        example_zh TEXT NULL,
+        topik_level TEXT NULL,
+        category TEXT NULL,
+        tags TEXT NULL,
+        note TEXT NULL,
+        hanja TEXT NULL,
+        etymology TEXT NULL,
+        source TEXT NULL,
+        language TEXT NOT NULL DEFAULT 'ko',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        UNIQUE (language, normalized_korean, normalized_base_form)
+      )
+    ''');
+    final hasIpa = await _hasColumn('words', 'ipa');
+    await customStatement('''
+      INSERT INTO words__repair (
+        id, korean, normalized_korean, base_form, normalized_base_form,
+        meaning_zh, pronunciation, ipa, part_of_speech, example_ko, example_zh,
+        topik_level, category, tags, note, hanja, etymology, source,
+        language, created_at, updated_at
+      )
+      SELECT
+        id, korean, normalized_korean, base_form, normalized_base_form,
+        meaning_zh, pronunciation, ${hasIpa ? 'ipa' : 'NULL'}, part_of_speech,
+        example_ko, example_zh, topik_level, category, tags, note, hanja,
+        etymology, source, language, created_at, updated_at
+      FROM words
+    ''');
+    await customStatement('DROP TABLE words');
+    await customStatement('ALTER TABLE words__repair RENAME TO words');
   }
 
   Future<HomeCounts> loadHomeCounts(
@@ -713,12 +867,18 @@ class AppDatabase extends _$AppDatabase {
       final book = await (select(
         wordBooks,
       )..where((row) => row.id.equals(wordBookId))).getSingleOrNull();
+      final lang = normalizeLearningLanguage(
+        language ?? book?.language ?? 'ko',
+      );
+      if (book != null && normalizeLearningLanguage(book.language) != lang) {
+        throw const FormatException('词书和词必须是同一种语言');
+      }
       return _writeWords(
         wordBookId: wordBookId,
         drafts: drafts,
         source: source,
         enrichExisting: enrichExisting,
-        language: language ?? book?.language ?? 'ko',
+        language: lang,
       );
     });
   }
@@ -899,6 +1059,9 @@ class AppDatabase extends _$AppDatabase {
               : const Value.absent(),
           exampleZh: existing.exampleZh == null
               ? Value(_nullable(draft.exampleZh))
+              : const Value.absent(),
+          ipa: existing.ipa == null
+              ? Value(_nullable(draft.ipa))
               : const Value.absent(),
           tags: existing.tags == null
               ? Value(_nullable(draft.tags))
@@ -1182,6 +1345,7 @@ class AppDatabase extends _$AppDatabase {
     String? partOfSpeech,
     String? exampleKo,
     String? exampleZh,
+    String? ipa,
     String? tags,
     String? note,
   }) async {
@@ -1204,6 +1368,7 @@ class AppDatabase extends _$AppDatabase {
         exampleZh: exampleZh == null
             ? const Value.absent()
             : Value(_nullable(exampleZh)),
+        ipa: ipa == null ? const Value.absent() : Value(_nullable(ipa)),
         tags: tags == null ? const Value.absent() : Value(_nullable(tags)),
         note: note == null ? const Value.absent() : Value(_nullable(note)),
         updatedAt: Value(DateTime.now().toUtc()),
@@ -1373,6 +1538,7 @@ class WordDraft {
     required this.meaningZh,
     this.baseForm = '',
     this.pronunciation,
+    this.ipa,
     this.partOfSpeech,
     this.exampleKo,
     this.exampleZh,
@@ -1388,6 +1554,7 @@ class WordDraft {
   final String meaningZh;
   final String baseForm;
   final String? pronunciation;
+  final String? ipa;
   final String? partOfSpeech;
   final String? exampleKo;
   final String? exampleZh;
@@ -1410,6 +1577,7 @@ class WordDraft {
       normalizedBaseForm: Value(normalizedBaseForm),
       meaningZh: meaningZh.trim(),
       pronunciation: Value(_nullable(pronunciation)),
+      ipa: Value(_nullable(ipa)),
       partOfSpeech: Value(_nullable(partOfSpeech)),
       exampleKo: Value(_nullable(exampleKo)),
       exampleZh: Value(_nullable(exampleZh)),

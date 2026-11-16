@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/language/learning_language.dart';
 import '../../../core/database/missing_meaning.dart';
 import '../domain/ai_models.dart';
 
@@ -87,6 +88,7 @@ class AiRepository {
           .insert(
             AiSuggestionsCompanion.insert(
               id: suggestion.requestId,
+              language: Value(request.learningLanguage),
               wordId: suggestion.wordId,
               originalSnapshot: aiSnapshotJson(request.word),
               cacheKey: aiCacheKey(
@@ -172,6 +174,7 @@ class AiRepository {
         await (db.select(db.words)..where(
               (r) =>
                   r.id.isNotValue(current.id) &
+                  r.language.equals(current.language) &
                   r.normalizedKorean.equals(normalizeLookup(newTerm)) &
                   r.normalizedBaseForm.equals(normalizeLookup(newBase)),
             ))
@@ -185,6 +188,7 @@ class AiRepository {
             'baseForm',
             'exampleKo',
             'exampleZh',
+            'ipa',
           ].contains(k),
         ) ||
         spelling != null;
@@ -213,6 +217,9 @@ class AiRepository {
           exampleZh: fields.contains('exampleZh')
               ? Value(edited.fieldText('exampleZh'))
               : const Value.absent(),
+          ipa: fields.contains('ipa')
+              ? Value(edited.fieldText('ipa'))
+              : const Value.absent(),
           updatedAt: Value(DateTime.now().toUtc()),
         ),
       );
@@ -233,6 +240,7 @@ class AiRepository {
           .insertOnConflictUpdate(
             AiWordContentsCompanion.insert(
               wordId: current.id,
+              language: Value(current.language),
               field: field,
               value: field == 'spelling' ? spelling! : edited.fieldText(field),
               requestId: id,
@@ -288,6 +296,7 @@ class AiRepository {
           .insert(
             AiTasksCompanion.insert(
               id: id,
+              language: Value(normalizeLearningLanguage(unique.first.language)),
               context: context,
               createdAt: now,
               updatedAt: now,
@@ -299,6 +308,7 @@ class AiRepository {
             .insert(
               AiTaskItemsCompanion.insert(
                 id: const Uuid().v4(),
+                language: Value(normalizeLearningLanguage(w.language)),
                 taskId: id,
                 wordId: w.id,
                 originalSnapshot: aiSnapshotJson(w),
