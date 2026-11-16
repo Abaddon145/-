@@ -400,7 +400,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                       Align(
                         alignment: Alignment.centerLeft,
                         child: ActionChip(
-                          label: Text(bookName ?? '全部词书'),
+                          label: Text('${bookName ?? '全部词书'} ▾'),
                           avatar: const Icon(Icons.library_books_outlined),
                           onPressed: () => _pickBook(books),
                         ),
@@ -493,103 +493,152 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                                   missing = isMissingMeaning(
                                     item.word.meaningZh,
                                   );
-                              return Card(
-                                child: ListTile(
-                                  onTap: () =>
-                                      showWordDetail(context, item.word),
-                                  leading: missing
-                                      ? Checkbox(
-                                          value: _selected.contains(
-                                            item.word.id,
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    onTap: () =>
+                                        showWordDetail(context, item.word),
+                                    leading: missing
+                                        ? Checkbox(
+                                            value: _selected.contains(
+                                              item.word.id,
+                                            ),
+                                            onChanged: (v) => setState(() {
+                                              if (v == true) {
+                                                _selected.add(item.word.id);
+                                              } else {
+                                                _selected.remove(item.word.id);
+                                              }
+                                            }),
+                                          )
+                                        : null,
+                                    title: Text(
+                                      item.word.korean,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
                                           ),
-                                          onChanged: (v) => setState(() {
-                                            if (v == true) {
-                                              _selected.add(item.word.id);
-                                            } else {
-                                              _selected.remove(item.word.id);
-                                            }
-                                          }),
-                                        )
-                                      : null,
-                                  title: Text(
-                                    item.word.korean,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                  visualDensity: const VisualDensity(
-                                    vertical: -1,
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        missing
-                                            ? '待补中文 · 可用 AI 生成建议'
-                                            : item.word.meaningZh,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      if (item.word.partOfSpeech?.isNotEmpty ==
-                                          true)
-                                        Text(item.word.partOfSpeech!),
-                                      if (item.word.tags?.isNotEmpty == true)
-                                        Text(item.word.tags!),
-                                      if (item.wrongCount > 0)
-                                        Text('错词 ×${item.wrongCount}'),
-                                    ],
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        tooltip: item.isFavorite
-                                            ? '取消收藏'
-                                            : '收藏',
-                                        icon: Icon(
-                                          item.isFavorite
-                                              ? Icons.star
-                                              : Icons.star_border,
+                                    ),
+                                    visualDensity: const VisualDensity(
+                                      vertical: -1,
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          missing
+                                              ? '待补中文 · 可用 AI 生成建议'
+                                              : item.word.meaningZh,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color: Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurfaceVariant,
+                                              ),
                                         ),
-                                        onPressed: () async {
-                                          await ref
-                                              .read(databaseProvider)
-                                              .setFavorite(
-                                                item.word.id,
-                                                !item.isFavorite,
+                                        if (item
+                                                .word
+                                                .partOfSpeech
+                                                ?.isNotEmpty ==
+                                            true)
+                                          Text(
+                                            item.word.partOfSpeech!,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelSmall
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                          ),
+                                        if (item.word.tags?.isNotEmpty == true)
+                                          Text(
+                                            item.word.tags!,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelSmall
+                                                ?.copyWith(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                          ),
+                                        if (item.wrongCount > 0)
+                                          Text(
+                                            '错词 ×${item.wrongCount}',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelSmall
+                                                ?.copyWith(
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.error,
+                                                ),
+                                          ),
+                                      ],
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          tooltip: item.isFavorite
+                                              ? '取消收藏'
+                                              : '收藏',
+                                          icon: Icon(
+                                            item.isFavorite
+                                                ? Icons.star
+                                                : Icons.star_border,
+                                          ),
+                                          onPressed: () async {
+                                            await ref
+                                                .read(databaseProvider)
+                                                .setFavorite(
+                                                  item.word.id,
+                                                  !item.isFavorite,
+                                                );
+                                            if (mounted) {
+                                              ref.invalidate(
+                                                libraryWordsProvider,
                                               );
-                                          if (mounted) {
-                                            ref.invalidate(
-                                              libraryWordsProvider,
-                                            );
-                                          }
-                                        },
-                                      ),
-                                      PopupMenuButton<String>(
-                                        tooltip: '更多操作',
-                                        onSelected: (v) {
-                                          if (v == 'edit') {
-                                            _edit(word: item.word);
-                                          } else {
-                                            _delete(item);
-                                          }
-                                        },
-                                        itemBuilder: (_) => const [
-                                          PopupMenuItem(
-                                            value: 'edit',
-                                            child: Text('编辑 / 标记词性'),
-                                          ),
-                                          PopupMenuItem(
-                                            value: 'delete',
-                                            child: Text('删除'),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                            }
+                                          },
+                                        ),
+                                        const SizedBox(width: 4),
+                                        PopupMenuButton<String>(
+                                          tooltip: '更多操作',
+                                          onSelected: (v) {
+                                            if (v == 'edit') {
+                                              _edit(word: item.word);
+                                            } else {
+                                              _delete(item);
+                                            }
+                                          },
+                                          itemBuilder: (_) => const [
+                                            PopupMenuItem(
+                                              value: 'edit',
+                                              child: Text('编辑 / 标记词性'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'delete',
+                                              child: Text('删除'),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
+                                  if (index < items.length - 1)
+                                    const Divider(indent: 16, height: 1),
+                                ],
                               );
                             },
                           ),

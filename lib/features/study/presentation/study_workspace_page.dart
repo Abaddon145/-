@@ -653,6 +653,12 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                                                   .meaningSize,
                                                               height: reading
                                                                   .lineHeight,
+                                                              color:
+                                                                  Theme.of(
+                                                                        context,
+                                                                      )
+                                                                      .colorScheme
+                                                                      .onSurface,
                                                             ),
                                                       ),
                                                       if (word
