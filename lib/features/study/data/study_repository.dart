@@ -26,6 +26,9 @@ class StudyRepository {
     return _database.nextTrainingWord(options, now);
   }
 
+  Future<DateTime?> nextLearningResumeAt() =>
+      _database.nextLearningResumeAt(options, DateTime.now());
+
   Future<Word?> undo() => _database.undoLastReview(DateTime.now());
 
   Future<double> desiredRetention() async => normalizeDesiredRetention(

@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 
 import '../../../core/database/app_database.dart';
 
+const bundledSeedMarkerKey = 'bundled_seed_marker';
+const bundledSeedMarker = 'bundled-books-v1';
+
 class BundledWordSeedService {
   const BundledWordSeedService();
 
@@ -11,8 +14,20 @@ class BundledWordSeedService {
   static const technicalAssetPath = 'assets/data/technical_word_books.json';
 
   Future<BundledSeedResult> seed(AppDatabase database) async {
+    if (await database.loadSetting(bundledSeedMarkerKey) == bundledSeedMarker) {
+      return const BundledSeedResult(
+        importedBooks: 0,
+        existingBooks: 0,
+        inserted: 0,
+        reused: 0,
+        bundledEntries: 0,
+      );
+    }
     final raw = await rootBundle.loadString(assetPath);
-    final books = [...decode(raw), ...decode(await rootBundle.loadString(technicalAssetPath))];
+    final books = [
+      ...decode(raw),
+      ...decode(await rootBundle.loadString(technicalAssetPath)),
+    ];
     var inserted = 0;
     var reused = 0;
     var importedBooks = 0;
@@ -33,13 +48,15 @@ class BundledWordSeedService {
       }
     }
 
-    return BundledSeedResult(
+    final result = BundledSeedResult(
       importedBooks: importedBooks,
       existingBooks: existingBooks,
       inserted: inserted,
       reused: reused,
       bundledEntries: books.fold(0, (sum, book) => sum + book.drafts.length),
     );
+    await database.saveSetting(bundledSeedMarkerKey, bundledSeedMarker);
+    return result;
   }
 
   List<BundledWordBook> decode(String raw) {
@@ -52,40 +69,44 @@ class BundledWordSeedService {
       throw const FormatException('内置词库缺少 books。');
     }
 
-    return rawBooks.map((rawBook) {
-      if (rawBook is! Map<String, dynamic>) {
-        throw const FormatException('内置词库包含无效分组。');
-      }
-      final name = rawBook['name']?.toString().trim() ?? '';
-      final sourceFileName =
-          rawBook['sourceFileName']?.toString().trim() ?? '';
-      final rawWords = rawBook['words'];
-      if (name.isEmpty || sourceFileName.isEmpty || rawWords is! List) {
-        throw const FormatException('内置词库分组信息不完整。');
-      }
-      final drafts = rawWords.map((rawWord) {
-        if (rawWord is! Map<String, dynamic>) {
-          throw const FormatException('内置词库包含无效词条。');
-        }
-        final korean = rawWord['korean']?.toString().trim() ?? '';
-        final meaningZh = rawWord['meaningZh']?.toString().trim() ?? '';
-        if (korean.isEmpty || meaningZh.isEmpty) {
-          throw const FormatException('内置词库包含空白韩语或中文释义。');
-        }
-        return WordDraft(
-          korean: korean,
-          meaningZh: meaningZh,
-          category: rawWord['category']?.toString(),
-          tags: rawWord['tags']?.toString(),
-          note: rawWord['note']?.toString(),
-        );
-      }).toList(growable: false);
-      return BundledWordBook(
-        name: name,
-        sourceFileName: sourceFileName,
-        drafts: drafts,
-      );
-    }).toList(growable: false);
+    return rawBooks
+        .map((rawBook) {
+          if (rawBook is! Map<String, dynamic>) {
+            throw const FormatException('内置词库包含无效分组。');
+          }
+          final name = rawBook['name']?.toString().trim() ?? '';
+          final sourceFileName =
+              rawBook['sourceFileName']?.toString().trim() ?? '';
+          final rawWords = rawBook['words'];
+          if (name.isEmpty || sourceFileName.isEmpty || rawWords is! List) {
+            throw const FormatException('内置词库分组信息不完整。');
+          }
+          final drafts = rawWords
+              .map((rawWord) {
+                if (rawWord is! Map<String, dynamic>) {
+                  throw const FormatException('内置词库包含无效词条。');
+                }
+                final korean = rawWord['korean']?.toString().trim() ?? '';
+                final meaningZh = rawWord['meaningZh']?.toString().trim() ?? '';
+                if (korean.isEmpty || meaningZh.isEmpty) {
+                  throw const FormatException('内置词库包含空白韩语或中文释义。');
+                }
+                return WordDraft(
+                  korean: korean,
+                  meaningZh: meaningZh,
+                  category: rawWord['category']?.toString(),
+                  tags: rawWord['tags']?.toString(),
+                  note: rawWord['note']?.toString(),
+                );
+              })
+              .toList(growable: false);
+          return BundledWordBook(
+            name: name,
+            sourceFileName: sourceFileName,
+            drafts: drafts,
+          );
+        })
+        .toList(growable: false);
   }
 }
 

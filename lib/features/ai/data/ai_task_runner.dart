@@ -50,13 +50,15 @@ class AiTaskRunner {
       );
       final pending = (await repository.items(taskId))
           .where(
-            (r) => [
-              'queued',
-              'running',
-              'failed',
-              'cancelled',
-              'conflict',
-            ].contains(r.status),
+            (r) =>
+                r.errorCode != 'response_too_large' &&
+                [
+                  'queued',
+                  'running',
+                  'failed',
+                  'cancelled',
+                  'conflict',
+                ].contains(r.status),
           )
           .toList();
       var next = 0;
@@ -85,6 +87,7 @@ class AiTaskRunner {
               word: word,
               context: task.context,
               type: 'complete',
+              meaningOnly: true,
             );
             final result = await client.generate(request, cancel);
             cancel.check();
@@ -113,8 +116,7 @@ class AiTaskRunner {
         }
       }
 
-      // Two client workers update only their own rows; server independently limits actual calls.
-      await Future.wait([worker(), worker()]);
+      await worker();
       if (cancel.cancelled) {
         await (db.update(db.aiTaskItems)..where(
               (r) =>

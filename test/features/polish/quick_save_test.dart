@@ -71,7 +71,9 @@ void main() {
       final example = find.widgetWithText(CheckboxListTile, '韩文例句');
       await tester.ensureVisible(example);
       await tester.pumpAndSettle();
-      await tester.tap(find.descendant(of: example, matching: find.text('韩文例句')));
+      await tester.tap(
+        find.descendant(of: example, matching: find.text('韩文例句')),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('应用选择（1 项）'));
       await tester.pumpAndSettle();

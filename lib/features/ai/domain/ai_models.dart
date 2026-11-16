@@ -48,6 +48,9 @@ String aiCacheKey(
     )
     .toString();
 
+const aiFullMaxTokens = 2500;
+const aiMeaningMaxTokens = 2000;
+
 class AiRequest implements AiRequestIdentity {
   const AiRequest({
     required this.requestId,
@@ -56,6 +59,7 @@ class AiRequest implements AiRequestIdentity {
     required this.type,
     this.style = 'default',
     this.exampleCount = 1,
+    this.meaningOnly = false,
   });
   @override
   final String requestId;
@@ -63,6 +67,9 @@ class AiRequest implements AiRequestIdentity {
   final String context;
   final String type, style;
   final Word word;
+  @override
+  final bool meaningOnly;
+  int get maxTokens => meaningOnly ? aiMeaningMaxTokens : aiFullMaxTokens;
   @override
   int get wordId => word.id;
   @override

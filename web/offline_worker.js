@@ -1,10 +1,21 @@
 // Own the app cache explicitly instead of relying on Flutter's deprecated worker.
-const CACHE = 'korean-memo-0.10.0';
+const CACHE = 'korean-memo-0.11.0';
+function canvasKitFiles() {
+  const ua = self.navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/.test(ua) ||
+    (/Macintosh/.test(ua) && self.navigator.maxTouchPoints > 1);
+  const blink = /Chrome|Chromium|Edg\//.test(ua) && !ios && !/CriOS|FxiOS/.test(ua);
+  const base = blink ? 'canvaskit/chromium/' : 'canvaskit/';
+  return [base + 'canvaskit.js', base + 'canvaskit.wasm'];
+}
 const CORE = ['./', 'index.html', 'flutter_bootstrap.js', 'main.dart.js',
   'sqlite3.wasm', 'drift_worker.js', 'manifest.json',
   'assets/FontManifest.json', 'assets/AssetManifest.bin.json',
   'assets/assets/data/default_word_books.json',
-  'assets/assets/data/technical_word_books.json'];
+  'assets/assets/data/technical_word_books.json',
+  'assets/assets/fonts/KoreanMemoSans-Regular.woff2',
+  'assets/assets/fonts/Roboto-Regular.woff2',
+  ...canvasKitFiles()];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)));
 });
@@ -26,6 +37,11 @@ self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   // Cache only this app's static assets. Never intercept another service or user uploads.
   if (url.origin !== self.location.origin || !url.pathname.startsWith(new URL('./', self.location).pathname)) return;
+  if (url.pathname.includes('/assets/fonts/fallback/noto')) {
+    const font = new URL('assets/assets/fonts/KoreanMemoSans-Regular.woff2', self.registration.scope);
+    event.respondWith(fetch(font));
+    return;
+  }
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const name = url.pathname.split('/').pop();

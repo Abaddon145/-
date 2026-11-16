@@ -27,6 +27,9 @@ class _Repository implements StudyRepository {
   }
 
   @override
+  Future<DateTime?> nextLearningResumeAt() async => null;
+
+  @override
   Future<ReviewWriteResult> submitRating({
     required Word word,
     required StudyRating rating,

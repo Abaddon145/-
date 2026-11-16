@@ -24,13 +24,15 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await ref.read(databaseProvider).saveSetting(AppearanceSettings.styleKey, id);
+      await ref
+          .read(databaseProvider)
+          .saveSetting(AppearanceSettings.styleKey, id);
       ref.invalidate(appearanceProvider);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('切换风格失败：$error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('切换风格失败：$error')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -64,21 +66,20 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
       } finally {
         buffer.dispose();
       }
-      await ref.read(databaseProvider).saveSetting(
-        AppearanceSettings.backgroundKey,
-        base64Encode(bytes),
-      );
+      await ref
+          .read(databaseProvider)
+          .saveSetting(AppearanceSettings.backgroundKey, base64Encode(bytes));
       ref.invalidate(appearanceProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('背景已更新')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('背景已更新')));
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('设置背景失败：$error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('设置背景失败：$error')));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -89,10 +90,9 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await ref.read(databaseProvider).saveSetting(
-        AppearanceSettings.backgroundKey,
-        null,
-      );
+      await ref
+          .read(databaseProvider)
+          .saveSetting(AppearanceSettings.backgroundKey, null);
       ref.invalidate(appearanceProvider);
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -136,7 +136,9 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(24),
-                            gradient: LinearGradient(colors: [preset.start, preset.end]),
+                            gradient: LinearGradient(
+                              colors: [preset.start, preset.end],
+                            ),
                             border: Border.all(
                               color: preset.seed,
                               width: selected?.styleId == preset.id ? 2.5 : 1,
@@ -147,19 +149,31 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                             children: [
                               Icon(
                                 selected?.styleId == preset.id
-                                    ? Icons.check_circle : Icons.circle_outlined,
+                                    ? Icons.check_circle
+                                    : Icons.circle_outlined,
                                 color: preset.dark ? Colors.white : preset.seed,
                               ),
                               const SizedBox(height: 24),
-                              Text(preset.name, style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.w700,
-                                color: preset.dark ? Colors.white : const Color(0xFF26314A),
-                              )),
+                              Text(
+                                preset.name,
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: preset.dark
+                                      ? Colors.white
+                                      : const Color(0xFF26314A),
+                                ),
+                              ),
                               const SizedBox(height: 4),
-                              Text(preset.description, style: TextStyle(
-                                fontSize: 12,
-                                color: preset.dark ? Colors.white70 : const Color(0xFF515E76),
-                              )),
+                              Text(
+                                preset.description,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: preset.dark
+                                      ? Colors.white70
+                                      : const Color(0xFF515E76),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -192,7 +206,9 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.wallpaper_rounded),
-                    title: Text(selected?.hasBackground == true ? '已使用自定义背景' : '选择背景图片'),
+                    title: Text(
+                      selected?.hasBackground == true ? '已使用自定义背景' : '选择背景图片',
+                    ),
                     subtitle: const Text('支持 JPG、PNG、WebP，最大 2 MB'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: _busy ? null : _chooseBackground,

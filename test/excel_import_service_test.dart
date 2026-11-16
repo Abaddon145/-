@@ -6,9 +6,12 @@ import 'package:korean_memo/features/import/domain/import_models.dart';
 void main() {
   group('ExcelImportService', () {
     test('recognizes Korean and Chinese header aliases', () {
-      final mapping = ExcelImportService().guessMapping(
-        const ['단어', '뜻', '품사', '예문'],
-      );
+      final mapping = ExcelImportService().guessMapping(const [
+        '단어',
+        '뜻',
+        '품사',
+        '예문',
+      ]);
 
       expect(mapping[ImportField.korean], 0);
       expect(mapping[ImportField.meaningZh], 1);

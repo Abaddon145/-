@@ -143,9 +143,9 @@ class _AiErrorNoticeState extends State<AiErrorNotice> {
                   TextButton(
                     onPressed: () {
                       final router = GoRouter.of(context);
-                    if (Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop();
-                    }
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      }
                       router.push('/settings/ai');
                     },
                     child: const Text('检查 AI 设置'),

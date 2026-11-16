@@ -47,7 +47,6 @@ class AiDeepSeekClient implements AiGateway {
     final transport = await _transport();
     cancellation.check();
     request.validate();
-    await onRequest?.call();
     cancellation.check();
     final response = await transport.send(
       'POST',
@@ -56,15 +55,21 @@ class AiDeepSeekClient implements AiGateway {
       data: {
         'model': model.trim(),
         'stream': false,
-        'max_tokens': 4000,
+        'max_tokens': request.maxTokens,
         'reasoning_effort': 'none',
         'response_format': {'type': 'json_object'},
         'messages': [
-          {'role': 'system', 'content': aiSystemPrompt},
+          {
+            'role': 'system',
+            'content': request.meaningOnly
+                ? aiMeaningSystemPrompt
+                : aiSystemPrompt,
+          },
           {'role': 'user', 'content': jsonEncode(aiPromptFor(request))},
         ],
       },
     );
+    await onRequest?.call();
     final choices = response['choices'];
     if (choices is! List || choices.isEmpty) {
       throw const AiException('empty_response');

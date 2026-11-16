@@ -156,7 +156,9 @@ class AiHttpTransport {
       final bytes = <int>[];
       await for (final chunk in response.stream) {
         bytes.addAll(chunk);
-        if (bytes.length > 32768) throw const AiException('invalid_response');
+        if (bytes.length > aiHttpByteLimit) {
+          throw const AiException('response_too_large');
+        }
         cancellation.check();
         requestCancellation.check();
       }

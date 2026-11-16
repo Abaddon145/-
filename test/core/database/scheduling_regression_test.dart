@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:korean_memo/core/database/app_database.dart';
 import 'package:korean_memo/core/text/cloze_target.dart';
 import 'package:korean_memo/features/settings/domain/backup_file.dart';
+import 'package:korean_memo/features/settings/domain/backup_delivery.dart';
 import 'package:korean_memo/features/study/domain/practice.dart';
 import 'package:korean_memo/services/fsrs_service.dart';
 
@@ -106,21 +107,39 @@ void main() {
     },
   );
 
-  test('a future learning card stays hidden while a due one ignores the review cap', () async {
-    final database = await open();
-    final now = DateTime(2026, 11, 9, 12);
-    final due = await add(database, '지금');
-    final later = await add(database, '나중');
-    await card(database, due, state: 1, due: now.toUtc().subtract(const Duration(minutes: 1)));
-    await card(database, later, state: 1, due: now.toUtc().add(const Duration(minutes: 10)));
-    await database.into(database.dailyStatistics).insert(
-      DailyStatisticsCompanion.insert(
-        date: DateTime.utc(2026, 11, 9),
-        reviewWords: const Value(100),
-      ),
-    );
-    expect((await database.nextTrainingWord(const SessionOptions(), now))?.id, due);
-  });
+  test(
+    'a future learning card stays hidden while a due one ignores the review cap',
+    () async {
+      final database = await open();
+      final now = DateTime(2026, 11, 9, 12);
+      final due = await add(database, '지금');
+      final later = await add(database, '나중');
+      await card(
+        database,
+        due,
+        state: 1,
+        due: now.toUtc().subtract(const Duration(minutes: 1)),
+      );
+      await card(
+        database,
+        later,
+        state: 1,
+        due: now.toUtc().add(const Duration(minutes: 10)),
+      );
+      await database
+          .into(database.dailyStatistics)
+          .insert(
+            DailyStatisticsCompanion.insert(
+              date: DateTime.utc(2026, 11, 9),
+              reviewWords: const Value(100),
+            ),
+          );
+      expect(
+        (await database.nextTrainingWord(const SessionOptions(), now))?.id,
+        due,
+      );
+    },
+  );
 
   test('mixed spelling never pulls a future-due card', () async {
     final database = await open();
@@ -344,6 +363,110 @@ void main() {
     expect(rowsInLimit, greaterThan(100000));
     expect(maxBackupRowsPerTable, greaterThanOrEqualTo(rowsInLimit));
     expect(maxBackupBytes, 50 * 1024 * 1024);
+  });
+
+  test('a future learning step stays in the session until it is due', () async {
+    final database = await open();
+    final now = DateTime(2026, 11, 16, 12);
+    final id = await add(database, '잠시');
+    final due = now.toUtc().add(const Duration(minutes: 10));
+    await card(database, id, state: 1, due: due);
+    await database.saveSetting('word_status:999', 'suspended');
+
+    expect(
+      await database.nextTrainingWord(const SessionOptions(), now),
+      isNull,
+    );
+    final resume = await database.nextLearningResumeAt(
+      const SessionOptions(),
+      now,
+    );
+    expect(resume?.toLocal(), now.add(const Duration(minutes: 10)));
+    expect(learningResumeLabel(now, resume!), '约 10 分钟后回来');
+    expect(
+      (await database.nextTrainingWord(
+        const SessionOptions(),
+        now.add(const Duration(minutes: 10)),
+      ))?.id,
+      id,
+    );
+
+    final hidden = await add(database, '숨김');
+    await card(
+      database,
+      hidden,
+      state: 3,
+      due: now.toUtc().add(const Duration(minutes: 1)),
+    );
+    await database.saveSetting('word_status:$hidden', 'suspended');
+    expect(
+      (await database.nextLearningResumeAt(
+        const SessionOptions(),
+        now,
+      ))?.toLocal(),
+      now.add(const Duration(minutes: 10)),
+    );
+  });
+
+  test('home due count matches the queue and splits learning cards', () async {
+    final database = await open();
+    final now = DateTime.utc(2026, 11, 16, 4);
+    final review = await add(database, '복습');
+    final learning = await add(database, '학습');
+    final suspended = await add(database, '정지');
+    final later = await add(database, '나중');
+    await card(database, review, state: 2, due: now);
+    await card(database, learning, state: 1, due: now);
+    await card(database, suspended, state: 2, due: now);
+    await card(
+      database,
+      later,
+      state: 1,
+      due: now.add(const Duration(minutes: 10)),
+    );
+    await database.saveSetting('word_status:$suspended', 'suspended');
+
+    final counts = await database.loadHomeCounts(now);
+    expect(counts.due, 1);
+    expect(counts.learningDue, 1);
+  });
+
+  test('backup time is recorded only after a confirmed save', () async {
+    final database = await open();
+    final now = DateTime.utc(2026, 11, 16, 1);
+
+    expect(
+      await recordBackupExport(database, BackupDelivery.downloadOnly, now),
+      isFalse,
+    );
+    expect(await database.loadSetting('last_backup_at'), isNull);
+    expect(
+      await recordBackupExport(database, BackupDelivery.cancelled, now),
+      isFalse,
+    );
+    expect(
+      await recordBackupExport(database, BackupDelivery.shared, now),
+      isTrue,
+    );
+    expect(await database.loadSetting('last_backup_at'), isNotNull);
+    expect(recordsBackupExport(BackupDelivery.written), isTrue);
+    expect(recordsBackupExport(BackupDelivery.acknowledged), isTrue);
+  });
+
+  test('spelling highlight uses normalized graphemes', () {
+    final spaced = answerHighlight('안녕 하세요', '안녕하세요');
+    expect(spaced.map((mark) => mark.correct), everyElement(isTrue));
+    expect(spaced.map((mark) => mark.text).join(), '안녕하세요');
+
+    final partial = answerHighlight('안녕하세', '안녕하세요');
+    expect(partial.map((mark) => mark.correct), [
+      true,
+      true,
+      true,
+      true,
+      false,
+    ]);
+    expect(partial.last.text, '요');
   });
 
   test('export refuses a file the app cannot restore', () {

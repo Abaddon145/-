@@ -26,37 +26,51 @@ final studyBookProvider = StateProvider<int?>((ref) => null);
 final studyVisibleProvider = StateProvider<bool>((ref) => false);
 
 class SessionOptionsController extends StateNotifier<SessionOptions> {
-  SessionOptionsController(this.database) : super(const SessionOptions()) { _restore(); }
+  SessionOptionsController(this.database) : super(const SessionOptions()) {
+    _restore();
+  }
   final AppDatabase database;
-  int _version=0;
+  int _version = 0;
   Future<void> _restore() async {
-    final version=_version;
+    final version = _version;
     final raw = await database.loadSetting('selected_learning_session');
-    if (!mounted || raw == null ||version!=_version) return;
+    if (!mounted || raw == null || version != _version) return;
     try {
       final data = jsonDecode(raw) as Map<String, dynamic>;
-      if (data['day'] == dayKey(DateTime.now())) { state = SessionOptions.fromJson(data); }
-    } catch (_) { /* Invalid preferences fall back to the daily queue. */ }
+      if (data['day'] == dayKey(DateTime.now())) {
+        state = SessionOptions.fromJson(data);
+      }
+    } catch (_) {
+      /* Invalid preferences fall back to the daily queue. */
+    }
   }
+
   Future<void> start(SessionOptions options) async {
     _version++;
     await database.startSession(options, DateTime.now());
     if (mounted) state = options;
   }
+
   Future<void> daily() async {
-    _version++; state = const SessionOptions();
-    await database.saveSetting('selected_learning_session',null);
+    _version++;
+    state = const SessionOptions();
+    await database.saveSetting('selected_learning_session', null);
   }
 }
 
-final sessionOptionsProvider = StateNotifierProvider<SessionOptionsController, SessionOptions>((ref) {
-  final controller = SessionOptionsController(ref.watch(databaseProvider));
-  ref.listen(localDayProvider, (_, _) => controller.daily());
-  return controller;
-});
-final sessionProgressProvider = FutureProvider.autoDispose<SessionProgress>((ref) {
+final sessionOptionsProvider =
+    StateNotifierProvider<SessionOptionsController, SessionOptions>((ref) {
+      final controller = SessionOptionsController(ref.watch(databaseProvider));
+      ref.listen(localDayProvider, (_, _) => controller.daily());
+      return controller;
+    });
+final sessionProgressProvider = FutureProvider.autoDispose<SessionProgress>((
+  ref,
+) {
   ref.watch(localDayProvider);
-  return ref.watch(databaseProvider).loadSession(ref.watch(sessionOptionsProvider), DateTime.now());
+  return ref
+      .watch(databaseProvider)
+      .loadSession(ref.watch(sessionOptionsProvider), DateTime.now());
 });
 final checkinsProvider = FutureProvider.autoDispose<CheckinSummary>((ref) {
   ref.watch(localDayProvider);
@@ -81,27 +95,31 @@ final homeCountsProvider = FutureProvider.autoDispose<HomeCounts>((ref) async {
   return ref.watch(databaseProvider).loadHomeCounts(DateTime.now().toUtc());
 });
 
-final dailyPlanSettingsProvider =
-    FutureProvider.autoDispose<DailyPlanSettings>((ref) {
-  return ref.watch(databaseProvider).loadDailyPlanSettings();
-});
+final dailyPlanSettingsProvider = FutureProvider.autoDispose<DailyPlanSettings>(
+  (ref) {
+    return ref.watch(databaseProvider).loadDailyPlanSettings();
+  },
+);
 
-final dailyPlanProgressProvider =
-    FutureProvider.autoDispose<DailyPlanProgress>((ref) async {
-  ref.watch(localDayProvider);
-  await ref.watch(bundledWordSeedProvider.future);
-  return ref.watch(databaseProvider).loadDailyPlanProgress(DateTime.now());
-});
+final dailyPlanProgressProvider = FutureProvider.autoDispose<DailyPlanProgress>(
+  (ref) async {
+    ref.watch(localDayProvider);
+    await ref.watch(bundledWordSeedProvider.future);
+    return ref.watch(databaseProvider).loadDailyPlanProgress(DateTime.now());
+  },
+);
 
 final studyRoundProgressProvider =
     FutureProvider.autoDispose<StudyRoundProgress>((ref) async {
-  ref.watch(localDayProvider);
-  final database = ref.watch(databaseProvider);
-  await ref.watch(bundledWordSeedProvider.future);
-  return database.loadStudyRoundProgress(DateTime.now());
-});
+      ref.watch(localDayProvider);
+      final database = ref.watch(databaseProvider);
+      await ref.watch(bundledWordSeedProvider.future);
+      return database.loadStudyRoundProgress(DateTime.now());
+    });
 
-final studyBookCountsProvider = FutureProvider.autoDispose<HomeCounts>((ref) async {
+final studyBookCountsProvider = FutureProvider.autoDispose<HomeCounts>((
+  ref,
+) async {
   ref.watch(localDayProvider);
   final bookId = ref.watch(studyBookProvider);
   final db = ref.watch(databaseProvider);
@@ -109,7 +127,9 @@ final studyBookCountsProvider = FutureProvider.autoDispose<HomeCounts>((ref) asy
   return db.loadScopedStudyCounts(bookId);
 });
 
-final wordBooksProvider = FutureProvider.autoDispose<List<WordBook>>((ref) async {
+final wordBooksProvider = FutureProvider.autoDispose<List<WordBook>>((
+  ref,
+) async {
   final db = ref.watch(databaseProvider);
   await ref.watch(bundledWordSeedProvider.future);
   return db.loadWordBooks();

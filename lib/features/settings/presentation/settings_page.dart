@@ -8,7 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
+import '../domain/backup_delivery.dart';
 import '../domain/backup_file.dart';
+import '../domain/backup_save.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/reading_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -124,27 +126,34 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   }
 
   Future<void> _backup() async {
+    final persistent = requestPersistentStorage();
     setState(() => _busy = true);
     try {
       final data = await ref
           .read(databaseProvider)
           .createBackupSnapshot(includeAi: _includeAi);
       final bytes = encodeBackupFile(data);
-      final saved = await FilePicker.saveFile(
-        fileName:
-            'korean-memo-${DateTime.now().toUtc().toIso8601String().replaceAll(':', '-').split('.').first}.json',
-        bytes: bytes,
-        mimeType: 'application/json',
-      );
+      final name =
+          'korean-memo-${DateTime.now().toUtc().toIso8601String().replaceAll(':', '-').split('.').first}.json';
+      await persistent;
+      final delivery = kIsWeb
+          ? await deliverBackupFile(bytes, name)
+          : await FilePicker.saveFile(
+                  fileName: name,
+                  bytes: bytes,
+                  mimeType: 'application/json',
+                ) ==
+                null
+          ? BackupDelivery.cancelled
+          : BackupDelivery.written;
       if (!mounted) return;
-      final confirmed = !kIsWeb
-          ? saved != null
-          : await showDialog<bool>(
+      final confirmed = delivery == BackupDelivery.downloadOnly
+          ? await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('确认备份文件已保存'),
                     content: const Text(
-                      '已发起下载。请确认 JSON 文件已保存到“文件”或下载目录，再更新备份时间。',
+                      '浏览器已开始下载。请在“文件”或下载目录里看到这份 JSON 后，再更新备份时间。',
                     ),
                     actions: [
                       TextButton(
@@ -158,25 +167,23 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ],
                   ),
                 ) ==
-                true;
+                true
+          : recordsBackupExport(delivery);
       if (!mounted) return;
-      if (confirmed) {
-        await ref
-            .read(databaseProvider)
-            .saveSetting(
-              'last_backup_at',
-              DateTime.now().toUtc().toIso8601String(),
-            );
-        await ref
-            .read(databaseProvider)
-            .saveSetting('backup_snoozed_until', null);
-        if (mounted) ref.invalidate(backupStatusProvider);
-      }
-      if (confirmed && mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('备份文件已导出')));
-      }
+      final recorded = confirmed
+          ? await recordBackupExport(
+              ref.read(databaseProvider),
+              delivery == BackupDelivery.downloadOnly
+                  ? BackupDelivery.acknowledged
+                  : delivery,
+              DateTime.now(),
+            )
+          : false;
+      if (recorded && mounted) ref.invalidate(backupStatusProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(recorded ? '备份文件已导出' : '未保存备份，学习记录仍在这台设备上')),
+      );
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(

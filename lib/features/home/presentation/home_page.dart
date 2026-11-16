@@ -5,6 +5,7 @@ import '../../../core/database/app_database.dart';
 import '../../study/domain/providers.dart';
 import '../../../core/theme/app_motion.dart';
 import '../../settings/presentation/backup_reminder_card.dart';
+import 'web_storage_banner.dart';
 import '../../settings/domain/backup_status.dart';
 
 class HomePage extends ConsumerWidget {
@@ -107,7 +108,14 @@ class HomePage extends ConsumerWidget {
                 data: (v) => Row(
                   children: [
                     Expanded(
-                      child: _MetricCard('待复习', v.due, Icons.history_rounded),
+                      child: _MetricCard(
+                        '待复习',
+                        v.due,
+                        Icons.history_rounded,
+                        detail: v.learningDue == 0
+                            ? null
+                            : '学习中 ${v.learningDue}',
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -130,7 +138,9 @@ class HomePage extends ConsumerWidget {
                 loading: () => const LinearProgressIndicator(),
                 error: (_, _) => const Text('暂时无法读取统计，下拉可重试。'),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
+              const WebStorageBanner(),
+              const SizedBox(height: 12),
               const BackupReminderCard(),
               const SizedBox(height: 20),
               Text('常用入口', style: Theme.of(context).textTheme.titleLarge),
@@ -289,10 +299,11 @@ class _PlanRow extends StatelessWidget {
 }
 
 class _MetricCard extends StatelessWidget {
-  const _MetricCard(this.label, this.value, this.icon);
+  const _MetricCard(this.label, this.value, this.icon, {this.detail});
   final String label;
   final int value;
   final IconData icon;
+  final String? detail;
   @override
   Widget build(BuildContext context) => Card(
     margin: EdgeInsets.zero,
@@ -315,6 +326,13 @@ class _MetricCard extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+          if (detail != null)
+            Text(
+              detail!,
+              style: Theme.of(context).textTheme.bodySmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
         ],
       ),
     ),

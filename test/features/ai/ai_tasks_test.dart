@@ -35,13 +35,13 @@ void main() {
     },
   );
   test(
-    'two workers persist each success, keep partial failures and retry only unfinished',
+    'one request at a time persists each success and retries only unfinished',
     () async {
       final selected = await words(5), gateway = TestGateway(failOnce: {'시험1'});
       final task = await repo.createTask(selected, '工厂设备'),
           runner = AiTaskRunner(repo, () => gateway);
       await runner.start(task);
-      expect(gateway.peak, 2);
+      expect(gateway.peak, 1);
       expect(gateway.requests, hasLength(5));
       var items = await repo.items(task);
       expect(items.where((r) => r.status == 'awaitingReview'), hasLength(4));
@@ -68,12 +68,12 @@ void main() {
       final task = await repo.createTask(selected, '物流与仓储'),
           runner = AiTaskRunner(repo, () => gateway);
       final pending = runner.start(task);
-      await gateway.twoStarted.future;
+      await gateway.started.future;
       expect(() => runner.start(task), throwsA(isA<AiException>()));
       await runner.cancelAll();
       await pending;
-      expect(gateway.calls, 2);
-      expect(gateway.aborted, 2);
+      expect(gateway.calls, 1);
+      expect(gateway.aborted, 1);
       expect(
         (await repo.items(task)).every((r) => r.status == 'cancelled'),
         true,
@@ -186,12 +186,12 @@ class TestGateway implements AiGateway {
 
 class BlockingGateway implements AiGateway {
   int calls = 0, aborted = 0;
-  final twoStarted = Completer<void>();
+  final started = Completer<void>();
   @override
   Future<String> health() async => 'test';
   @override
   Future<AiSuggestion> generate(AiRequest r, AiCancellation cancel) async {
-    if (++calls == 2) twoStarted.complete();
+    if (++calls == 1 && !started.isCompleted) started.complete();
     await cancel.signal;
     aborted++;
     throw const AiException('cancelled');

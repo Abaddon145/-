@@ -85,6 +85,7 @@ abstract final class AppTheme {
     return ThemeData(
       useMaterial3: true,
       fontFamily: fontFamily,
+      fontFamilyFallback: const [fontFamily, 'Roboto'],
       colorScheme: scheme,
       scaffoldBackgroundColor: Colors.transparent,
       visualDensity: VisualDensity.standard,

@@ -28,6 +28,7 @@ class AiKeyController extends StateNotifier<String> {
     ready = _load();
   }
   final AiKeyStore store;
+
   /// When set, a false result keeps the key in memory for this session only.
   final Future<bool> Function()? loadPersist;
   late final Future<void> ready;
