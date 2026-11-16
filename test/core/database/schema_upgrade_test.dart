@@ -9,7 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
   test('upgrading schema 4 adds an index on study_cards.due', () async {
-    final directory = await Directory.systemTemp.createTemp('koreanmemo-schema');
+    final directory = await Directory.systemTemp.createTemp(
+      'koreanmemo-schema',
+    );
     addTearDown(() => directory.delete(recursive: true));
     final file = File('${directory.path}/memo.sqlite');
     final created = AppDatabase(NativeDatabase(file));
@@ -20,9 +22,11 @@ void main() {
 
     final upgraded = AppDatabase(NativeDatabase(file));
     addTearDown(upgraded.close);
-    final indexes = await upgraded.customSelect(
-      "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_study_cards_due'",
-    ).get();
+    final indexes = await upgraded
+        .customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_study_cards_due'",
+        )
+        .get();
     expect(indexes, hasLength(1));
   });
 
@@ -30,11 +34,9 @@ void main() {
     final database = AppDatabase(NativeDatabase.memory());
     addTearDown(database.close);
     for (var i = 0; i < 3; i++) {
-      await database.addManualWord(WordDraft(
-        korean: '단어$i',
-        meaningZh: '释义$i',
-        partOfSpeech: '名词',
-      ));
+      await database.addManualWord(
+        WordDraft(korean: '단어$i', meaningZh: '释义$i', partOfSpeech: '名词'),
+      );
     }
     final page = await database.searchLibraryWords(
       query: '',
@@ -55,28 +57,40 @@ void main() {
       const WordDraft(korean: '삭제', meaningZh: '删除', partOfSpeech: '名词'),
     );
     final now = DateTime.utc(2026, 11, 9);
-    await database.into(database.aiSuggestions).insert(AiSuggestionsCompanion.insert(
-      id: 'suggestion',
-      wordId: id,
-      originalSnapshot: '{}',
-      cacheKey: 'cache',
-      taskType: 'complete',
-      context: '日常',
-      payload: '{}',
-      createdAt: now,
-    ));
-    await database.into(database.aiTasks).insert(AiTasksCompanion.insert(
-      id: 'task',
-      context: '日常',
-      createdAt: now,
-      updatedAt: now,
-    ));
-    await database.into(database.aiTaskItems).insert(AiTaskItemsCompanion.insert(
-      id: 'item',
-      taskId: 'task',
-      wordId: id,
-      originalSnapshot: '{}',
-    ));
+    await database
+        .into(database.aiSuggestions)
+        .insert(
+          AiSuggestionsCompanion.insert(
+            id: 'suggestion',
+            wordId: id,
+            originalSnapshot: '{}',
+            cacheKey: 'cache',
+            taskType: 'complete',
+            context: '日常',
+            payload: '{}',
+            createdAt: now,
+          ),
+        );
+    await database
+        .into(database.aiTasks)
+        .insert(
+          AiTasksCompanion.insert(
+            id: 'task',
+            context: '日常',
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
+    await database
+        .into(database.aiTaskItems)
+        .insert(
+          AiTaskItemsCompanion.insert(
+            id: 'item',
+            taskId: 'task',
+            wordId: id,
+            originalSnapshot: '{}',
+          ),
+        );
     await database.deleteWord(id);
     expect(await database.select(database.aiSuggestions).get(), isEmpty);
     expect(await database.select(database.aiTaskItems).get(), isEmpty);
@@ -103,9 +117,9 @@ void main() {
       },
       reviewLogMap: {},
     );
-    final container = ProviderContainer(overrides: [
-      databaseProvider.overrideWithValue(database),
-    ]);
+    final container = ProviderContainer(
+      overrides: [databaseProvider.overrideWithValue(database)],
+    );
     addTearDown(container.dispose);
     final days = await container.read(recentStatisticsProvider.future);
     expect(days.last.newWords, 1);

@@ -8,6 +8,7 @@ import 'package:korean_memo/core/database/app_database.dart';
 import 'package:korean_memo/features/ai/data/ai_client.dart';
 import 'package:korean_memo/features/ai/data/ai_deepseek_client.dart';
 import 'package:korean_memo/features/ai/domain/ai_models.dart';
+import 'package:korean_memo/features/ai/domain/ai_prompts.dart';
 import 'ai_client_test.dart' show AbortTransport;
 import 'fixtures.dart';
 
@@ -68,7 +69,7 @@ void main() {
         final body = jsonDecode(r.body) as Map;
         expect(body['model'], 'deepseek-flash');
         expect(body['response_format'], {'type': 'json_object'});
-        expect(body['max_tokens'], 4000);
+        expect(body['max_tokens'], request.maxTokens);
         expect(body['reasoning_effort'], 'none');
         expect(r.body, isNot(contains('sk-unit-test-only')));
         final messages = body['messages'] as List;
@@ -216,4 +217,71 @@ void main() {
       expect(transport.closed, true);
     }
   });
+
+  test(
+    'meaning-only batch asks for the short schema and fewer tokens',
+    () async {
+      final brief = AiRequest(
+        requestId: request.requestId,
+        word: request.word,
+        context: request.context,
+        type: 'complete',
+        meaningOnly: true,
+      );
+      final gateway = client((r) async {
+        final body = jsonDecode(r.body) as Map;
+        expect(body['max_tokens'], aiMeaningMaxTokens);
+        final messages = body['messages'] as List;
+        expect(messages.first['content'], aiMeaningSystemPrompt);
+        final prompt = jsonDecode(messages[1]['content'] as String) as Map;
+        final properties = (prompt['outputSchema']['properties'] as Map).keys
+            .toSet();
+        expect(properties, {
+          'meaningZh',
+          'requestId',
+          'wordId',
+          'originalTerm',
+          'context',
+        });
+        return reply(
+          content: jsonEncode({
+            'requestId': brief.requestId,
+            'wordId': brief.wordId,
+            'originalTerm': brief.originalTerm,
+            'context': brief.context,
+            'meaningZh': '压力',
+          }),
+        );
+      });
+      final suggestion = await gateway.generate(brief, AiCancellation());
+      expect(suggestion.fieldText('meaningZh'), '压力');
+      expect(suggestion.fieldText('exampleKo'), isEmpty);
+    },
+  );
+
+  test(
+    'an oversized reply is not counted and is not retried automatically',
+    () async {
+      var counted = 0;
+      final gateway = AiDeepSeekClient(
+        apiKey: 'sk-unit-test-only',
+        onRequest: () async => counted++,
+        clientFactory: () => MockClient(
+          (_) async => http.Response('x' * (aiHttpByteLimit + 1), 200),
+        ),
+      );
+      await expectLater(
+        gateway.generate(request, AiCancellation()),
+        throwsA(
+          isA<AiException>().having(
+            (e) => e.code,
+            'code',
+            'response_too_large',
+          ),
+        ),
+      );
+      expect(counted, 0);
+      expect(const AiException('response_too_large').canRetry, isFalse);
+    },
+  );
 }

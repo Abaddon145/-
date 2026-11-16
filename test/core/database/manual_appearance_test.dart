@@ -58,8 +58,10 @@ void main() {
     );
 
     expect(await destination.loadSetting('appearance_style'), 'forest');
-    expect(await destination.loadSetting('appearance_background_base64'),
-        'aGVsbG8=');
+    expect(
+      await destination.loadSetting('appearance_background_base64'),
+      'aGVsbG8=',
+    );
     final words = await destination.searchLibraryWords(
       query: '나무',
       filter: LibraryFilter.all,

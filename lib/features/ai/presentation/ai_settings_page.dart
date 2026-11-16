@@ -36,8 +36,10 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
       ref.read(aiConnectionModeProvider.future),
       ref.read(aiModelProvider.future),
     ]);
-    final remember = !kIsWeb ||
-        (await ref.read(databaseProvider).loadSetting('ai_remember_key')) == 'true';
+    final remember =
+        !kIsWeb ||
+        (await ref.read(databaseProvider).loadSetting('ai_remember_key')) ==
+            'true';
     if (!mounted) return;
     setState(() {
       _address.text = values[0];
@@ -109,8 +111,14 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
                 '密钥会留在这个浏览器里。abaddon145.github.io 上的任何页面都能读取它，包括同一账号下的其他 GitHub Pages。只在你自己的设备上勾选。',
               ),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('仅本次')),
-                FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('记住')),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('仅本次'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: const Text('记住'),
+                ),
               ],
             ),
           );
@@ -119,7 +127,9 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
           setState(() => _rememberKey = persist);
         }
         await db.saveSetting('ai_remember_key', persist ? 'true' : 'false');
-        await ref.read(aiApiKeyProvider.notifier).save(apiKey, persist: persist);
+        await ref
+            .read(aiApiKeyProvider.notifier)
+            .save(apiKey, persist: persist);
         if (!mounted) return;
       }
       ref.read(aiCredentialProvider.notifier).state = _credential.text.trim();
@@ -230,21 +240,24 @@ class _AiSettingsPageState extends ConsumerState<AiSettingsPage> {
                       value: _rememberKey,
                       onChanged: _busy
                           ? null
-                          : (value) => setState(() => _rememberKey = value ?? false),
+                          : (value) =>
+                                setState(() => _rememberKey = value ?? false),
                       title: const Text('在此设备记住密钥'),
                       subtitle: const Text(
                         'abaddon145.github.io 上的任何页面都能读取已保存的密钥。',
                       ),
                     ),
                   if (_mode == 'deepseek')
-                    ref.watch(aiDailyRequestCountProvider).when(
-                      data: (count) => Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('今天直连已发送 $count 次请求'),
-                      ),
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
+                    ref
+                        .watch(aiDailyRequestCountProvider)
+                        .when(
+                          data: (count) => Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('今天直连已发送 $count 次请求'),
+                          ),
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
+                        ),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(

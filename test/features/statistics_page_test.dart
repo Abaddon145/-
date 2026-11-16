@@ -9,25 +9,36 @@ import 'package:korean_memo/features/statistics/domain/providers.dart';
 
 void main() {
   testWidgets('today metrics do not include earlier days', (tester) async {
-    final db=AppDatabase(NativeDatabase.memory());addTearDown(db.close);
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        databaseProvider.overrideWithValue(db),
-        recentStatisticsProvider.overrideWith((ref) async => [
-          DailyStatisticsSummary(
-            date: DateTime.utc(2026, 10, 6),
-            newWords: 2, reviews: 8, correct: 9, wrong: 1,
-            durationMs: 600000,
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          recentStatisticsProvider.overrideWith(
+            (ref) async => [
+              DailyStatisticsSummary(
+                date: DateTime.utc(2026, 10, 6),
+                newWords: 2,
+                reviews: 8,
+                correct: 9,
+                wrong: 1,
+                durationMs: 600000,
+              ),
+              DailyStatisticsSummary(
+                date: DateTime.utc(2026, 10, 7),
+                newWords: 1,
+                reviews: 1,
+                correct: 1,
+                wrong: 1,
+                durationMs: 60000,
+              ),
+            ],
           ),
-          DailyStatisticsSummary(
-            date: DateTime.utc(2026, 10, 7),
-            newWords: 1, reviews: 1, correct: 1, wrong: 1,
-            durationMs: 60000,
-          ),
-        ]),
-      ],
-      child: const MaterialApp(home: StatisticsPage()),
-    ));
+        ],
+        child: const MaterialApp(home: StatisticsPage()),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('自评记忆率  50%'), findsOneWidget);
     expect(find.text('学习时长  1 分钟'), findsOneWidget);

@@ -15,3 +15,8 @@ characters used in the bundled vocabulary and UI, Latin and punctuation.
 It is not restricted to Hangul characters found in the bundled words.
 The family is renamed KoreanMemo Sans. Vertical and regional alternate
 features are omitted; horizontal Korean shaping features are retained.
+
+Roboto Regular (Roboto-Regular.woff2) is the Apache License 2.0 font from
+Google Fonts, used as Flutter web's local default so the app does not
+download Roboto from fonts.gstatic.com. Copyright 2011 The Roboto Project
+Authors.

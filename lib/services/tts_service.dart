@@ -19,7 +19,7 @@ class TtsService {
     await _tts.stop();
     final request = speechRequest(text);
     await _tts.setLanguage(request.language);
-    await _tts.setSpeechRate(rate.clamp(.2,.8));
+    await _tts.setSpeechRate(rate.clamp(.2, .8));
     await _tts.awaitSpeakCompletion(true);
     await _tts.speak(request.spoken);
   }

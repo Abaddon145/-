@@ -175,7 +175,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
         builder: (dialogContext) => AlertDialog(
           title: const Text('发送 AI 请求？'),
           content: Text(
-            '这一批会发送 ${words.length} 次请求，每个词一次。直连模式下今天已经发送 $today 次。',
+            '这一批会发送 ${words.length} 次请求，每次只生成中文释义，单次输出上限约 $aiMeaningMaxTokens token。直连模式下今天已经发送 $today 次。回复过长不会计入次数，也不会自动重试。',
           ),
           actions: [
             TextButton(

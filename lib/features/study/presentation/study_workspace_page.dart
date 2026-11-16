@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,6 +9,7 @@ import '../../library/domain/providers.dart';
 import '../../library/presentation/word_editor_sheet.dart';
 import '../../library/presentation/word_detail_sheet.dart';
 import '../domain/practice.dart';
+import '../../../services/tts_service.dart';
 import '../domain/providers.dart';
 import 'study_controller.dart';
 import 'study_content.dart';
@@ -26,6 +29,8 @@ class _StudyPageState extends ConsumerState<StudyPage>
   int? _wordId;
   String? _sessionKey;
   bool? _correct;
+  int? _spokenWordId;
+  Timer? _resumeTimer;
   @override
   void initState() {
     super.initState();
@@ -34,9 +39,29 @@ class _StudyPageState extends ConsumerState<StudyPage>
 
   @override
   void dispose() {
+    _resumeTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _answer.dispose();
     super.dispose();
+  }
+
+  void _armResume(DateTime? at) {
+    _resumeTimer?.cancel();
+    _resumeTimer = null;
+    if (at == null) return;
+    _resumeTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (!at.isAfter(DateTime.now())) {
+        timer.cancel();
+        _resumeTimer = null;
+        ref.read(studyControllerProvider.notifier).load();
+      } else {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -44,6 +69,12 @@ class _StudyPageState extends ConsumerState<StudyPage>
     ref
         .read(studyControllerProvider.notifier)
         .setAppActive(state == AppLifecycleState.resumed);
+    if (state == AppLifecycleState.resumed) {
+      final resumeAt = ref.read(studyControllerProvider).resumeAt;
+      if (resumeAt != null && !resumeAt.isAfter(DateTime.now())) {
+        ref.read(studyControllerProvider.notifier).load();
+      }
+    }
   }
 
   Future<void> _configure() async {
@@ -103,7 +134,25 @@ class _StudyPageState extends ConsumerState<StudyPage>
       _answer.clear();
       _correct = null;
     }
+    if (options.mode == PracticeMode.listening &&
+        word != null &&
+        _spokenWordId != word.id) {
+      _spokenWordId = word.id;
+      final spoken = practiceItem(word, options).spoken;
+      final spokenId = word.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted || _spokenWordId != spokenId) return;
+        final rate =
+            double.tryParse(
+              await ref.read(databaseProvider).loadSetting('speech_rate') ?? '',
+            ) ??
+            .45;
+        if (!mounted || _spokenWordId != spokenId) return;
+        await ref.read(ttsServiceProvider).speakKorean(spoken, rate: rate);
+      });
+    }
     ref.listen(studyControllerProvider, (previous, next) {
+      if (next.resumeAt != previous?.resumeAt) _armResume(next.resumeAt);
       final notice = next.notice;
       if (notice == null || notice == previous?.notice) return;
       ScaffoldMessenger.of(
@@ -168,7 +217,12 @@ class _StudyPageState extends ConsumerState<StudyPage>
                       ),
                       const SizedBox(height: 18),
                       Text(
-                        '本轮完成，或暂时没有符合条件的词',
+                        state.resumeAt == null
+                            ? '本轮完成，或暂时没有符合条件的词'
+                            : learningResumeLabel(
+                                DateTime.now(),
+                                state.resumeAt!,
+                              ),
                         style: Theme.of(context).textTheme.titleLarge,
                         textAlign: TextAlign.center,
                       ),
@@ -339,16 +393,26 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                     ],
                                   ),
                                   const SizedBox(height: 12),
-                                  Text(
-                                    item.question,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineMedium
-                                        ?.copyWith(
-                                          fontSize: reading.wordSize,
-                                          height: reading.lineHeight,
-                                        ),
-                                    textAlign: TextAlign.center,
+                                  Semantics(
+                                    localeForSubtree:
+                                        hangulPattern.hasMatch(item.question)
+                                        ? const Locale('ko')
+                                        : null,
+                                    child: Text(
+                                      item.question,
+                                      locale:
+                                          hangulPattern.hasMatch(item.question)
+                                          ? const Locale('ko')
+                                          : null,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium
+                                          ?.copyWith(
+                                            fontSize: reading.wordSize,
+                                            height: reading.lineHeight,
+                                          ),
+                                      textAlign: TextAlign.center,
+                                    ),
                                   ),
                                   if (word.partOfSpeech?.isNotEmpty == true)
                                     Padding(
@@ -411,6 +475,10 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                       ),
                                       Text(
                                         '参考答案：${item.answer}',
+                                        locale:
+                                            hangulPattern.hasMatch(item.answer)
+                                            ? const Locale('ko')
+                                            : null,
                                         textAlign: TextAlign.center,
                                       ),
                                       const SizedBox(height: 8),
@@ -423,19 +491,21 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                       if (!_correct!)
                                         Wrap(
                                           children: [
-                                            for (
-                                              var i = 0;
-                                              i < item.answer.length;
-                                              i++
-                                            )
+                                            for (final mark in answerHighlight(
+                                              _answer.text,
+                                              item.answer,
+                                            ))
                                               Text(
-                                                item.answer[i],
+                                                mark.text,
+                                                locale:
+                                                    hangulPattern.hasMatch(
+                                                      mark.text,
+                                                    )
+                                                    ? const Locale('ko')
+                                                    : null,
                                                 style: TextStyle(
                                                   fontSize: 22,
-                                                  color:
-                                                      i < _answer.text.length &&
-                                                          _answer.text[i] ==
-                                                              item.answer[i]
+                                                  color: mark.correct
                                                       ? colors.primary
                                                       : colors.error,
                                                 ),
@@ -471,9 +541,14 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                                         .exampleKo
                                                         ?.isNotEmpty ==
                                                     true)
-                                                  SelectableText(
-                                                    word.exampleKo!,
-                                                    textAlign: TextAlign.center,
+                                                  Semantics(
+                                                    localeForSubtree:
+                                                        const Locale('ko'),
+                                                    child: SelectableText(
+                                                      word.exampleKo!,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
                                                   ),
                                                 if (word
                                                         .exampleZh

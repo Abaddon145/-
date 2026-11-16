@@ -3,7 +3,9 @@ import '../../../core/database/app_database.dart';
 const aiDirectRequestPrefix = 'ai_direct_requests:';
 
 Future<int> loadTodayDirectRequests(AppDatabase database, DateTime now) async {
-  final value = await database.loadSetting('$aiDirectRequestPrefix${dayKey(now)}');
+  final value = await database.loadSetting(
+    '$aiDirectRequestPrefix${dayKey(now)}',
+  );
   return int.tryParse(value ?? '') ?? 0;
 }
 

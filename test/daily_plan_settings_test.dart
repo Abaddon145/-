@@ -12,10 +12,7 @@ void main() {
     expect(defaults.reviewsPerDay, DailyPlanSettings.defaultReviews);
 
     await database.saveDailyPlanSettings(
-      const DailyPlanSettings(
-        newWordsPerDay: 10,
-        reviewsPerDay: 50,
-      ),
+      const DailyPlanSettings(newWordsPerDay: 10, reviewsPerDay: 50),
     );
 
     final saved = await database.loadDailyPlanSettings();

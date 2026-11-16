@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'web_database_kind.dart';
 import '../text/cloze_target.dart';
 import 'backup_limits.dart';
 import '../../services/fsrs_service.dart';
@@ -210,6 +211,9 @@ class AppDatabase extends _$AppDatabase {
               web: DriftWebOptions(
                 sqlite3Wasm: Uri.parse('sqlite3.wasm'),
                 driftWorker: Uri.parse('drift_worker.js'),
+                // Drift already prefers OPFS locks when the browser is
+                // cross-origin isolated. GitHub Pages cannot set those headers.
+                onResult: noteWebDatabaseKind,
               ),
             ),
       );
@@ -248,9 +252,14 @@ class AppDatabase extends _$AppDatabase {
 
   Future<HomeCounts> loadHomeCounts(DateTime nowUtc) async {
     final dueResult = await customSelect(
-      'SELECT COUNT(*) AS amount FROM study_cards WHERE due <= ?',
+      'SELECT '
+      'SUM(CASE WHEN s.state = 2 THEN 1 ELSE 0 END) AS reviews, '
+      'SUM(CASE WHEN s.state IN (1, 3) THEN 1 ELSE 0 END) AS learning '
+      'FROM study_cards s WHERE s.due <= ? AND NOT EXISTS ('
+      "SELECT 1 FROM app_settings a WHERE a.key = 'word_status:' || s.word_id "
+      "AND a.value IN ('suspended', 'known'))",
       variables: [Variable<DateTime>(nowUtc)],
-      readsFrom: {studyCards},
+      readsFrom: {studyCards, appSettings},
     ).getSingle();
     final newResult = await customSelect(
       'SELECT COUNT(*) AS amount FROM words w '
@@ -262,7 +271,8 @@ class AppDatabase extends _$AppDatabase {
       readsFrom: {reviewLogs},
     ).getSingle();
     return HomeCounts(
-      due: dueResult.read<int>('amount'),
+      due: dueResult.read<int?>('reviews') ?? 0,
+      learningDue: dueResult.read<int?>('learning') ?? 0,
       newWords: newResult.read<int>('amount'),
       completed: learnedResult.read<int>('amount'),
     );
@@ -457,6 +467,7 @@ class AppDatabase extends _$AppDatabase {
     ).getSingle();
     return HomeCounts(
       due: 0,
+      learningDue: 0,
       newWords: fresh.read<int>('amount'),
       completed: 0,
     );
@@ -1060,11 +1071,16 @@ class DailyPlanProgress {
 class HomeCounts {
   const HomeCounts({
     required this.due,
+    required this.learningDue,
     required this.newWords,
     required this.completed,
   });
 
+  /// Review-state cards that are due and still in the study queue.
   final int due;
+
+  /// Learning or relearning cards that are due and still in the study queue.
+  final int learningDue;
   final int newWords;
   final int completed;
 }

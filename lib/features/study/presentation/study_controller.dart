@@ -17,6 +17,7 @@ class StudyUiState {
     this.error,
     this.notice,
     this.intervals = const {},
+    this.resumeAt,
   });
 
   final Word? word;
@@ -26,6 +27,7 @@ class StudyUiState {
   final Object? error;
   final String? notice;
   final Map<StudyRating, String> intervals;
+  final DateTime? resumeAt;
 
   bool get isComplete => !isLoading && word == null && error == null;
 
@@ -41,6 +43,8 @@ class StudyUiState {
     bool clearNotice = false,
     Map<StudyRating, String>? intervals,
     bool clearIntervals = false,
+    DateTime? resumeAt,
+    bool clearResume = false,
   }) {
     return StudyUiState(
       word: clearWord ? null : (word ?? this.word),
@@ -50,13 +54,14 @@ class StudyUiState {
       error: clearError ? null : (error ?? this.error),
       notice: clearNotice ? null : (notice ?? this.notice),
       intervals: clearIntervals ? const {} : (intervals ?? this.intervals),
+      resumeAt: clearResume ? null : (resumeAt ?? this.resumeAt),
     );
   }
 }
 
 class StudyController extends StateNotifier<StudyUiState> {
   StudyController(this._repository, {this.onRatingSaved, this.beforeLoad})
-      : super(const StudyUiState(isLoading: true));
+    : super(const StudyUiState(isLoading: true));
 
   final StudyRepository _repository;
   final void Function()? onRatingSaved;
@@ -65,17 +70,45 @@ class StudyController extends StateNotifier<StudyUiState> {
   bool _visible = true;
   bool _appActive = true;
   int _panelDepth = 0;
-  void pauseForPanel() {if (!mounted) return; _panelDepth++; _syncClock();}
-  void resumeFromPanel() {if (!mounted) return; if (_panelDepth > 0) _panelDepth--; _syncClock();}
+  void pauseForPanel() {
+    if (!mounted) return;
+    _panelDepth++;
+    _syncClock();
+  }
+
+  void resumeFromPanel() {
+    if (!mounted) return;
+    if (_panelDepth > 0) _panelDepth--;
+    _syncClock();
+  }
+
   Duration get effectiveStudyTime => _clock.elapsed;
   bool get isTiming => _clock.isRunning;
-  void setVisible(bool value) { if(!mounted)return; _visible = value; _syncClock(); }
-  void setAppActive(bool value) { if(!mounted)return; _appActive = value; _syncClock(); }
-  void _syncClock() {
-    if (_visible && _appActive && _panelDepth == 0 && state.word != null && !state.isLoading && !state.isSubmitting) {
-      _clock.start();
-    } else { _clock.stop(); }
+  void setVisible(bool value) {
+    if (!mounted) return;
+    _visible = value;
+    _syncClock();
   }
+
+  void setAppActive(bool value) {
+    if (!mounted) return;
+    _appActive = value;
+    _syncClock();
+  }
+
+  void _syncClock() {
+    if (_visible &&
+        _appActive &&
+        _panelDepth == 0 &&
+        state.word != null &&
+        !state.isLoading &&
+        !state.isSubmitting) {
+      _clock.start();
+    } else {
+      _clock.stop();
+    }
+  }
+
   int _loadVersion = 0;
   int? _preparedWordId;
   Map<StudyRating, FsrsReviewResult>? _prepared;
@@ -95,9 +128,13 @@ class StudyController extends StateNotifier<StudyUiState> {
       if (!mounted || version != _loadVersion) return;
       final word = await _repository.nextWord();
       if (!mounted || version != _loadVersion) return;
+      final resumeAt = word == null
+          ? await _repository.nextLearningResumeAt()
+          : null;
+      if (!mounted || version != _loadVersion) return;
       _clock.reset();
       _clearPrepared();
-      state = StudyUiState(word: word);
+      state = StudyUiState(word: word, resumeAt: resumeAt);
       _syncClock();
     } catch (error) {
       if (!mounted || version != _loadVersion) return;
@@ -155,7 +192,9 @@ class StudyController extends StateNotifier<StudyUiState> {
     try {
       final word = await _repository.undo();
       if (!mounted || word == null) return;
-      _clock..stop()..reset();
+      _clock
+        ..stop()
+        ..reset();
       _clearPrepared();
       state = StudyUiState(word: word);
       _syncClock();
@@ -167,16 +206,26 @@ class StudyController extends StateNotifier<StudyUiState> {
 
   Future<void> rate(StudyRating rating) async {
     final word = state.word;
-    if (word == null || state.isLoading || state.isSubmitting || !state.isRevealed) {
+    if (word == null ||
+        state.isLoading ||
+        state.isSubmitting ||
+        !state.isRevealed) {
       return;
     }
-    state = state.copyWith(isSubmitting: true, clearError: true, clearNotice: true);
+    state = state.copyWith(
+      isSubmitting: true,
+      clearError: true,
+      clearNotice: true,
+    );
     _clock.stop();
     try {
-      if (_preparedWordId != word.id || _prepared == null || !_prepared!.containsKey(rating)) {
+      if (_preparedWordId != word.id ||
+          _prepared == null ||
+          !_prepared!.containsKey(rating)) {
         await prepareRatings();
       }
-      final FsrsReviewResult? prepared = _preparedWordId == word.id && _prepared != null
+      final FsrsReviewResult? prepared =
+          _preparedWordId == word.id && _prepared != null
           ? _prepared![rating]
           : null;
       final outcome = await _repository.submitRating(
@@ -203,30 +252,33 @@ class StudyController extends StateNotifier<StudyUiState> {
 
 final studyControllerProvider =
     StateNotifierProvider.autoDispose<StudyController, StudyUiState>((ref) {
-  final controller = StudyController(
-    ref.watch(studyRepositoryProvider),
-    beforeLoad: () async {
-      await ref.read(bundledWordSeedProvider.future);
-    },
-    onRatingSaved: () {
-      ref.invalidate(dailyPlanProgressProvider);
-      ref.invalidate(studyRoundProgressProvider);
-      ref.invalidate(sessionProgressProvider);
-      if (ref.read(visibleTabProvider) == 0) {
-        ref.invalidate(homeCountsProvider);
-      }
-      if (ref.read(visibleTabProvider) == 1) {
-        ref.invalidate(libraryWordsProvider);
-        ref.invalidate(libraryCountProvider);
-      }
-    },
-  );
-  ref.listen(localDayProvider, (_, _) {
-    // An in-flight rating will load the next word after its transaction completes.
-    controller.refreshForNewDay();
-  });
-  controller.load();
-  controller.setVisible(ref.read(studyVisibleProvider));
-  ref.listen(studyVisibleProvider, (_, value) => controller.setVisible(value));
-  return controller;
-});
+      final controller = StudyController(
+        ref.watch(studyRepositoryProvider),
+        beforeLoad: () async {
+          await ref.read(bundledWordSeedProvider.future);
+        },
+        onRatingSaved: () {
+          ref.invalidate(dailyPlanProgressProvider);
+          ref.invalidate(studyRoundProgressProvider);
+          ref.invalidate(sessionProgressProvider);
+          if (ref.read(visibleTabProvider) == 0) {
+            ref.invalidate(homeCountsProvider);
+          }
+          if (ref.read(visibleTabProvider) == 1) {
+            ref.invalidate(libraryWordsProvider);
+            ref.invalidate(libraryCountProvider);
+          }
+        },
+      );
+      ref.listen(localDayProvider, (_, _) {
+        // An in-flight rating will load the next word after its transaction completes.
+        controller.refreshForNewDay();
+      });
+      controller.load();
+      controller.setVisible(ref.read(studyVisibleProvider));
+      ref.listen(
+        studyVisibleProvider,
+        (_, value) => controller.setVisible(value),
+      );
+      return controller;
+    });

@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-DateTime localDay(DateTime value) => DateTime(value.year, value.month, value.day);
+DateTime localDay(DateTime value) =>
+    DateTime(value.year, value.month, value.day);
 
-final localDayProvider = StateProvider<DateTime>((ref) => localDay(DateTime.now()));
+final localDayProvider = StateProvider<DateTime>(
+  (ref) => localDay(DateTime.now()),
+);
 
 /// Keeps cached daily views current across midnight and app suspension.
 class LocalDayObserver extends ConsumerStatefulWidget {

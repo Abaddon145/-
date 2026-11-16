@@ -19,7 +19,9 @@ final aiApiKeyProvider = StateNotifierProvider<AiKeyController, String>(
     ref.watch(aiKeyStoreProvider),
     loadPersist: kIsWeb
         ? () async =>
-              (await ref.read(databaseProvider).loadSetting('ai_remember_key')) ==
+              (await ref
+                  .read(databaseProvider)
+                  .loadSetting('ai_remember_key')) ==
               'true'
         : null,
   ),

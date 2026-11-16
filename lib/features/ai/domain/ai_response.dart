@@ -5,9 +5,11 @@ abstract interface class AiRequestIdentity {
   int get wordId;
   String get originalTerm;
   String get context;
+  bool get meaningOnly;
 }
 
 const aiPromptVersion = 'ko-zh-v1';
+const aiHttpByteLimit = 262144;
 const aiContexts = ['日常韩语', '物流与仓储', '工厂设备', '生产与工业术语', '商务邮件', '自定义语境'];
 const aiFieldLabels = <String, String>{
   'meaningZh': '中文释义与义项',
@@ -73,6 +75,7 @@ class AiException implements Exception {
         'empty_response': '模型返回空内容，未保存。',
         'invalid_json': '结果不是合法 JSON，未保存。',
         'invalid_response': '结果缺少字段或超过长度限制，未保存。',
+        'response_too_large': '回复超过可读取的大小，未保存，也没有计入今日次数。请缩短语境后再生成，这次不会自动重试。',
         'identity_mismatch': '结果与原请求不匹配，已拒绝写入。',
         'provider_error': '模型服务出错，请稍后重试。',
         'deleted': '原词已删除，无法保存。',
@@ -122,11 +125,12 @@ class AiSuggestion {
     Map<String, dynamic> json, {
     AiRequestIdentity? request,
   }) {
-    if (utf8.encode(jsonEncode(json)).length > 32768 ||
+    if (utf8.encode(jsonEncode(json)).length > aiHttpByteLimit ||
         json['result'] is! Map<String, dynamic>) {
       throw const AiException('invalid_response');
     }
     final data = Map<String, dynamic>.from(json['result'] as Map);
+    final meaningOnly = request?.meaningOnly == true;
     final required = {
       ...aiFieldLabels.keys,
       'requestId',
@@ -137,6 +141,19 @@ class AiSuggestion {
       'suggestedSpellings',
       'needsMoreContext',
     };
+    if (meaningOnly) {
+      data['meaningZh'] ??= '';
+      for (final key in aiFieldLabels.keys) {
+        data.putIfAbsent(
+          key,
+          () => aiListFields.contains(key) ? <String>[] : '',
+        );
+      }
+      data.putIfAbsent('suspectedTypo', () => false);
+      data.putIfAbsent('needsMoreContext', () => false);
+      data.putIfAbsent('suggestedSpellings', () => <String>[]);
+      data.removeWhere((key, _) => !required.contains(key));
+    }
     if (data.length != required.length || !required.every(data.containsKey)) {
       throw const AiException('invalid_response');
     }
