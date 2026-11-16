@@ -75,7 +75,7 @@ void main() {
     'checkin is idempotent, uses local calendar day, and keeps streak',
     () async {
       final id = await add('하늘');
-      await expectLater(db.checkIn(day), throwsA(isA<FormatException>()));
+      expect(await db.checkIn(day), isFalse);
       for (final offset in [2, 1, 0]) {
         await rate(id, 3, date: day.subtract(Duration(days: offset)));
       }

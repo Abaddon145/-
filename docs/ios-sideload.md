@@ -32,7 +32,7 @@
 1. 打开 [构建 iOS 安装包](https://github.com/Abaddon145/-/actions/workflows/ios-build.yml)。
 2. 点 **Run workflow**。工作流只在手动运行时执行。合并到 `main` 之后选 `main`；还在分支上验证时选含有该工作流的分支。
 3. 等名为 iOS IPA 的运行结束，并且是绿色。
-4. 打开该次运行页面，在 Artifacts 里下载 `KoreanMemo-` 加上 `pubspec.yaml` 里的版本号。当前版本是 `KoreanMemo-0.12.0+18`。
+4. 打开该次运行页面，在 Artifacts 里下载 `KoreanMemo-` 加上 `pubspec.yaml` 里的版本号。当前版本是 `KoreanMemo-0.12.1+19`。
 5. 解压下载到的压缩包，得到 `KoreanMemo-<版本>.ipa`。这个文件才是要拖进 Sideloadly 的安装包。不要把 ipa 提交回仓库。
 
 安装包是真机 Release（arm64），不是模拟器包。里面没有描述文件，也没有推送、App Groups、iCloud、Associated Domains 或钥匙串共享这些免费账号签不了的授权。
