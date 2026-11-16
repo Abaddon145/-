@@ -1,6 +1,7 @@
 import 'package:uuid/uuid.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/language/learning_language.dart';
 import '../../../services/fsrs_service.dart';
 
 class StudyRepository {
@@ -18,7 +19,11 @@ class StudyRepository {
   final Uuid _uuid = const Uuid();
 
   Future<void> startExtraRound(int count) {
-    return _database.startExtraStudyRound(DateTime.now(), count);
+    return _database.startExtraStudyRound(
+      DateTime.now(),
+      count,
+      options.language,
+    );
   }
 
   Future<Word?> nextWord() {
@@ -29,10 +34,13 @@ class StudyRepository {
   Future<DateTime?> nextLearningResumeAt() =>
       _database.nextLearningResumeAt(options, DateTime.now());
 
-  Future<Word?> undo() => _database.undoLastReview(DateTime.now());
+  Future<Word?> undo() =>
+      _database.undoLastReview(DateTime.now(), options.language);
 
   Future<double> desiredRetention() async => normalizeDesiredRetention(
-    await _database.loadSetting(retentionSettingKey),
+    await _database.loadSetting(
+      scopedSetting(options.language, retentionSettingKey),
+    ),
   );
 
   /// One scheduler and one UTC timestamp for every button, so the label the

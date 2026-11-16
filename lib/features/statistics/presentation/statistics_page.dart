@@ -16,9 +16,10 @@ class StatisticsPage extends ConsumerWidget {
   Future<void> _export(BuildContext context, WidgetRef ref, bool csv) async {
     try {
       final db = ref.read(databaseProvider);
+      final language = ref.read(activeLanguageProvider);
       final text = csv
-          ? await LearningReport.csv(db, DateTime.now())
-          : await LearningReport.weekly(db, DateTime.now());
+          ? await LearningReport.csv(db, DateTime.now(), language)
+          : await LearningReport.weekly(db, DateTime.now(), language);
       await FilePicker.saveFile(
         fileName: csv ? 'learning-report.csv' : 'learning-weekly.md',
         bytes: Uint8List.fromList(utf8.encode(text)),

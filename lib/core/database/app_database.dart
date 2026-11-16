@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import '../language/learning_language.dart';
 import 'web_database_kind.dart';
 import '../text/cloze_target.dart';
 import 'backup_limits.dart';
@@ -31,12 +32,13 @@ class Words extends Table {
   TextColumn get hanja => text().nullable()();
   TextColumn get etymology => text().nullable()();
   TextColumn get source => text().nullable()();
+  TextColumn get language => text().withDefault(const Constant('ko'))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {normalizedKorean, normalizedBaseForm},
+    {language, normalizedKorean, normalizedBaseForm},
   ];
 }
 
@@ -45,6 +47,7 @@ class WordBooks extends Table {
   TextColumn get name => text()();
   TextColumn get description => text().nullable()();
   TextColumn get sourceFileName => text().nullable()();
+  TextColumn get language => text().withDefault(const Constant('ko'))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 }
@@ -61,6 +64,7 @@ class WordBookWords extends Table {
 class StudyCards extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get wordId => integer().unique().references(Words, #id)();
+  TextColumn get language => text().withDefault(const Constant('ko'))();
   IntColumn get state => integer().withDefault(const Constant(0))();
   DateTimeColumn get due => dateTime()();
   RealColumn get stability => real().withDefault(const Constant(0))();
@@ -78,6 +82,7 @@ class StudyCards extends Table {
 class ReviewLogs extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get wordId => integer().references(Words, #id)();
+  TextColumn get language => text().withDefault(const Constant('ko'))();
   TextColumn get submissionToken => text().unique()();
   IntColumn get rating => integer()();
   DateTimeColumn get reviewedAt => dateTime()();
@@ -109,9 +114,10 @@ class DailyStatistics extends Table {
   IntColumn get correctCount => integer().withDefault(const Constant(0))();
   IntColumn get wrongCount => integer().withDefault(const Constant(0))();
   IntColumn get studyDurationMs => integer().withDefault(const Constant(0))();
+  TextColumn get language => text().withDefault(const Constant('ko'))();
 
   @override
-  Set<Column<Object>> get primaryKey => {date};
+  Set<Column<Object>> get primaryKey => {date, language};
 }
 
 class AppSettings extends Table {
@@ -134,6 +140,7 @@ class RecoverySnapshots extends Table {
 @DataClassName('AiSuggestionRecord')
 class AiSuggestions extends Table {
   TextColumn get id => text()();
+  TextColumn get language => text().withDefault(const Constant('ko'))();
   IntColumn get wordId => integer()();
   TextColumn get originalSnapshot => text()();
   TextColumn get cacheKey => text()();
@@ -149,6 +156,7 @@ class AiSuggestions extends Table {
 @DataClassName('AiTaskRecord')
 class AiTasks extends Table {
   TextColumn get id => text()();
+  TextColumn get language => text().withDefault(const Constant('ko'))();
   TextColumn get context => text()();
   TextColumn get status => text().withDefault(const Constant('paused'))();
   DateTimeColumn get createdAt => dateTime()();
@@ -160,6 +168,7 @@ class AiTasks extends Table {
 @DataClassName('AiTaskItemRecord')
 class AiTaskItems extends Table {
   TextColumn get id => text()();
+  TextColumn get language => text().withDefault(const Constant('ko'))();
   TextColumn get taskId => text().references(AiTasks, #id)();
   IntColumn get wordId => integer()();
   TextColumn get originalSnapshot => text()();
@@ -173,6 +182,7 @@ class AiTaskItems extends Table {
 
 class AiWordContents extends Table {
   IntColumn get wordId => integer()();
+  TextColumn get language => text().withDefault(const Constant('ko'))();
   TextColumn get field => text()();
   TextColumn get value => text()();
   TextColumn get requestId => text()();
@@ -219,13 +229,14 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
       await _ensureStudyCardsDueIndex();
+      await saveSetting(activeLanguageSettingKey, 'ko');
     },
     // Retire only obsolete cloud markers; keep every local learning table.
     beforeOpen: (_) => customStatement(
@@ -242,32 +253,192 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createTable(aiTaskItems);
         await migrator.createTable(aiWordContents);
       }
-      if (from < 5) await _ensureStudyCardsDueIndex();
+      if (from < 5) {
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS idx_study_cards_due ON study_cards (due)',
+        );
+      }
+      if (from < 6) await _migrateToLanguageSpace();
     },
   );
 
   Future<void> _ensureStudyCardsDueIndex() => customStatement(
-    'CREATE INDEX IF NOT EXISTS idx_study_cards_due ON study_cards (due)',
+    'CREATE INDEX IF NOT EXISTS idx_study_cards_language_due ON study_cards (language, due)',
   );
 
-  Future<HomeCounts> loadHomeCounts(DateTime nowUtc) async {
+  Future<void> _migrateToLanguageSpace() async {
+    await customStatement('PRAGMA foreign_keys = OFF');
+    try {
+      await transaction(() async {
+        final duplicate = await customSelect(
+          'SELECT 1 AS hit FROM words GROUP BY normalized_korean, normalized_base_form HAVING COUNT(*) > 1 LIMIT 1',
+        ).get();
+        if (duplicate.isNotEmpty) {
+          throw StateError('词条有重复，已中止语言迁移，没有合并任何词');
+        }
+        await _addLanguageColumn('words');
+        await _addLanguageColumn('word_books');
+        await _addLanguageColumn('study_cards');
+        await _addLanguageColumn('review_logs');
+        await _addLanguageColumn('ai_suggestions');
+        await _addLanguageColumn('ai_tasks');
+        await _addLanguageColumn('ai_task_items');
+        await _addLanguageColumn('ai_word_contents');
+        await _rebuildWordsForLanguage();
+        await _rebuildDailyStatisticsForLanguage();
+        await _prefixLearningSettings();
+        await saveSetting(activeLanguageSettingKey, 'ko');
+        await customStatement('DROP INDEX IF EXISTS idx_study_cards_due');
+        await _ensureStudyCardsDueIndex();
+      });
+    } finally {
+      await customStatement('PRAGMA foreign_keys = ON');
+    }
+  }
+
+  Future<void> _addLanguageColumn(String table) async {
+    final columns = await customSelect('PRAGMA table_info($table)').get();
+    if (columns.any((row) => row.read<String>('name') == 'language')) return;
+    await customStatement(
+      "ALTER TABLE $table ADD COLUMN language TEXT NOT NULL DEFAULT 'ko'",
+    );
+  }
+
+  Future<void> _rebuildWordsForLanguage() async {
+    await customStatement('''
+      CREATE TABLE words__v6 (
+        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        korean TEXT NOT NULL,
+        normalized_korean TEXT NOT NULL,
+        base_form TEXT NOT NULL DEFAULT '',
+        normalized_base_form TEXT NOT NULL DEFAULT '',
+        meaning_zh TEXT NOT NULL,
+        pronunciation TEXT NULL,
+        part_of_speech TEXT NULL,
+        example_ko TEXT NULL,
+        example_zh TEXT NULL,
+        topik_level TEXT NULL,
+        category TEXT NULL,
+        tags TEXT NULL,
+        note TEXT NULL,
+        hanja TEXT NULL,
+        etymology TEXT NULL,
+        source TEXT NULL,
+        language TEXT NOT NULL DEFAULT 'ko',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        UNIQUE (language, normalized_korean, normalized_base_form)
+      )
+    ''');
+    await customStatement('''
+      INSERT INTO words__v6 (
+        id, korean, normalized_korean, base_form, normalized_base_form,
+        meaning_zh, pronunciation, part_of_speech, example_ko, example_zh,
+        topik_level, category, tags, note, hanja, etymology, source,
+        language, created_at, updated_at
+      )
+      SELECT
+        id, korean, normalized_korean, base_form, normalized_base_form,
+        meaning_zh, pronunciation, part_of_speech, example_ko, example_zh,
+        topik_level, category, tags, note, hanja, etymology, source,
+        language, created_at, updated_at
+      FROM words
+    ''');
+    await customStatement('DROP TABLE words');
+    await customStatement('ALTER TABLE words__v6 RENAME TO words');
+  }
+
+  Future<void> _rebuildDailyStatisticsForLanguage() async {
+    await customStatement('''
+      CREATE TABLE daily_statistics__v6 (
+        date INTEGER NOT NULL,
+        new_words INTEGER NOT NULL DEFAULT 0,
+        review_words INTEGER NOT NULL DEFAULT 0,
+        correct_count INTEGER NOT NULL DEFAULT 0,
+        wrong_count INTEGER NOT NULL DEFAULT 0,
+        study_duration_ms INTEGER NOT NULL DEFAULT 0,
+        language TEXT NOT NULL DEFAULT 'ko',
+        PRIMARY KEY (date, language)
+      )
+    ''');
+    final columns = await customSelect(
+      'PRAGMA table_info(daily_statistics)',
+    ).get();
+    final hasLanguage = columns.any(
+      (row) => row.read<String>('name') == 'language',
+    );
+    if (!hasLanguage) {
+      await customStatement(
+        "ALTER TABLE daily_statistics ADD COLUMN language TEXT NOT NULL DEFAULT 'ko'",
+      );
+    }
+    await customStatement('''
+      INSERT INTO daily_statistics__v6 (
+        date, new_words, review_words, correct_count, wrong_count,
+        study_duration_ms, language
+      )
+      SELECT
+        date, new_words, review_words, correct_count, wrong_count,
+        study_duration_ms, language
+      FROM daily_statistics
+    ''');
+    await customStatement('DROP TABLE daily_statistics');
+    await customStatement(
+      'ALTER TABLE daily_statistics__v6 RENAME TO daily_statistics',
+    );
+  }
+
+  Future<void> _prefixLearningSettings() async {
+    await customStatement('''
+      UPDATE app_settings SET key = 'checkin:ko:' || substr(key, 9)
+      WHERE key LIKE 'checkin:%'
+        AND key NOT LIKE 'checkin:ko:%'
+        AND key NOT LIKE 'checkin:en:%'
+    ''');
+    await customStatement('''
+      UPDATE app_settings SET key = 'objective:ko:' || substr(key, 11)
+      WHERE key LIKE 'objective:%'
+        AND key NOT LIKE 'objective:ko:%'
+        AND key NOT LIKE 'objective:en:%'
+    ''');
+    await customStatement('''
+      UPDATE app_settings SET key = 'ko:' || key
+      WHERE key NOT LIKE 'ko:%' AND key NOT LIKE 'en:%' AND (
+        key IN (
+          'daily_new_words', 'daily_reviews',
+          'study_round_day', 'study_round_baseline', 'study_round_target',
+          'selected_learning_session', 'fsrs_desired_retention',
+          'auto_checkin', 'speech_rate', 'last_review_undo'
+        )
+        OR key LIKE 'learning_session:%'
+      )
+    ''');
+  }
+
+  Future<HomeCounts> loadHomeCounts(
+    DateTime nowUtc, [
+    String language = 'ko',
+  ]) async {
+    final lang = normalizeLearningLanguage(language);
     final dueResult = await customSelect(
       'SELECT '
       'SUM(CASE WHEN s.state = 2 THEN 1 ELSE 0 END) AS reviews, '
       'SUM(CASE WHEN s.state IN (1, 3) THEN 1 ELSE 0 END) AS learning '
-      'FROM study_cards s WHERE s.due <= ? AND NOT EXISTS ('
+      'FROM study_cards s WHERE s.language = ? AND s.due <= ? AND NOT EXISTS ('
       "SELECT 1 FROM app_settings a WHERE a.key = 'word_status:' || s.word_id "
       "AND a.value IN ('suspended', 'known'))",
-      variables: [Variable<DateTime>(nowUtc)],
+      variables: [Variable<String>(lang), Variable<DateTime>(nowUtc)],
       readsFrom: {studyCards, appSettings},
     ).getSingle();
     final newResult = await customSelect(
       'SELECT COUNT(*) AS amount FROM words w '
-      'WHERE NOT EXISTS (SELECT 1 FROM study_cards s WHERE s.word_id = w.id)',
+      'WHERE w.language = ? AND NOT EXISTS (SELECT 1 FROM study_cards s WHERE s.word_id = w.id)',
+      variables: [Variable<String>(lang)],
       readsFrom: {words, studyCards},
     ).getSingle();
     final learnedResult = await customSelect(
-      'SELECT COUNT(*) AS amount FROM review_logs',
+      'SELECT COUNT(*) AS amount FROM review_logs WHERE language = ?',
+      variables: [Variable<String>(lang)],
       readsFrom: {reviewLogs},
     ).getSingle();
     return HomeCounts(
@@ -278,49 +449,49 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<DailyPlanSettings> loadDailyPlanSettings() async {
-    final rows =
-        await (select(appSettings)..where(
-              (row) => row.key.isIn(const [
-                DailyPlanSettings.newWordsKey,
-                DailyPlanSettings.reviewsKey,
-              ]),
-            ))
-            .get();
+  Future<DailyPlanSettings> loadDailyPlanSettings([
+    String language = 'ko',
+  ]) async {
+    final lang = normalizeLearningLanguage(language);
+    final newKey = scopedSetting(lang, DailyPlanSettings.newWordsKey);
+    final reviewKey = scopedSetting(lang, DailyPlanSettings.reviewsKey);
+    final rows = await (select(
+      appSettings,
+    )..where((row) => row.key.isIn([newKey, reviewKey]))).get();
     final values = {for (final row in rows) row.key: int.tryParse(row.value)};
     return DailyPlanSettings(
-      newWordsPerDay:
-          values[DailyPlanSettings.newWordsKey] ??
-          DailyPlanSettings.defaultNewWords,
-      reviewsPerDay:
-          values[DailyPlanSettings.reviewsKey] ??
-          DailyPlanSettings.defaultReviews,
+      newWordsPerDay: values[newKey] ?? DailyPlanSettings.defaultNewWords,
+      reviewsPerDay: values[reviewKey] ?? DailyPlanSettings.defaultReviews,
     ).normalized();
   }
 
-  Future<void> saveDailyPlanSettings(DailyPlanSettings settings) async {
+  Future<void> saveDailyPlanSettings(
+    DailyPlanSettings settings, [
+    String language = 'ko',
+  ]) async {
+    final lang = normalizeLearningLanguage(language);
     final normalized = settings.normalized();
     final now = DateTime.now().toUtc();
     await transaction(() async {
       await batch((batch) {
         batch.insertAllOnConflictUpdate(appSettings, [
           AppSettingsCompanion.insert(
-            key: DailyPlanSettings.newWordsKey,
+            key: scopedSetting(lang, DailyPlanSettings.newWordsKey),
             value: normalized.newWordsPerDay.toString(),
             updatedAt: now,
           ),
           AppSettingsCompanion.insert(
-            key: DailyPlanSettings.reviewsKey,
+            key: scopedSetting(lang, DailyPlanSettings.reviewsKey),
             value: normalized.reviewsPerDay.toString(),
             updatedAt: now,
           ),
         ]);
       });
       await (delete(appSettings)..where(
-            (row) => row.key.isIn(const [
-              'study_round_day',
-              'study_round_baseline',
-              'study_round_target',
+            (row) => row.key.isIn([
+              scopedSetting(lang, 'study_round_day'),
+              scopedSetting(lang, 'study_round_baseline'),
+              scopedSetting(lang, 'study_round_target'),
             ]),
           ))
           .go();
@@ -348,12 +519,18 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<DailyPlanProgress> loadDailyPlanProgress(DateTime localNow) async {
-    final settings = await loadDailyPlanSettings();
+  Future<DailyPlanProgress> loadDailyPlanProgress(
+    DateTime localNow, [
+    String language = 'ko',
+  ]) async {
+    final lang = normalizeLearningLanguage(language);
+    final settings = await loadDailyPlanSettings(lang);
     final day = _dailyStatKey(localNow);
-    final statistics = await (select(
-      dailyStatistics,
-    )..where((row) => row.date.equals(day))).getSingleOrNull();
+    final statistics =
+        await (select(
+              dailyStatistics,
+            )..where((row) => row.date.equals(day) & row.language.equals(lang)))
+            .getSingleOrNull();
     return DailyPlanProgress(
       settings: settings,
       newWordsDone: statistics?.newWords ?? 0,
@@ -364,15 +541,28 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<StudyRoundProgress> loadStudyRoundProgress(DateTime localNow) async {
-    final progress = await loadDailyPlanProgress(localNow);
-    final day = await loadSetting('study_round_day');
+  Future<StudyRoundProgress> loadStudyRoundProgress(
+    DateTime localNow, [
+    String language = 'ko',
+  ]) async {
+    final lang = normalizeLearningLanguage(language);
+    final progress = await loadDailyPlanProgress(localNow, lang);
+    final day = await loadSetting(scopedSetting(lang, 'study_round_day'));
     final active = day == _dailyStatKey(localNow).toIso8601String();
     final baseline = active
-        ? int.tryParse(await loadSetting('study_round_baseline') ?? '') ?? 0
+        ? int.tryParse(
+                await loadSetting(
+                      scopedSetting(lang, 'study_round_baseline'),
+                    ) ??
+                    '',
+              ) ??
+              0
         : 0;
     final target = active
-        ? int.tryParse(await loadSetting('study_round_target') ?? '') ??
+        ? int.tryParse(
+                await loadSetting(scopedSetting(lang, 'study_round_target')) ??
+                    '',
+              ) ??
               progress.settings.newWordsPerDay
         : progress.settings.newWordsPerDay;
     return StudyRoundProgress(
@@ -383,21 +573,26 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<void> startExtraStudyRound(DateTime localNow, int count) async {
+  Future<void> startExtraStudyRound(
+    DateTime localNow,
+    int count, [
+    String language = 'ko',
+  ]) async {
     if (count < 1) {
       throw const FormatException('请输入大于 0 的整数');
     }
+    final lang = normalizeLearningLanguage(language);
     await transaction(() async {
-      final progress = await loadDailyPlanProgress(localNow);
+      final progress = await loadDailyPlanProgress(localNow, lang);
       await saveSetting(
-        'study_round_day',
+        scopedSetting(lang, 'study_round_day'),
         _dailyStatKey(localNow).toIso8601String(),
       );
       await saveSetting(
-        'study_round_baseline',
+        scopedSetting(lang, 'study_round_baseline'),
         progress.newWordsDone.toString(),
       );
-      await saveSetting('study_round_target', count.toString());
+      await saveSetting(scopedSetting(lang, 'study_round_target'), '$count');
     });
   }
 
@@ -405,8 +600,10 @@ class AppDatabase extends _$AppDatabase {
     DateTime nowUtc, {
     required DateTime localNow,
     int? bookId,
+    String language = 'ko',
   }) async {
-    final progress = await loadDailyPlanProgress(localNow);
+    final lang = normalizeLearningLanguage(language);
+    final progress = await loadDailyPlanProgress(localNow, lang);
 
     if (progress.reviewsDone < progress.settings.reviewsPerDay) {
       final dueQuery =
@@ -420,8 +617,8 @@ class AppDatabase extends _$AppDatabase {
                 ),
             ])
             ..where(
-              studyCards.due.isSmallerOrEqualValue(nowUtc) &
-                  const Constant<bool>(true),
+              words.language.equals(lang) &
+                  studyCards.due.isSmallerOrEqualValue(nowUtc),
             )
             ..orderBy([OrderingTerm.asc(studyCards.due)])
             ..limit(1);
@@ -429,7 +626,7 @@ class AppDatabase extends _$AppDatabase {
       if (dueRow != null) return dueRow.readTable(words);
     }
 
-    final round = await loadStudyRoundProgress(localNow);
+    final round = await loadStudyRoundProgress(localNow, lang);
     if (progress.newWordsDone >= round.baseline + round.target) return null;
 
     final newQuery =
@@ -442,23 +639,32 @@ class AppDatabase extends _$AppDatabase {
                     wordBookWords.wordBookId.equals(bookId),
               ),
           ])
-          ..where(studyCards.id.isNull() & const Constant<bool>(true))
+          ..where(words.language.equals(lang) & studyCards.id.isNull())
           ..orderBy([OrderingTerm.asc(words.id)])
           ..limit(1);
     final newRow = await newQuery.getSingleOrNull();
     return newRow?.readTable(words);
   }
 
-  Future<List<WordBook>> loadWordBooks() =>
-      (select(wordBooks)..orderBy([(row) => OrderingTerm.asc(row.id)])).get();
+  Future<List<WordBook>> loadWordBooks([String language = 'ko']) {
+    final lang = normalizeLearningLanguage(language);
+    return (select(wordBooks)
+          ..where((row) => row.language.equals(lang))
+          ..orderBy([(row) => OrderingTerm.asc(row.id)]))
+        .get();
+  }
 
-  Future<HomeCounts> loadScopedStudyCounts(int? bookId) async {
+  Future<HomeCounts> loadScopedStudyCounts(
+    int? bookId, [
+    String language = 'ko',
+  ]) async {
+    final lang = normalizeLearningLanguage(language);
     final scope = bookId == null
-        ? '1=1'
-        : 'EXISTS (SELECT 1 FROM word_book_words b WHERE b.word_id=w.id AND b.word_book_id=?)';
+        ? 'w.language = ?'
+        : 'w.language = ? AND EXISTS (SELECT 1 FROM word_book_words b WHERE b.word_id=w.id AND b.word_book_id=?)';
     final variables = bookId == null
-        ? <Variable>[]
-        : <Variable>[Variable<int>(bookId)];
+        ? <Variable>[Variable<String>(lang)]
+        : <Variable>[Variable<String>(lang), Variable<int>(bookId)];
     final fresh = await customSelect(
       'SELECT COUNT(*) AS amount FROM words w WHERE $scope AND NOT EXISTS '
       '(SELECT 1 FROM study_cards s WHERE s.word_id=w.id)',
@@ -482,12 +688,14 @@ class AppDatabase extends _$AppDatabase {
   Future<int> createWordBook({
     required String name,
     required String sourceFileName,
+    String language = 'ko',
   }) {
     final now = DateTime.now().toUtc();
     return into(wordBooks).insert(
       WordBooksCompanion.insert(
         name: name,
         sourceFileName: Value(sourceFileName),
+        language: Value(normalizeLearningLanguage(language)),
         createdAt: now,
         updatedAt: now,
       ),
@@ -499,26 +707,36 @@ class AppDatabase extends _$AppDatabase {
     required List<WordDraft> drafts,
     required String source,
     bool enrichExisting = false,
+    String? language,
   }) {
-    return transaction(
-      () => _writeWords(
+    return transaction(() async {
+      final book = await (select(
+        wordBooks,
+      )..where((row) => row.id.equals(wordBookId))).getSingleOrNull();
+      return _writeWords(
         wordBookId: wordBookId,
         drafts: drafts,
         source: source,
         enrichExisting: enrichExisting,
-      ),
-    );
+        language: language ?? book?.language ?? 'ko',
+      );
+    });
   }
 
   Future<ImportWriteResult?> importWordBookIfMissing({
     required String name,
     required String sourceFileName,
     required List<WordDraft> drafts,
+    String language = 'ko',
   }) {
+    final lang = normalizeLearningLanguage(language);
     return transaction(() async {
       final existingBook =
-          await (select(wordBooks)
-                ..where((row) => row.sourceFileName.equals(sourceFileName)))
+          await (select(wordBooks)..where(
+                (row) =>
+                    row.sourceFileName.equals(sourceFileName) &
+                    row.language.equals(lang),
+              ))
               .getSingleOrNull();
       if (existingBook != null) return null;
 
@@ -527,6 +745,7 @@ class AppDatabase extends _$AppDatabase {
         WordBooksCompanion.insert(
           name: name,
           sourceFileName: Value(sourceFileName),
+          language: Value(lang),
           createdAt: now,
           updatedAt: now,
         ),
@@ -535,56 +754,71 @@ class AppDatabase extends _$AppDatabase {
         wordBookId: wordBookId,
         drafts: drafts,
         source: sourceFileName,
+        language: lang,
       );
     });
   }
 
-  Future<int> addManualWord(WordDraft draft) => transaction(() async {
-    if (draft.korean.trim().isEmpty ||
-        (draft.partOfSpeech?.trim().isEmpty ?? true)) {
-      throw const FormatException('请填写韩语、中文释义和词性');
-    }
-    final existing =
-        await (select(words)..where(
-              (word) =>
-                  word.normalizedKorean.equals(draft.normalizedKorean) &
-                  word.normalizedBaseForm.equals(draft.normalizedBaseForm),
-            ))
-            .getSingleOrNull();
-    if (existing != null) {
-      throw const FormatException('这个单词已存在，请在词库中编辑');
-    }
-    const source = 'manual://words';
-    final book = await (select(
-      wordBooks,
-    )..where((item) => item.sourceFileName.equals(source))).getSingleOrNull();
-    final now = DateTime.now().toUtc();
-    final bookId =
-        book?.id ??
-        await into(wordBooks).insert(
-          WordBooksCompanion.insert(
-            name: '手动录入',
-            sourceFileName: const Value(source),
-            createdAt: now,
-            updatedAt: now,
+  Future<int> addManualWord(WordDraft draft, {String language = 'ko'}) =>
+      transaction(() async {
+        final lang = normalizeLearningLanguage(language);
+        final english = lang == 'en';
+        if (draft.korean.trim().isEmpty ||
+            draft.meaningZh.trim().isEmpty ||
+            (!english && (draft.partOfSpeech?.trim().isEmpty ?? true))) {
+          throw FormatException(english ? '请填写英文单词和中文释义' : '请填写韩语、中文释义和词性');
+        }
+        final existing =
+            await (select(words)..where(
+                  (word) =>
+                      word.language.equals(lang) &
+                      word.normalizedKorean.equals(draft.normalizedKorean) &
+                      word.normalizedBaseForm.equals(draft.normalizedBaseForm),
+                ))
+                .getSingleOrNull();
+        if (existing != null) {
+          throw const FormatException('这个单词已存在，请在词库中编辑');
+        }
+        final source = 'manual://words/$lang';
+        final book =
+            await (select(wordBooks)..where(
+                  (item) =>
+                      item.sourceFileName.equals(source) &
+                      item.language.equals(lang),
+                ))
+                .getSingleOrNull();
+        final now = DateTime.now().toUtc();
+        final bookId =
+            book?.id ??
+            await into(wordBooks).insert(
+              WordBooksCompanion.insert(
+                name: english ? '手动录入' : '手动录入',
+                sourceFileName: Value(source),
+                language: Value(lang),
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
+        final wordId = await into(
+          words,
+        ).insert(draft.toCompanion(source: '手动录入', language: lang));
+        await into(wordBookWords).insert(
+          WordBookWordsCompanion.insert(
+            wordBookId: bookId,
+            wordId: wordId,
+            sortOrder: wordId,
           ),
         );
-    final wordId = await into(words).insert(draft.toCompanion(source: '手动录入'));
-    await into(wordBookWords).insert(
-      WordBookWordsCompanion.insert(
-        wordBookId: bookId,
-        wordId: wordId,
-        sortOrder: wordId,
-      ),
-    );
-    return wordId;
-  });
+        return wordId;
+      });
 
   /// Looks up only the incoming keys, in chunks. Never scans the whole words table.
   Future<Map<(String, String), Word>> _wordsForDrafts(
     List<WordDraft> drafts,
+    String language,
   ) async {
     final found = <(String, String), Word>{};
+    final lang = normalizeLearningLanguage(language);
     for (var offset = 0; offset < drafts.length; offset += 200) {
       final keys = drafts
           .skip(offset)
@@ -593,9 +827,13 @@ class AppDatabase extends _$AppDatabase {
           .toSet()
           .toList();
       if (keys.isEmpty) continue;
-      final rows = await (select(
-        words,
-      )..where((word) => word.normalizedKorean.isIn(keys))).get();
+      final rows =
+          await (select(words)..where(
+                (word) =>
+                    word.language.equals(lang) &
+                    word.normalizedKorean.isIn(keys),
+              ))
+              .get();
       for (final row in rows) {
         found[(row.normalizedKorean, row.normalizedBaseForm)] = row;
       }
@@ -608,14 +846,16 @@ class AppDatabase extends _$AppDatabase {
     required List<WordDraft> drafts,
     required String source,
     bool enrichExisting = false,
+    String language = 'ko',
   }) async {
-    final known = await _wordsForDrafts(drafts);
+    final lang = normalizeLearningLanguage(language);
+    final known = await _wordsForDrafts(drafts, lang);
     final additions = <WordsCompanion>[];
     final insertedKeys = <(String, String)>{};
     for (final draft in drafts) {
       final key = (draft.normalizedKorean, draft.normalizedBaseForm);
       if (known.containsKey(key) || !insertedKeys.add(key)) continue;
-      additions.add(draft.toCompanion(source: source));
+      additions.add(draft.toCompanion(source: source, language: lang));
     }
     for (var offset = 0; offset < additions.length; offset += 400) {
       await batch(
@@ -625,7 +865,7 @@ class AppDatabase extends _$AppDatabase {
     if (additions.isNotEmpty) {
       known
         ..clear()
-        ..addAll(await _wordsForDrafts(drafts));
+        ..addAll(await _wordsForDrafts(drafts, lang));
     }
     final links = <WordBookWordsCompanion>[];
     final enriched = <int>{};
@@ -695,6 +935,10 @@ class AppDatabase extends _$AppDatabase {
   }) {
     return transaction(() async {
       final undo = await captureReviewUndo(wordId, localDay, session);
+      final wordRow = await (select(
+        words,
+      )..where((row) => row.id.equals(wordId))).getSingle();
+      final lang = normalizeLearningLanguage(wordRow.language);
       final previous = await cardForWord(wordId);
       final now = reviewedAt.toUtc();
       final due = _dateTime(cardMap['due']) ?? now;
@@ -714,6 +958,7 @@ class AppDatabase extends _$AppDatabase {
           isWrong;
       final companion = StudyCardsCompanion(
         wordId: Value(wordId),
+        language: Value(lang),
         state: Value(_integer(cardMap['state'])),
         due: Value(due),
         stability: Value(_double(cardMap['stability'])),
@@ -737,6 +982,7 @@ class AppDatabase extends _$AppDatabase {
       await into(reviewLogs).insert(
         ReviewLogsCompanion.insert(
           wordId: wordId,
+          language: Value(lang),
           submissionToken: submissionToken,
           rating: rating,
           reviewedAt: now,
@@ -750,13 +996,16 @@ class AppDatabase extends _$AppDatabase {
       );
 
       final day = _dailyStatKey(localDay);
-      final statistics = await (select(
-        dailyStatistics,
-      )..where((row) => row.date.equals(day))).getSingleOrNull();
+      final statistics =
+          await (select(dailyStatistics)..where(
+                (row) => row.date.equals(day) & row.language.equals(lang),
+              ))
+              .getSingleOrNull();
       if (statistics == null) {
         await into(dailyStatistics).insert(
           DailyStatisticsCompanion.insert(
             date: day,
+            language: Value(lang),
             newWords: Value(isNewWord ? 1 : 0),
             reviewWords: Value(countsAsReview ? 1 : 0),
             correctCount: Value(isWrong ? 0 : 1),
@@ -766,18 +1015,21 @@ class AppDatabase extends _$AppDatabase {
         );
       } else {
         await (update(
-          dailyStatistics,
-        )..where((row) => row.date.equals(day))).write(
-          DailyStatisticsCompanion(
-            newWords: Value(statistics.newWords + (isNewWord ? 1 : 0)),
-            reviewWords: Value(
-              statistics.reviewWords + (countsAsReview ? 1 : 0),
-            ),
-            correctCount: Value(statistics.correctCount + (isWrong ? 0 : 1)),
-            wrongCount: Value(statistics.wrongCount + (isWrong ? 1 : 0)),
-            studyDurationMs: Value(statistics.studyDurationMs + durationMs),
-          ),
-        );
+              dailyStatistics,
+            )..where((row) => row.date.equals(day) & row.language.equals(lang)))
+            .write(
+              DailyStatisticsCompanion(
+                newWords: Value(statistics.newWords + (isNewWord ? 1 : 0)),
+                reviewWords: Value(
+                  statistics.reviewWords + (countsAsReview ? 1 : 0),
+                ),
+                correctCount: Value(
+                  statistics.correctCount + (isWrong ? 0 : 1),
+                ),
+                wrongCount: Value(statistics.wrongCount + (isWrong ? 1 : 0)),
+                studyDurationMs: Value(statistics.studyDurationMs + durationMs),
+              ),
+            );
       }
       await customStatement(
         'INSERT INTO user_words (word_id,is_favorite,is_difficult,correct_count,wrong_count,last_seen_at) VALUES (?,0,?,?,?,?) '
@@ -798,6 +1050,7 @@ class AppDatabase extends _$AppDatabase {
         submissionToken,
         undo,
         session,
+        lang,
       );
       if (becameLeech) await saveSetting('word_status:$wordId', 'suspended');
       return ReviewWriteResult(leechSuspended: becameLeech, lapses: lapses);
@@ -808,10 +1061,13 @@ class AppDatabase extends _$AppDatabase {
     required String query,
     required LibraryFilter filter,
     int? bookId,
+    String language = 'ko',
   }) {
     final normalized = normalizeLookup(query);
-    final where = <String>['1=1'];
-    final variables = <Variable>[];
+    final where = <String>['w.language = ?'];
+    final variables = <Variable>[
+      Variable<String>(normalizeLearningLanguage(language)),
+    ];
     if (normalized.isNotEmpty) {
       where.add(
         '(lower(w.korean) LIKE ? OR lower(w.meaning_zh) LIKE ? OR lower(w.base_form) LIKE ? OR lower(coalesce(w.tags, \'\')) LIKE ? OR lower(coalesce(w.part_of_speech, \'\')) LIKE ?)',
@@ -850,8 +1106,14 @@ class AppDatabase extends _$AppDatabase {
     required String query,
     required LibraryFilter filter,
     int? bookId,
+    String language = 'ko',
   }) async {
-    final clause = _libraryClause(query: query, filter: filter, bookId: bookId);
+    final clause = _libraryClause(
+      query: query,
+      filter: filter,
+      bookId: bookId,
+      language: language,
+    );
     final row = await customSelect(
       'SELECT COUNT(*) AS amount $_libraryFrom WHERE ${clause.where}',
       variables: clause.variables,
@@ -866,8 +1128,14 @@ class AppDatabase extends _$AppDatabase {
     int? bookId,
     int? limit,
     int offset = 0,
+    String language = 'ko',
   }) async {
-    final clause = _libraryClause(query: query, filter: filter, bookId: bookId);
+    final clause = _libraryClause(
+      query: query,
+      filter: filter,
+      bookId: bookId,
+      language: language,
+    );
     final variables = [...clause.variables];
     var sql =
         'SELECT w.id $_libraryFrom WHERE ${clause.where} ORDER BY w.korean, w.id';
@@ -944,6 +1212,10 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> deleteWord(int id) => transaction(() async {
+    final existing = await (select(
+      words,
+    )..where((row) => row.id.equals(id))).getSingleOrNull();
+    final lang = normalizeLearningLanguage(existing?.language);
     await (delete(aiWordContents)..where((r) => r.wordId.equals(id))).go();
     await (delete(aiSuggestions)..where((r) => r.wordId.equals(id))).go();
     await (delete(aiTaskItems)..where((r) => r.wordId.equals(id))).go();
@@ -955,9 +1227,9 @@ class AppDatabase extends _$AppDatabase {
           ]),
         ))
         .go();
-    final undo = await loadSetting('last_review_undo');
+    final undo = await loadSetting(scopedSetting(lang, 'last_review_undo'));
     if (undo != null && (jsonDecode(undo) as Map)['wordId'] == id) {
-      await saveSetting('last_review_undo', null);
+      await saveSetting(scopedSetting(lang, 'last_review_undo'), null);
     }
     await (delete(reviewLogs)..where((r) => r.wordId.equals(id))).go();
     await (delete(studyCards)..where((r) => r.wordId.equals(id))).go();
@@ -969,7 +1241,9 @@ class AppDatabase extends _$AppDatabase {
   Future<List<DailyStatisticsSummary>> loadRecentStatistics(
     DateTime now, {
     int days = 7,
+    String language = 'ko',
   }) async {
+    final lang = normalizeLearningLanguage(language);
     final today = DateTime.utc(now.year, now.month, now.day),
         start = DateTime.utc(
           now.year,
@@ -980,6 +1254,7 @@ class AppDatabase extends _$AppDatabase {
         await (select(dailyStatistics)
               ..where(
                 (r) =>
+                    r.language.equals(lang) &
                     r.date.isBiggerOrEqualValue(start) &
                     r.date.isSmallerOrEqualValue(today),
               )
@@ -1126,7 +1401,7 @@ class WordDraft {
   String get normalizedKorean => normalizeLookup(korean);
   String get normalizedBaseForm => normalizeLookup(baseForm);
 
-  WordsCompanion toCompanion({required String source}) {
+  WordsCompanion toCompanion({required String source, String language = 'ko'}) {
     final now = DateTime.now().toUtc();
     return WordsCompanion.insert(
       korean: korean.trim(),
@@ -1145,6 +1420,7 @@ class WordDraft {
       hanja: Value(_nullable(hanja)),
       etymology: Value(_nullable(etymology)),
       source: Value(source),
+      language: Value(normalizeLearningLanguage(language)),
       createdAt: now,
       updatedAt: now,
     );

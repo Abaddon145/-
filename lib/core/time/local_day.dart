@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/study/domain/providers.dart';
 
 DateTime localDay(DateTime value) =>
     DateTime(value.year, value.month, value.day);
@@ -49,7 +50,10 @@ class _LocalDayObserverState extends ConsumerState<LocalDayObserver>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _checkDay();
+    if (state == AppLifecycleState.resumed) {
+      _checkDay();
+      ref.read(activeLanguageProvider.notifier).reload();
+    }
   }
 
   @override

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/language/learning_language.dart';
 import '../../../services/fsrs_service.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
@@ -46,8 +47,11 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
   void initState() {
     super.initState();
     final database = ref.read(databaseProvider);
-    _settingsFuture = database.loadDailyPlanSettings();
-    database.loadSetting(retentionSettingKey).then((value) {
+    final language = ref.read(activeLanguageProvider);
+    _settingsFuture = database.loadDailyPlanSettings(language);
+    database.loadSetting(scopedSetting(language, retentionSettingKey)).then((
+      value,
+    ) {
       if (!mounted) return;
       setState(() => _retention = normalizeDesiredRetention(value));
     });
@@ -61,11 +65,13 @@ class _DailyPlanPageState extends ConsumerState<DailyPlanPage> {
     setState(() => _saving = true);
     try {
       final database = ref.read(databaseProvider);
+      final language = ref.read(activeLanguageProvider);
       await database.saveDailyPlanSettings(
         DailyPlanSettings(newWordsPerDay: newWords, reviewsPerDay: reviews),
+        language,
       );
       await database.saveSetting(
-        retentionSettingKey,
+        scopedSetting(language, retentionSettingKey),
         _retention.toStringAsFixed(2),
       );
       ref.invalidate(dailyPlanSettingsProvider);

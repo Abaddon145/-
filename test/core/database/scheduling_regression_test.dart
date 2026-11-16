@@ -4,6 +4,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:korean_memo/core/database/app_database.dart';
+import 'package:korean_memo/core/language/learning_language.dart';
 import 'package:korean_memo/core/text/cloze_target.dart';
 import 'package:korean_memo/features/settings/domain/backup_file.dart';
 import 'package:korean_memo/features/settings/domain/backup_delivery.dart';
@@ -356,7 +357,10 @@ void main() {
               createdAt: DateTime.utc(2026, 11, 9),
             ),
           );
-      await database.saveSetting(retentionSettingKey, '0.85');
+      await database.saveSetting(
+        scopedSetting('ko', retentionSettingKey),
+        '0.85',
+      );
       final legacy = await database.createBackupSnapshot();
       expect((legacy['tables'] as Map).containsKey('ai_suggestions'), isFalse);
       await database.restoreBackupSnapshot(legacy);
@@ -364,7 +368,7 @@ void main() {
       await restored.restoreBackupSnapshot(legacy);
       expect(
         normalizeDesiredRetention(
-          await restored.loadSetting(retentionSettingKey),
+          await restored.loadSetting(scopedSetting('ko', retentionSettingKey)),
         ),
         0.85,
       );

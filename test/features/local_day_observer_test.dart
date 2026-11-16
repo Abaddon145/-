@@ -1,7 +1,10 @@
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:korean_memo/core/database/app_database.dart';
 import 'package:korean_memo/core/time/local_day.dart';
+import 'package:korean_memo/features/study/domain/providers.dart';
 
 void main() {
   testWidgets('midnight refreshes the day without restarting the app', (
@@ -30,9 +33,12 @@ void main() {
     tester,
   ) async {
     var now = DateTime(2026, 10, 8, 12);
+    final db = AppDatabase(NativeDatabase.memory());
+    addTearDown(db.close);
     final container = ProviderContainer(
       overrides: [
         localDayProvider.overrideWith((ref) => DateTime(2026, 10, 8)),
+        databaseProvider.overrideWithValue(db),
       ],
     );
     addTearDown(container.dispose);

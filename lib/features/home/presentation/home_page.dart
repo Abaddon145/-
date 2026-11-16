@@ -35,15 +35,33 @@ class HomePage extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
             children: [
               Text(
-                '每天，让韩语熟悉一点',
+                ref.watch(activeLanguageProvider) == 'en'
+                    ? '每天，让英语熟悉一点'
+                    : '每天，让韩语熟悉一点',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
-                '从今天的计划开始，按自己的节奏学习。',
+                ref.watch(activeLanguageProvider) == 'en'
+                    ? '从今天的计划开始，按自己的节奏学英语。'
+                    : '从今天的计划开始，按自己的节奏学习。',
                 style: TextStyle(color: colors.onSurfaceVariant),
+              ),
+              const SizedBox(height: 16),
+              SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(value: 'ko', label: Text('韩语')),
+                  ButtonSegment(value: 'en', label: Text('英语')),
+                ],
+                selected: {ref.watch(activeLanguageProvider)},
+                onSelectionChanged: (selected) {
+                  ref
+                      .read(activeLanguageProvider.notifier)
+                      .select(selected.first);
+                },
               ),
               const SizedBox(height: 20),
               plan.when(

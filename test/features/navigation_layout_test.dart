@@ -16,7 +16,7 @@ class CountingDatabase extends AppDatabase {
   int autoReads = 0;
   @override
   Future<String?> loadSetting(String key) {
-    if (key == 'auto_checkin') {
+    if (key == 'ko:auto_checkin' || key == 'auto_checkin') {
       autoReads++;
     }
     return super.loadSetting(key);

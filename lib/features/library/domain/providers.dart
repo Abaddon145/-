@@ -27,6 +27,7 @@ final libraryWordsProvider = FutureProvider.autoDispose<List<LibraryWordEntry>>(
       filter: filter,
       bookId: ref.watch(libraryBookProvider),
       limit: limit,
+      language: ref.watch(activeLanguageProvider),
     );
   },
 );
@@ -38,5 +39,6 @@ final libraryCountProvider = FutureProvider.autoDispose<int>((ref) async {
     query: ref.watch(librarySearchProvider),
     filter: ref.watch(libraryFilterProvider),
     bookId: ref.watch(libraryBookProvider),
+    language: ref.watch(activeLanguageProvider),
   );
 });

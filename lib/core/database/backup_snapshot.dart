@@ -1,5 +1,35 @@
 part of 'app_database.dart';
 
+const _backupLanguageTables = {
+  'words',
+  'word_books',
+  'study_cards',
+  'review_logs',
+  'daily_statistics',
+  'ai_suggestions',
+  'ai_tasks',
+  'ai_task_items',
+  'ai_word_contents',
+};
+
+bool _keepBackupRow(
+  String table,
+  Map<String, Object?> row,
+  Set<String> excludedSettings,
+) {
+  if (table == 'app_settings') {
+    final key = row['key'] as String;
+    return !key.startsWith('cloud_') && !excludedSettings.contains(key);
+  }
+  final language = row['language'];
+  return language == null || language == 'ko';
+}
+
+Map<String, Object?> _backupRow(Map<String, Object?> row) {
+  final copy = Map<String, Object?>.from(row)..remove('language');
+  return copy;
+}
+
 extension BackupSnapshots on AppDatabase {
   Future<Map<String, Object?>> createBackupSnapshot({bool includeAi = false}) =>
       transaction(() async {
@@ -32,10 +62,8 @@ extension BackupSnapshots on AppDatabase {
           final rows = await customSelect('SELECT * FROM $table').get();
           data[table] = [
             for (final row in rows)
-              if (table != 'app_settings' ||
-                  (!(row.data['key'] as String).startsWith('cloud_') &&
-                      !excludedSettings.contains(row.data['key'])))
-                Map<String, Object?>.from(row.data),
+              if (_keepBackupRow(table, row.data, excludedSettings))
+                _backupRow(row.data),
           ];
         }
         return {
@@ -230,10 +258,15 @@ extension BackupSnapshots on AppDatabase {
       for (final table in columns.keys) {
         for (final raw in payload[table] as List) {
           final row = Map<String, Object?>.from(raw as Map);
-          final names = columns[table]!;
+          final names = [...columns[table]!];
+          final values = [for (final name in names) row[name]];
+          if (_backupLanguageTables.contains(table)) {
+            names.add('language');
+            values.add(row['language'] ?? 'ko');
+          }
           await customStatement(
             'INSERT INTO $table (${names.join(',')}) VALUES (${List.filled(names.length, '?').join(',')})',
-            [for (final name in names) row[name]],
+            values,
           );
         }
       }
@@ -243,6 +276,12 @@ extension BackupSnapshots on AppDatabase {
       // An undo snapshot is valid only for the transaction that produced it on
       // this device; imported files must never provide executable row snapshots.
       await saveSetting('last_review_undo', null);
+      await saveSetting(scopedSetting('ko', 'last_review_undo'), null);
+      await saveSetting(scopedSetting('en', 'last_review_undo'), null);
+      await _prefixLearningSettings();
+      if (await loadSetting(activeLanguageSettingKey) == null) {
+        await saveSetting(activeLanguageSettingKey, 'ko');
+      }
       await customStatement(
         "DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'",
       );

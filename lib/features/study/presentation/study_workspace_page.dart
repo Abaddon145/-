@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/language/learning_language.dart';
 import '../../../core/theme/reading_preferences.dart';
 import '../../library/domain/providers.dart';
 import '../../library/presentation/word_editor_sheet.dart';
@@ -154,7 +155,15 @@ class _StudyPageState extends ConsumerState<StudyPage>
         if (!mounted || _spokenWordId != spokenId) return;
         final rate =
             double.tryParse(
-              await ref.read(databaseProvider).loadSetting('speech_rate') ?? '',
+              await ref
+                      .read(databaseProvider)
+                      .loadSetting(
+                        scopedSetting(
+                          ref.read(activeLanguageProvider),
+                          'speech_rate',
+                        ),
+                      ) ??
+                  '',
             ) ??
             .45;
         if (!mounted || _spokenWordId != spokenId) return;
@@ -443,7 +452,12 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                                                       databaseProvider,
                                                                     )
                                                                     .loadSetting(
-                                                                      'speech_rate',
+                                                                      scopedSetting(
+                                                                        ref.read(
+                                                                          activeLanguageProvider,
+                                                                        ),
+                                                                        'speech_rate',
+                                                                      ),
                                                                     ) ??
                                                                 '',
                                                           ) ??
