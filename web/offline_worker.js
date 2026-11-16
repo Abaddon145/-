@@ -1,9 +1,10 @@
 // Own the app cache explicitly instead of relying on Flutter's deprecated worker.
 const CACHE = 'korean-memo-0.11.0';
 function canvasKitFiles() {
-  const ua = self.navigator.userAgent || '';
+  const nav = self.navigator || {};
+  const ua = nav.userAgent || '';
   const ios = /iPhone|iPad|iPod/.test(ua) ||
-    (/Macintosh/.test(ua) && self.navigator.maxTouchPoints > 1);
+    (/Macintosh/.test(ua) && (nav.maxTouchPoints || 0) > 1);
   const blink = /Chrome|Chromium|Edg\//.test(ua) && !ios && !/CriOS|FxiOS/.test(ua);
   const base = blink ? 'canvaskit/chromium/' : 'canvaskit/';
   return [base + 'canvaskit.js', base + 'canvaskit.wasm'];
