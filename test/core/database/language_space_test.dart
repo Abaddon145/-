@@ -79,7 +79,7 @@ void main() {
       raw.execute('CREATE TABLE $table (id INTEGER PRIMARY KEY)');
     }
     raw.execute('PRAGMA user_version = 5');
-    raw.dispose();
+    raw.close();
   }
 
   test('schema 5 migrates check-ins and words into Korean', () async {
@@ -115,7 +115,7 @@ void main() {
     final raw = sqlite3.open(file.path);
     final version = raw.select('PRAGMA user_version').single.values.single;
     final columns = raw.select('PRAGMA table_info(words)');
-    raw.dispose();
+    raw.close();
     expect(version, 5);
     expect(columns.any((row) => row['name'] == 'language'), isFalse);
   });
