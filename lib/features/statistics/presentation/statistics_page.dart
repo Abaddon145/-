@@ -297,25 +297,67 @@ class _StatGrid extends StatelessWidget {
 class _WeekBars extends StatelessWidget {
   const _WeekBars({required this.days});
   final List<DailyStatisticsSummary> days;
+  static const _weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final quiet =
+        days.isEmpty || days.every((day) => day.newWords + day.reviews == 0);
+    final description = quiet
+        ? '完成第一次学习后，这里会显示近 7 天的柱状图'
+        : '近 7 天学习次数：${days.map((day) => '周${_weekdays[day.date.weekday - 1]} ${day.newWords + day.reviews}次').join('，')}';
     final maxValue = days.fold<int>(
       1,
       (max, day) => math.max(max, day.newWords + day.reviews),
     );
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: AppMotion.duration(context, 300),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, _) => CustomPaint(
-        painter: _WeekBarPainter(
-          days: days,
-          maxValue: maxValue,
-          progress: t,
-          primary: Theme.of(context).colorScheme.primary,
-          again: Theme.of(context).colorScheme.errorContainer,
-        ),
-        child: const SizedBox.expand(),
+    return Semantics(
+      label: description,
+      child: ExcludeSemantics(
+        child: quiet
+            ? Center(
+                child: Text(
+                  '完成第一次学习后，这里会显示近 7 天的柱状图',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              )
+            : Column(
+                children: [
+                  Expanded(
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: AppMotion.duration(context, 300),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, t, _) => CustomPaint(
+                        painter: _WeekBarPainter(
+                          days: days,
+                          maxValue: maxValue,
+                          progress: t,
+                          primary: colors.primary,
+                          again: colors.errorContainer,
+                        ),
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      for (final day in days)
+                        Expanded(
+                          child: Text(
+                            _weekdays[day.date.weekday - 1],
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: colors.onSurfaceVariant),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
       ),
     );
   }

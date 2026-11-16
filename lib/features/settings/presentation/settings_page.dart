@@ -329,10 +329,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       const SizedBox(height: 10),
                       Text(
                         '你的学习，保存在本机',
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: colors.onPrimaryContainer,
+                        ),
                       ),
                       const SizedBox(height: 6),
-                      const Text('无需账户。换设备时，用备份文件带走词库与进度。'),
+                      Text(
+                        '无需账户。换设备时，用备份文件带走词库与进度。',
+                        style: TextStyle(color: colors.onPrimaryContainer),
+                      ),
                     ],
                   ),
                 ),

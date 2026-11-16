@@ -22,21 +22,7 @@ class HomePage extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('KoreanMemo'),
-        actions: [
-          ref
-              .watch(checkinsProvider)
-              .when(
-                data: (c) => Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: Chip(label: Text('连续 ${c.streak} 天')),
-                ),
-                loading: () => const SizedBox.shrink(),
-                error: (_, _) => const SizedBox.shrink(),
-              ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('KoreanMemo')),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -184,6 +170,10 @@ class _TodayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final started = progress.newWordsDone + progress.reviewsDone > 0;
+    final base = Theme.of(context).brightness == Brightness.dark
+        ? colors.surfaceContainerHigh
+        : colors.surfaceContainerLowest;
+    final tint = Color.alphaBlend(colors.primary.withValues(alpha: .14), base);
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
@@ -192,13 +182,7 @@ class _TodayCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              colors.primaryContainer,
-              Color.alphaBlend(
-                colors.primary.withValues(alpha: .06),
-                colors.surface,
-              ),
-            ],
+            colors: [tint, base],
           ),
         ),
         child: Padding(
@@ -264,15 +248,27 @@ class _PlanRow extends StatelessWidget {
   final String label;
   final int done, target;
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Row(children: [Text(label), const Spacer(), Text('$done / $target')]),
-      const SizedBox(height: 6),
-      SmoothProgress(
-        value: target == 0 ? 1 : (done / target).clamp(0, 1).toDouble(),
-      ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Row(children: [Text(label), const Spacer(), Text('$done / $target')]),
+        const SizedBox(height: 6),
+        Theme(
+          data: theme.copyWith(
+            progressIndicatorTheme: theme.progressIndicatorTheme.copyWith(
+              linearTrackColor: theme.colorScheme.primary.withValues(
+                alpha: .24,
+              ),
+            ),
+          ),
+          child: SmoothProgress(
+            value: target == 0 ? 1 : (done / target).clamp(0, 1).toDouble(),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _CountCell extends StatelessWidget {

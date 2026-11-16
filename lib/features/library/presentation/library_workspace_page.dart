@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../../core/database/missing_meaning.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
@@ -338,15 +339,22 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
             ),
       floatingActionButton: visibleSelected > 0
           ? null
-          : _fabCompact
-          ? FloatingActionButton(
-              onPressed: () => _edit(),
-              child: const Icon(Icons.add),
-            )
-          : FloatingActionButton.extended(
-              onPressed: () => _edit(),
-              icon: const Icon(Icons.add),
-              label: const Text('录入单词'),
+          : AnimatedSwitcher(
+              duration: AppMotion.duration(context, 200),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: _fabCompact
+                  ? FloatingActionButton(
+                      key: const ValueKey('compact'),
+                      onPressed: () => _edit(),
+                      child: const Icon(Icons.add),
+                    )
+                  : FloatingActionButton.extended(
+                      key: const ValueKey('extended'),
+                      onPressed: () => _edit(),
+                      icon: const Icon(Icons.add),
+                      label: const Text('录入单词'),
+                    ),
             ),
       body: SafeArea(
         child: NotificationListener<ScrollNotification>(

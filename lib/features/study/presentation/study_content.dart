@@ -25,7 +25,7 @@ class _StudyActionsState extends State<StudyActions> {
   StudyRating? _acked;
 
   Future<void> _rate(StudyRating rating) async {
-    if (widget.busy) return;
+    if (widget.busy || _acked != null) return;
     setState(() => _acked = rating);
     await Future<void>.delayed(AppMotion.duration(context, 120));
     if (!mounted) return;
@@ -102,10 +102,10 @@ class _StudyActionsState extends State<StudyActions> {
       interval ?? '',
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+      style: const TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        fontFeatures: const [FontFeature.tabularFigures()],
+        fontFeatures: [FontFeature.tabularFigures()],
       ),
     );
     final title = _acked == rating.$1

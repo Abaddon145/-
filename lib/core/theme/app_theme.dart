@@ -121,10 +121,17 @@ abstract final class AppTheme {
           fontWeight: FontWeight.w700,
         ),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
+      ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.transparent,
         height: 68,
-        indicatorColor: scheme.primaryContainer,
+        indicatorColor: scheme.secondaryContainer,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
             fontSize: 12,
