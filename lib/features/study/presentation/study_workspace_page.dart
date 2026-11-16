@@ -300,6 +300,7 @@ class _StudyPageState extends ConsumerState<StudyPage>
                 : Padding(
                     padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         options.daily
                             ? ref
@@ -374,363 +375,424 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                             controller.reveal();
                                           }
 
-                                          return Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
+                                          return Stack(
                                             children: [
-                                              Row(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.end,
-                                                children: [
-                                                  IconButton(
-                                                    tooltip: '收藏',
-                                                    onPressed: () async {
-                                                      final db = ref.read(
-                                                        databaseProvider,
-                                                      );
-                                                      await db.setFavorite(
-                                                        word.id,
-                                                        !favorite,
-                                                      );
-                                                      ref.invalidate(
-                                                        studyFavoriteProvider(
-                                                          word.id,
-                                                        ),
-                                                      );
-                                                      ref.invalidate(
-                                                        libraryWordsProvider,
-                                                      );
-                                                      if (context.mounted) {
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          SnackBar(
-                                                            content: Text(
-                                                              favorite
-                                                                  ? '已取消收藏'
-                                                                  : '已收藏',
-                                                            ),
+                                              ConstrainedBox(
+                                                constraints: BoxConstraints(
+                                                  minWidth:
+                                                      (constraints.maxWidth -
+                                                              36)
+                                                          .clamp(
+                                                            0,
+                                                            double.infinity,
                                                           ),
-                                                        );
-                                                      }
-                                                    },
-                                                    icon: AnimatedSwitcher(
-                                                      duration:
-                                                          AppMotion.duration(
-                                                            context,
-                                                            160,
+                                                  minHeight:
+                                                      (constraints.maxHeight -
+                                                              36)
+                                                          .clamp(
+                                                            0,
+                                                            double.infinity,
                                                           ),
-                                                      transitionBuilder:
-                                                          (child, animation) =>
-                                                              ScaleTransition(
-                                                                scale:
-                                                                    animation,
-                                                                child: child,
-                                                              ),
-                                                      child: Icon(
-                                                        favorite
-                                                            ? Icons.star_rounded
-                                                            : Icons
-                                                                  .star_border_rounded,
-                                                        key: ValueKey(favorite),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  PopupMenuButton<String>(
-                                                    tooltip: '更多',
-                                                    icon: const Icon(
-                                                      Icons.more_horiz,
-                                                    ),
-                                                    onSelected: (value) async {
-                                                      if (value == 'edit') {
-                                                        await _edit(word);
-                                                      } else {
-                                                        controller
-                                                            .pauseForPanel();
-                                                        try {
-                                                          await showWordDetail(
-                                                            context,
-                                                            word,
-                                                          );
-                                                        } finally {
-                                                          if (mounted &&
-                                                              controller
-                                                                  .mounted) {
-                                                            controller
-                                                                .resumeFromPanel();
-                                                          }
-                                                        }
-                                                      }
-                                                    },
-                                                    itemBuilder: (_) => const [
-                                                      PopupMenuItem(
-                                                        value: 'edit',
-                                                        child: Text('编辑单词'),
-                                                      ),
-                                                      PopupMenuItem(
-                                                        value: 'detail',
-                                                        child: Text('单词详情'),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 12),
-                                              Semantics(
-                                                localeForSubtree:
-                                                    hangulPattern.hasMatch(
-                                                      item.question,
-                                                    )
-                                                    ? const Locale('ko')
-                                                    : null,
-                                                child: Text(
-                                                  item.question,
-                                                  locale:
-                                                      hangulPattern.hasMatch(
+                                                ),
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Semantics(
+                                                      localeForSubtree:
+                                                          hangulPattern
+                                                              .hasMatch(
+                                                                item.question,
+                                                              )
+                                                          ? const Locale('ko')
+                                                          : null,
+                                                      child: Text(
                                                         item.question,
-                                                      )
-                                                      ? const Locale('ko')
-                                                      : null,
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .headlineMedium
-                                                      ?.copyWith(
-                                                        fontSize:
-                                                            reading.wordSize,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        height:
-                                                            reading.lineHeight,
-                                                      ),
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ),
-                                              if (word
-                                                      .partOfSpeech
-                                                      ?.isNotEmpty ==
-                                                  true)
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 10,
-                                                      ),
-                                                  child: Chip(
-                                                    label: Text(
-                                                      word.partOfSpeech!,
-                                                    ),
-                                                  ),
-                                                ),
-                                              const SizedBox(height: 12),
-                                              IconButton.filledTonal(
-                                                tooltip: '播放发音',
-                                                onPressed: () async {
-                                                  final rate =
-                                                      double.tryParse(
-                                                        await ref
-                                                                .read(
-                                                                  databaseProvider,
+                                                        locale:
+                                                            hangulPattern
+                                                                .hasMatch(
+                                                                  item.question,
                                                                 )
-                                                                .loadSetting(
-                                                                  'speech_rate',
-                                                                ) ??
-                                                            '',
-                                                      ) ??
-                                                      .45;
-                                                  await ref
-                                                      .read(ttsServiceProvider)
-                                                      .speakKorean(
-                                                        item.spoken,
-                                                        rate: rate,
-                                                      );
-                                                },
-                                                icon: const Icon(
-                                                  Icons.volume_up_rounded,
-                                                ),
-                                              ),
-                                              TextButton.icon(
-                                                onPressed: state.isSubmitting
-                                                    ? null
-                                                    : () => _explain(word),
-                                                icon: const Icon(
-                                                  Icons.auto_awesome,
-                                                ),
-                                                label: const Text('AI 解释'),
-                                              ),
-                                              if (quiz) ...[
-                                                const SizedBox(height: 18),
-                                                TextField(
-                                                  controller: _answer,
-                                                  enabled: _correct == null,
-                                                  decoration:
-                                                      const InputDecoration(
-                                                        labelText: '输入答案',
-                                                      ),
-                                                  onSubmitted: (_) => grade(),
-                                                ),
-                                                const SizedBox(height: 12),
-                                                if (_correct == null)
-                                                  OutlinedButton(
-                                                    onPressed: grade,
-                                                    child: const Text('检查答案'),
-                                                  )
-                                                else ...[
-                                                  Text(
-                                                    _correct!
-                                                        ? '回答正确'
-                                                        : '需要再记一次',
-                                                    style: TextStyle(
-                                                      color: _correct!
-                                                          ? colors.primary
-                                                          : colors.error,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    '参考答案：${item.answer}',
-                                                    locale:
-                                                        hangulPattern.hasMatch(
-                                                          item.answer,
-                                                        )
-                                                        ? const Locale('ko')
-                                                        : null,
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  Text(
-                                                    _correct!
-                                                        ? '建议记为「认识」。记得很吃力可选「困难」，毫不费力可选「简单」。'
-                                                        : '如果只是差一点，可选「困难」，不必把整张卡片记成忘记。',
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                  if (!_correct!)
-                                                    Wrap(
-                                                      children: [
-                                                        for (final mark
-                                                            in answerHighlight(
-                                                              _answer.text,
-                                                              item.answer,
-                                                            ))
-                                                          Text(
-                                                            mark.text,
-                                                            locale:
-                                                                hangulPattern
-                                                                    .hasMatch(
-                                                                      mark.text,
-                                                                    )
-                                                                ? const Locale(
-                                                                    'ko',
-                                                                  )
-                                                                : null,
-                                                            style: TextStyle(
-                                                              fontSize: 22,
-                                                              color:
-                                                                  mark.correct
-                                                                  ? colors
-                                                                        .primary
-                                                                  : colors
-                                                                        .error,
-                                                            ),
-                                                          ),
-                                                      ],
-                                                    ),
-                                                ],
-                                              ] else if (state.isRevealed) ...[
-                                                const Divider(
-                                                  indent: 48,
-                                                  endIndent: 48,
-                                                  height: 32,
-                                                ),
-                                                RevealContent(
-                                                  child: Column(
-                                                    children: [
-                                                      StudyMeaning(
-                                                        key: ValueKey(word.id),
-                                                        text: item.answer,
+                                                            ? const Locale('ko')
+                                                            : null,
                                                         style: Theme.of(context)
                                                             .textTheme
-                                                            .headlineSmall
+                                                            .headlineMedium
                                                             ?.copyWith(
                                                               fontSize: reading
-                                                                  .meaningSize,
+                                                                  .wordSize,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
                                                               height: reading
                                                                   .lineHeight,
-                                                              color:
-                                                                  Theme.of(
-                                                                        context,
-                                                                      )
-                                                                      .colorScheme
-                                                                      .onSurface,
                                                             ),
+                                                        textAlign:
+                                                            TextAlign.center,
                                                       ),
-                                                      if (word
-                                                                  .exampleKo
-                                                                  ?.isNotEmpty ==
-                                                              true ||
-                                                          word
-                                                                  .exampleZh
-                                                                  ?.isNotEmpty ==
-                                                              true)
-                                                        Container(
-                                                          width:
-                                                              double.infinity,
-                                                          margin:
-                                                              const EdgeInsets.only(
-                                                                top: 12,
-                                                              ),
-                                                          padding:
-                                                              const EdgeInsets.all(
-                                                                14,
-                                                              ),
-                                                          decoration: BoxDecoration(
-                                                            color: Theme.of(context)
-                                                                .colorScheme
-                                                                .surfaceContainerLow,
-                                                            borderRadius:
-                                                                BorderRadius.circular(
-                                                                  16,
-                                                                ),
+                                                    ),
+                                                    if (word
+                                                            .partOfSpeech
+                                                            ?.isNotEmpty ==
+                                                        true)
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets.only(
+                                                              top: 10,
+                                                            ),
+                                                        child: Chip(
+                                                          label: Text(
+                                                            word.partOfSpeech!,
                                                           ),
-                                                          child: Column(
+                                                        ),
+                                                      ),
+                                                    const SizedBox(height: 12),
+                                                    IconButton.filledTonal(
+                                                      tooltip: '播放发音',
+                                                      onPressed: () async {
+                                                        final rate =
+                                                            double.tryParse(
+                                                              await ref
+                                                                      .read(
+                                                                        databaseProvider,
+                                                                      )
+                                                                      .loadSetting(
+                                                                        'speech_rate',
+                                                                      ) ??
+                                                                  '',
+                                                            ) ??
+                                                            .45;
+                                                        await ref
+                                                            .read(
+                                                              ttsServiceProvider,
+                                                            )
+                                                            .speakKorean(
+                                                              item.spoken,
+                                                              rate: rate,
+                                                            );
+                                                      },
+                                                      icon: const Icon(
+                                                        Icons.volume_up_rounded,
+                                                      ),
+                                                    ),
+                                                    TextButton.icon(
+                                                      onPressed:
+                                                          state.isSubmitting
+                                                          ? null
+                                                          : () =>
+                                                                _explain(word),
+                                                      icon: const Icon(
+                                                        Icons.auto_awesome,
+                                                      ),
+                                                      label: const Text(
+                                                        'AI 解释',
+                                                      ),
+                                                    ),
+                                                    if (quiz) ...[
+                                                      const SizedBox(
+                                                        height: 18,
+                                                      ),
+                                                      TextField(
+                                                        controller: _answer,
+                                                        enabled:
+                                                            _correct == null,
+                                                        decoration:
+                                                            const InputDecoration(
+                                                              labelText: '输入答案',
+                                                            ),
+                                                        onSubmitted: (_) =>
+                                                            grade(),
+                                                      ),
+                                                      const SizedBox(
+                                                        height: 12,
+                                                      ),
+                                                      if (_correct == null)
+                                                        OutlinedButton(
+                                                          onPressed: grade,
+                                                          child: const Text(
+                                                            '检查答案',
+                                                          ),
+                                                        )
+                                                      else ...[
+                                                        Text(
+                                                          _correct!
+                                                              ? '回答正确'
+                                                              : '需要再记一次',
+                                                          style: TextStyle(
+                                                            color: _correct!
+                                                                ? colors.primary
+                                                                : colors.error,
+                                                          ),
+                                                        ),
+                                                        Text(
+                                                          '参考答案：${item.answer}',
+                                                          locale:
+                                                              hangulPattern
+                                                                  .hasMatch(
+                                                                    item.answer,
+                                                                  )
+                                                              ? const Locale(
+                                                                  'ko',
+                                                                )
+                                                              : null,
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 8,
+                                                        ),
+                                                        Text(
+                                                          _correct!
+                                                              ? '建议记为「认识」。记得很吃力可选「困难」，毫不费力可选「简单」。'
+                                                              : '如果只是差一点，可选「困难」，不必把整张卡片记成忘记。',
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                        ),
+                                                        if (!_correct!)
+                                                          Wrap(
                                                             children: [
-                                                              if (word
-                                                                      .exampleKo
-                                                                      ?.isNotEmpty ==
-                                                                  true)
-                                                                Semantics(
-                                                                  localeForSubtree:
-                                                                      const Locale(
-                                                                        'ko',
-                                                                      ),
-                                                                  child: SelectableText(
-                                                                    word.exampleKo!,
-                                                                    textAlign:
-                                                                        TextAlign
-                                                                            .center,
-                                                                  ),
-                                                                ),
-                                                              if (word
-                                                                      .exampleZh
-                                                                      ?.isNotEmpty ==
-                                                                  true)
-                                                                Padding(
-                                                                  padding:
-                                                                      const EdgeInsets.symmetric(
-                                                                        vertical:
-                                                                            10,
-                                                                      ),
-                                                                  child: Text(
-                                                                    word.exampleZh!,
-                                                                    textAlign:
-                                                                        TextAlign
-                                                                            .center,
+                                                              for (final mark
+                                                                  in answerHighlight(
+                                                                    _answer
+                                                                        .text,
+                                                                    item.answer,
+                                                                  ))
+                                                                Text(
+                                                                  mark.text,
+                                                                  locale:
+                                                                      hangulPattern
+                                                                          .hasMatch(
+                                                                            mark.text,
+                                                                          )
+                                                                      ? const Locale(
+                                                                          'ko',
+                                                                        )
+                                                                      : null,
+                                                                  style: TextStyle(
+                                                                    fontSize:
+                                                                        22,
+                                                                    color:
+                                                                        mark.correct
+                                                                        ? colors
+                                                                              .primary
+                                                                        : colors
+                                                                              .error,
                                                                   ),
                                                                 ),
                                                             ],
                                                           ),
+                                                      ],
+                                                    ] else if (state
+                                                        .isRevealed) ...[
+                                                      const Divider(
+                                                        indent: 48,
+                                                        endIndent: 48,
+                                                        height: 32,
+                                                      ),
+                                                      RevealContent(
+                                                        child: Column(
+                                                          children: [
+                                                            StudyMeaning(
+                                                              key: ValueKey(
+                                                                word.id,
+                                                              ),
+                                                              text: item.answer,
+                                                              style: Theme.of(context)
+                                                                  .textTheme
+                                                                  .headlineSmall
+                                                                  ?.copyWith(
+                                                                    fontSize:
+                                                                        reading
+                                                                            .meaningSize,
+                                                                    height: reading
+                                                                        .lineHeight,
+                                                                    color: Theme.of(
+                                                                      context,
+                                                                    ).colorScheme.onSurface,
+                                                                  ),
+                                                            ),
+                                                            if (word
+                                                                        .exampleKo
+                                                                        ?.isNotEmpty ==
+                                                                    true ||
+                                                                word
+                                                                        .exampleZh
+                                                                        ?.isNotEmpty ==
+                                                                    true)
+                                                              Container(
+                                                                width: double
+                                                                    .infinity,
+                                                                margin:
+                                                                    const EdgeInsets.only(
+                                                                      top: 12,
+                                                                    ),
+                                                                padding:
+                                                                    const EdgeInsets.all(
+                                                                      14,
+                                                                    ),
+                                                                decoration: BoxDecoration(
+                                                                  color: Theme.of(
+                                                                    context,
+                                                                  ).colorScheme.surfaceContainerLow,
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        16,
+                                                                      ),
+                                                                ),
+                                                                child: Column(
+                                                                  children: [
+                                                                    if (word
+                                                                            .exampleKo
+                                                                            ?.isNotEmpty ==
+                                                                        true)
+                                                                      Semantics(
+                                                                        localeForSubtree:
+                                                                            const Locale(
+                                                                              'ko',
+                                                                            ),
+                                                                        child: SelectableText(
+                                                                          word.exampleKo!,
+                                                                          textAlign:
+                                                                              TextAlign.center,
+                                                                        ),
+                                                                      ),
+                                                                    if (word
+                                                                            .exampleZh
+                                                                            ?.isNotEmpty ==
+                                                                        true)
+                                                                      Padding(
+                                                                        padding: const EdgeInsets.symmetric(
+                                                                          vertical:
+                                                                              10,
+                                                                        ),
+                                                                        child: Text(
+                                                                          word.exampleZh!,
+                                                                          textAlign:
+                                                                              TextAlign.center,
+                                                                        ),
+                                                                      ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                          ],
                                                         ),
+                                                      ),
                                                     ],
-                                                  ),
+                                                  ],
                                                 ),
-                                              ],
+                                              ),
+                                              Positioned(
+                                                top: 0,
+                                                right: 0,
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.end,
+                                                  children: [
+                                                    IconButton(
+                                                      tooltip: '收藏',
+                                                      onPressed: () async {
+                                                        final db = ref.read(
+                                                          databaseProvider,
+                                                        );
+                                                        await db.setFavorite(
+                                                          word.id,
+                                                          !favorite,
+                                                        );
+                                                        ref.invalidate(
+                                                          studyFavoriteProvider(
+                                                            word.id,
+                                                          ),
+                                                        );
+                                                        ref.invalidate(
+                                                          libraryWordsProvider,
+                                                        );
+                                                        if (context.mounted) {
+                                                          ScaffoldMessenger.of(
+                                                            context,
+                                                          ).showSnackBar(
+                                                            SnackBar(
+                                                              content: Text(
+                                                                favorite
+                                                                    ? '已取消收藏'
+                                                                    : '已收藏',
+                                                              ),
+                                                            ),
+                                                          );
+                                                        }
+                                                      },
+                                                      icon: AnimatedSwitcher(
+                                                        duration:
+                                                            AppMotion.duration(
+                                                              context,
+                                                              160,
+                                                            ),
+                                                        transitionBuilder:
+                                                            (
+                                                              child,
+                                                              animation,
+                                                            ) =>
+                                                                ScaleTransition(
+                                                                  scale:
+                                                                      animation,
+                                                                  child: child,
+                                                                ),
+                                                        child: Icon(
+                                                          favorite
+                                                              ? Icons
+                                                                    .star_rounded
+                                                              : Icons
+                                                                    .star_border_rounded,
+                                                          key: ValueKey(
+                                                            favorite,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    PopupMenuButton<String>(
+                                                      tooltip: '更多',
+                                                      icon: const Icon(
+                                                        Icons.more_horiz,
+                                                      ),
+                                                      onSelected: (value) async {
+                                                        if (value == 'edit') {
+                                                          await _edit(word);
+                                                        } else {
+                                                          controller
+                                                              .pauseForPanel();
+                                                          try {
+                                                            await showWordDetail(
+                                                              context,
+                                                              word,
+                                                            );
+                                                          } finally {
+                                                            if (mounted &&
+                                                                controller
+                                                                    .mounted) {
+                                                              controller
+                                                                  .resumeFromPanel();
+                                                            }
+                                                          }
+                                                        }
+                                                      },
+                                                      itemBuilder: (_) =>
+                                                          const [
+                                                            PopupMenuItem(
+                                                              value: 'edit',
+                                                              child: Text(
+                                                                '编辑单词',
+                                                              ),
+                                                            ),
+                                                            PopupMenuItem(
+                                                              value: 'detail',
+                                                              child: Text(
+                                                                '单词详情',
+                                                              ),
+                                                            ),
+                                                          ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ],
                                           );
                                         },
