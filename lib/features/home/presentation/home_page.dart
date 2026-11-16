@@ -65,6 +65,8 @@ class HomePage extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
               plan.when(
+                skipLoadingOnReload: true,
+                skipLoadingOnRefresh: true,
                 data: (p) => _TodayCard(
                   progress: p,
                   ready: seed.hasValue,
@@ -85,6 +87,8 @@ class HomePage extends ConsumerWidget {
                   child: ref
                       .watch(checkinsProvider)
                       .when(
+                        skipLoadingOnReload: true,
+                        skipLoadingOnRefresh: true,
                         data: (c) => Text(
                           '连续 ${c.streak} 天 · 累计打卡 ${c.days.length} 天',
                           style: Theme.of(context).textTheme.bodySmall,
@@ -106,19 +110,27 @@ class HomePage extends ConsumerWidget {
                 ],
               ),
               counts.when(
-                data: (v) => Card(
-                  margin: EdgeInsets.zero,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: IntrinsicHeight(
-                      child: Row(
-                        children: [
-                          _CountCell('待复习', v.due, emphasize: v.due > 0),
-                          const VerticalDivider(),
-                          _CountCell('学习中', v.learningDue, emphasize: false),
-                          const VerticalDivider(),
-                          _CountCell('未学习', v.newWords, emphasize: false),
-                        ],
+                skipLoadingOnReload: true,
+                skipLoadingOnRefresh: true,
+                data: (v) => AnimatedSwitcher(
+                  duration: AppMotion.duration(context, 180),
+                  child: Card(
+                    key: ValueKey(
+                      '${ref.watch(activeLanguageProvider)}:${v.due}:${v.learningDue}:${v.newWords}',
+                    ),
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: IntrinsicHeight(
+                        child: Row(
+                          children: [
+                            _CountCell('待复习', v.due, emphasize: v.due > 0),
+                            const VerticalDivider(),
+                            _CountCell('学习中', v.learningDue, emphasize: false),
+                            const VerticalDivider(),
+                            _CountCell('未学习', v.newWords, emphasize: false),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -153,8 +165,16 @@ class HomePage extends ConsumerWidget {
                         Icons.file_upload_outlined,
                         color: colors.primary,
                       ),
-                      title: const Text('导入 Excel 词库'),
-                      subtitle: const Text('把自己的单词带进来'),
+                      title: Text(
+                        ref.watch(activeLanguageProvider) == 'en'
+                            ? '导入英语词表'
+                            : '导入 Excel 词库',
+                      ),
+                      subtitle: Text(
+                        ref.watch(activeLanguageProvider) == 'en'
+                            ? 'CSV 或 TSV，只写入英语'
+                            : '把自己的单词带进来',
+                      ),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () => context.push('/import'),
                     ),

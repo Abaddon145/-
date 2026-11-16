@@ -11,6 +11,9 @@ void main() {
       final english = speechRequest('warehouse');
       expect(english.language, 'en-US');
       expect(english.spoken, 'warehouse');
+      final englishSpace = speechRequest('考试 / 시험', learningLanguage: 'en');
+      expect(englishSpace.language, 'en-US');
+      expect(englishSpace.spoken, '考试 / 시험');
     },
   );
 }

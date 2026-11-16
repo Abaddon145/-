@@ -6,13 +6,20 @@ abstract interface class AiRequestIdentity {
   String get originalTerm;
   String get context;
   bool get meaningOnly;
+  String get learningLanguage;
 }
 
 const aiPromptVersion = 'ko-zh-v1';
+const aiEnglishPromptVersion = 'en-zh-v1';
+const aiPromptVersions = {aiPromptVersion, aiEnglishPromptVersion};
+
+String aiPromptVersionFor(String? language) =>
+    language == 'en' ? aiEnglishPromptVersion : aiPromptVersion;
 const aiHttpByteLimit = 262144;
 const aiContexts = ['日常韩语', '物流与仓储', '工厂设备', '生产与工业术语', '商务邮件', '自定义语境'];
 const aiFieldLabels = <String, String>{
   'meaningZh': '中文释义与义项',
+  'ipa': '国际音标',
   'partOfSpeech': '词性',
   'baseForm': '原形',
   'collocations': '常见搭配',
@@ -29,6 +36,7 @@ const aiFieldLabels = <String, String>{
 const aiListFields = {'collocations', 'ambiguityNotes', 'confusingWords'};
 const aiFieldLimits = <String, int>{
   'meaningZh': 2000,
+  'ipa': 200,
   'partOfSpeech': 200,
   'baseForm': 200,
   'exampleKo': 1000,
@@ -141,6 +149,7 @@ class AiSuggestion {
       'suggestedSpellings',
       'needsMoreContext',
     };
+    data.putIfAbsent('ipa', () => '');
     if (meaningOnly) {
       data['meaningZh'] ??= '';
       for (final key in aiFieldLabels.keys) {
@@ -198,7 +207,12 @@ class AiSuggestion {
         DateTime.tryParse(json['generatedAt'] as String) == null) {
       throw const AiException('invalid_response');
     }
-    if (json['promptVersion'] != aiPromptVersion) {
+    final expectedPrompt = request == null
+        ? null
+        : aiPromptVersionFor(request.learningLanguage);
+    if (expectedPrompt != null
+        ? json['promptVersion'] != expectedPrompt
+        : !aiPromptVersions.contains(json['promptVersion'])) {
       throw const AiException('prompt_mismatch');
     }
     if (request != null &&

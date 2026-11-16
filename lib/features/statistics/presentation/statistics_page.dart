@@ -64,6 +64,8 @@ class StatisticsPage extends ConsumerWidget {
         ],
       ),
       body: stats.when(
+        skipLoadingOnReload: true,
+        skipLoadingOnRefresh: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('读取统计失败：$e')),
         data: (days) {

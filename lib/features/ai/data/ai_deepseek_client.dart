@@ -62,8 +62,8 @@ class AiDeepSeekClient implements AiGateway {
           {
             'role': 'system',
             'content': request.meaningOnly
-                ? aiMeaningSystemPrompt
-                : aiSystemPrompt,
+                ? aiMeaningSystemPromptFor(request.learningLanguage)
+                : aiSystemPromptFor(request.learningLanguage),
           },
           {'role': 'user', 'content': jsonEncode(aiPromptFor(request))},
         ],
@@ -106,7 +106,7 @@ class AiDeepSeekClient implements AiGateway {
       'result': result,
       'model': response['model'] ?? model.trim(),
       'generatedAt': DateTime.now().toUtc().toIso8601String(),
-      'promptVersion': aiPromptVersion,
+      'promptVersion': aiPromptVersionFor(request.learningLanguage),
     }, request: request);
   }
 

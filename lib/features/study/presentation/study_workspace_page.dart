@@ -167,7 +167,13 @@ class _StudyPageState extends ConsumerState<StudyPage>
             ) ??
             .45;
         if (!mounted || _spokenWordId != spokenId) return;
-        await ref.read(ttsServiceProvider).speakKorean(spoken, rate: rate);
+        await ref
+            .read(ttsServiceProvider)
+            .speakKorean(
+              spoken,
+              rate: rate,
+              learningLanguage: ref.read(activeLanguageProvider),
+            );
       });
     }
     ref.listen(studyControllerProvider, (previous, next) {
@@ -303,6 +309,8 @@ class _StudyPageState extends ConsumerState<StudyPage>
                           ? ref
                                 .watch(studyRoundProgressProvider)
                                 .when(
+                                  skipLoadingOnReload: true,
+                                  skipLoadingOnRefresh: true,
                                   data: (p) =>
                                       _progress('每日新词', p.done, p.target),
                                   loading: () => const SizedBox(height: 41),
@@ -311,6 +319,8 @@ class _StudyPageState extends ConsumerState<StudyPage>
                           : ref
                                 .watch(sessionProgressProvider)
                                 .when(
+                                  skipLoadingOnReload: true,
+                                  skipLoadingOnRefresh: true,
                                   data: (p) =>
                                       _progress('本轮练习', p.done, p.target),
                                   loading: () => const SizedBox(height: 41),
@@ -441,6 +451,53 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                                         ),
                                                       ),
                                                     ),
+                                                  if (word.language == 'en' &&
+                                                      word.ipa?.isNotEmpty ==
+                                                          true)
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            top: 8,
+                                                          ),
+                                                      child: Text(
+                                                        word.ipa!,
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style: Theme.of(
+                                                          context,
+                                                        ).textTheme.titleMedium,
+                                                      ),
+                                                    ),
+                                                  if (word.language != 'en' &&
+                                                      word.hanja?.isNotEmpty ==
+                                                          true)
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            top: 8,
+                                                          ),
+                                                      child: Text(
+                                                        word.hanja!,
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                      ),
+                                                    ),
+                                                  if (word.language != 'en' &&
+                                                      word
+                                                              .topikLevel
+                                                              ?.isNotEmpty ==
+                                                          true)
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            top: 6,
+                                                          ),
+                                                      child: Text(
+                                                        'TOPIK ${word.topikLevel}',
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                      ),
+                                                    ),
                                                   const SizedBox(height: 12),
                                                   IconButton.filledTonal(
                                                     tooltip: '播放发音',
@@ -469,6 +526,10 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                                           .speakKorean(
                                                             item.spoken,
                                                             rate: rate,
+                                                            learningLanguage:
+                                                                ref.read(
+                                                                  activeLanguageProvider,
+                                                                ),
                                                           );
                                                     },
                                                     icon: const Icon(
@@ -631,10 +692,12 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                                                           ?.isNotEmpty ==
                                                                       true)
                                                                     Semantics(
-                                                                      localeForSubtree:
-                                                                          const Locale(
-                                                                            'ko',
-                                                                          ),
+                                                                      localeForSubtree: Locale(
+                                                                        word.language ==
+                                                                                'en'
+                                                                            ? 'en'
+                                                                            : 'ko',
+                                                                      ),
                                                                       child: SelectableText(
                                                                         word.exampleKo!,
                                                                         textAlign:
@@ -659,6 +722,38 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                                                 ],
                                                               ),
                                                             ),
+                                                          if (word.language !=
+                                                              'en')
+                                                            ref
+                                                                .watch(
+                                                                  studyWordFormsProvider(
+                                                                    word.id,
+                                                                  ),
+                                                                )
+                                                                .when(
+                                                                  skipLoadingOnReload:
+                                                                      true,
+                                                                  data: (forms) =>
+                                                                      forms
+                                                                          .trim()
+                                                                          .isEmpty
+                                                                      ? const SizedBox.shrink()
+                                                                      : Padding(
+                                                                          padding: const EdgeInsets.only(
+                                                                            top:
+                                                                                12,
+                                                                          ),
+                                                                          child: Text(
+                                                                            forms,
+                                                                            textAlign:
+                                                                                TextAlign.center,
+                                                                          ),
+                                                                        ),
+                                                                  loading: () =>
+                                                                      const SizedBox.shrink(),
+                                                                  error: (_, _) =>
+                                                                      const SizedBox.shrink(),
+                                                                ),
                                                         ],
                                                       ),
                                                     ),
