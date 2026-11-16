@@ -368,6 +368,8 @@ extension LearningDatabase on AppDatabase {
       }
     }
     if (await loadSetting('auto_checkin') != 'false') {
+      // A learning or relearning step does not increase the daily counters.
+      // Skipping check-in must not roll back the review.
       await checkIn(date);
     }
     await saveSetting(
@@ -423,14 +425,15 @@ extension LearningDatabase on AppDatabase {
     row.values.toList(),
   );
 
-  Future<void> checkIn(DateTime now) async {
-    if ((await loadDailyPlanProgress(now)).totalDone == 0) {
-      throw const FormatException('完成至少一次学习后即可打卡');
-    }
+  /// Records today's check-in once the day has a counted new word or review.
+  /// Returns false when it is too early, without throwing.
+  Future<bool> checkIn(DateTime now) async {
+    if ((await loadDailyPlanProgress(now)).totalDone == 0) return false;
     final key = 'checkin:${dayKey(now)}';
     if (await loadSetting(key) == null) {
       await saveSetting(key, now.toUtc().toIso8601String());
     }
+    return true;
   }
 
   Future<CheckinSummary> loadCheckins(DateTime now) async {

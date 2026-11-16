@@ -108,6 +108,37 @@ void main() {
   );
 
   test(
+    'a learning step saves when the day has not earned a check-in',
+    () async {
+      final database = await open();
+      final now = DateTime(2026, 11, 16, 12);
+      final id = await add(database, '학습');
+      await card(database, id, state: 1, due: now.toUtc());
+
+      await database.persistReview(
+        wordId: id,
+        submissionToken: 'learning-step',
+        rating: 3,
+        reviewedAt: now.toUtc(),
+        localDay: now,
+        durationMs: 800,
+        cardMap: {'state': 1, 'due': now.toUtc().toIso8601String()},
+        reviewLogMap: {},
+      );
+
+      expect((await database.loadDailyPlanProgress(now)).totalDone, 0);
+      expect(await database.checkIn(now), isFalse);
+      expect((await database.loadCheckins(now)).days, isEmpty);
+      expect((await database.select(database.reviewLogs).get()), hasLength(1));
+      expect((await database.cardForWord(id))?.state, 1);
+      expect(
+        (await database.nextTrainingWord(const SessionOptions(), now))?.id,
+        id,
+      );
+    },
+  );
+
+  test(
     'a future learning card stays hidden while a due one ignores the review cap',
     () async {
       final database = await open();

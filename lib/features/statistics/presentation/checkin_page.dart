@@ -21,7 +21,15 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
 
   Future<void> _check() async {
     try {
-      await ref.read(databaseProvider).checkIn(DateTime.now());
+      final recorded = await ref.read(databaseProvider).checkIn(DateTime.now());
+      if (!recorded) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('完成至少一次学习后即可打卡')));
+        }
+        return;
+      }
       ref.invalidate(checkinsProvider);
     } catch (error) {
       _showError(error);
