@@ -22,7 +22,7 @@ class HomePage extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('KoreanMemo')),
+      appBar: AppBar(title: const Text('词忆')),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {

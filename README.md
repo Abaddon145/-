@@ -1,4 +1,6 @@
-# KoreanMemo
+# 词忆
+
+v0.13.1 应用显示名改为词忆。韩语和英语仍分开学习，本机数据不变。[更新应用](https://abaddon145.github.io/-/update.html?v=0.13.1)
 
 v0.13.0 首页可以在韩语和英语之间切换。两种语言的词库、每日上限、到期数量和打卡分开计算。原来的数据都留在韩语里。[更新应用](https://abaddon145.github.io/-/update.html?v=0.13.0)
 

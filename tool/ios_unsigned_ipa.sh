@@ -39,8 +39,8 @@ import plistlib, sys
 from pathlib import Path
 path = Path(sys.argv[1])
 info = plistlib.loads(path.read_bytes())
-info["CFBundleDisplayName"] = "韩语记忆"
-info["CFBundleName"] = "韩语记忆"
+info["CFBundleDisplayName"] = "词忆"
+info["CFBundleName"] = "词忆"
 info.pop("UIBackgroundModes", None)
 for key in (
     "aps-environment",
@@ -95,7 +95,7 @@ package() {
   fi
   local display
   display="$(plutil -extract CFBundleDisplayName raw -o - "$app/Info.plist")"
-  if [[ "$display" != "韩语记忆" ]]; then
+  if [[ "$display" != "词忆" ]]; then
     echo "display name is ${display}" >&2
     exit 1
   fi

@@ -60,11 +60,11 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('KoreanMemo'), findsOneWidget);
+      expect(find.text('词忆'), findsOneWidget);
       for (var i = 0; i < 3; i++) {
         appRouter.push('/checkin');
         await tester.pumpAndSettle();
-        expect(find.text('KoreanMemo').hitTestable(), findsNothing);
+        expect(find.text('词忆').hitTestable(), findsNothing);
         expect(find.text('学习打卡').hitTestable(), findsOneWidget);
         final context = tester.element(find.byType(CheckinPage));
         expect(
@@ -85,7 +85,7 @@ void main() {
         expect(tester.takeException(), isNull);
         appRouter.pop();
         await tester.pumpAndSettle();
-        expect(find.text('KoreanMemo').hitTestable(), findsOneWidget);
+        expect(find.text('词忆').hitTestable(), findsOneWidget);
       }
       await tester.pumpWidget(const SizedBox.shrink());
     },

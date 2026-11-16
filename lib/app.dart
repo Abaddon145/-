@@ -20,7 +20,7 @@ class KoreanMemoApp extends ConsumerWidget {
     final light = saved.dark ? AppTheme.presets.first : saved;
     final dark = AppTheme.preset('night');
     return MaterialApp.router(
-      title: 'KoreanMemo',
+      title: '词忆',
       debugShowCheckedModeBanner: false,
       locale: const Locale('zh', 'CN'),
       supportedLocales: const [Locale('zh', 'CN')],

@@ -1,4 +1,4 @@
-# 在 Windows 上把韩语记忆装到 iPhone
+# 在 Windows 上把词忆装到 iPhone
 
 这份安装包给没有 Mac、也没有付费 Apple Developer 账号的人用。GitHub Actions 在 macOS 上打一个**未签名**的正式包，你在自己的 Windows 电脑上用 [Sideloadly](https://sideloadly.io) 和**免费 Apple ID** 重新签名，再装到 iPhone。
 
@@ -14,7 +14,7 @@
 
 换一个 Bundle ID，手机会把它当成另一个新 App。原来的词库、学习记录和钥匙串里的密钥都留在旧 App 里，新 App 是空的。以后每次重新签名也必须继续用这个 ID。
 
-主屏幕名称是「韩语记忆」。
+主屏幕名称是「词忆」。
 
 ## 先备份
 
@@ -32,7 +32,7 @@
 1. 打开 [构建 iOS 安装包](https://github.com/Abaddon145/-/actions/workflows/ios-build.yml)。
 2. 点 **Run workflow**。工作流只在手动运行时执行。合并到 `main` 之后选 `main`；还在分支上验证时选含有该工作流的分支。
 3. 等名为 iOS IPA 的运行结束，并且是绿色。
-4. 打开该次运行页面，在 Artifacts 里下载 `KoreanMemo-` 加上 `pubspec.yaml` 里的版本号。当前版本是 `KoreanMemo-0.13.0+20`。
+4. 打开该次运行页面，在 Artifacts 里下载 `KoreanMemo-` 加上 `pubspec.yaml` 里的版本号。当前版本是 `KoreanMemo-0.13.1+21`。
 5. 解压下载到的压缩包，得到 `KoreanMemo-<版本>.ipa`。这个文件才是要拖进 Sideloadly 的安装包。不要把 ipa 提交回仓库。
 
 安装包是真机 Release（arm64），不是模拟器包。里面没有描述文件，也没有推送、App Groups、iCloud、Associated Domains 或钥匙串共享这些免费账号签不了的授权。
@@ -51,7 +51,7 @@
 3. 点 Start，等它签名并安装。
 4. 若手机还没有开发者模式：打开「设置 → 隐私与安全性 → 开发者模式」，按提示打开并重启。这个开关有时要等第一次安装尝试之后才会出现。重启后再在 Sideloadly 里装一次。
 5. 打开「设置 → 通用 → VPN 与设备管理」（有的系统显示「描述文件与设备管理」），点你的 Apple ID，再点信任。
-6. 回到主屏幕，打开「韩语记忆」。
+6. 回到主屏幕，打开「词忆」。
 
 ## 每 7 天重新签名
 
