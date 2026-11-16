@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/language/learning_language.dart';
 import '../../../core/theme/reading_preferences.dart';
 import '../../../core/theme/appearance_settings.dart';
 import '../../study/domain/providers.dart';
@@ -29,18 +30,23 @@ class _ReadingPageState extends ConsumerState<ReadingPage> {
     _load();
   }
 
+  String _storedKey(String key) => key == 'speech_rate'
+      ? scopedSetting(ref.read(activeLanguageProvider), key)
+      : key;
+
   Future<void> _load() async {
     final db = ref.read(databaseProvider);
     for (final key in _values.keys.toList()) {
       _values[key] =
-          double.tryParse(await db.loadSetting(key) ?? '') ?? _values[key]!;
+          double.tryParse(await db.loadSetting(_storedKey(key)) ?? '') ??
+          _values[key]!;
     }
     _focus = await db.loadSetting('focus_mode') == 'true';
     if (mounted) setState(() => _ready = true);
   }
 
   Future<void> _save(String key, double value) async {
-    await ref.read(databaseProvider).saveSetting(key, '$value');
+    await ref.read(databaseProvider).saveSetting(_storedKey(key), '$value');
     ref.invalidate(readingProvider);
     ref.invalidate(appearanceProvider);
   }

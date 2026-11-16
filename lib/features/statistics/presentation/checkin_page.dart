@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/language/learning_language.dart';
 import '../../study/domain/providers.dart';
 
 class CheckinPage extends ConsumerStatefulWidget {
@@ -16,12 +17,17 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
   @override
   void initState() {
     super.initState();
-    _autoCheckin = ref.read(databaseProvider).loadSetting('auto_checkin');
+    final language = ref.read(activeLanguageProvider);
+    _autoCheckin = ref
+        .read(databaseProvider)
+        .loadSetting(scopedSetting(language, 'auto_checkin'));
   }
 
   Future<void> _check() async {
     try {
-      final recorded = await ref.read(databaseProvider).checkIn(DateTime.now());
+      final recorded = await ref
+          .read(databaseProvider)
+          .checkIn(DateTime.now(), ref.read(activeLanguageProvider));
       if (!recorded) {
         if (mounted) {
           ScaffoldMessenger.of(
@@ -47,7 +53,12 @@ class _CheckinPageState extends ConsumerState<CheckinPage> {
   Future<void> _setAuto(bool value) async {
     setState(() => _saving = true);
     try {
-      await ref.read(databaseProvider).saveSetting('auto_checkin', '$value');
+      await ref
+          .read(databaseProvider)
+          .saveSetting(
+            scopedSetting(ref.read(activeLanguageProvider), 'auto_checkin'),
+            '$value',
+          );
       if (mounted) {
         setState(() => _autoCheckin = Future.value('$value'));
       }

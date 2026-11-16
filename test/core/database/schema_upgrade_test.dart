@@ -24,7 +24,7 @@ void main() {
     addTearDown(upgraded.close);
     final indexes = await upgraded
         .customSelect(
-          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_study_cards_due'",
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_study_cards_language_due'",
         )
         .get();
     expect(indexes, hasLength(1));

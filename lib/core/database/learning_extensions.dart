@@ -1,5 +1,7 @@
 part of 'app_database.dart';
 
+// Language helpers live in learning_language.dart and are imported by the library.
+
 enum QueueKind { mixed, newWords, reviews }
 
 enum PracticeMode { cards, spelling, listening, cloze, forms }
@@ -17,6 +19,7 @@ class SessionOptions {
     this.partOfSpeech = '',
     this.tag = '',
     this.bookId,
+    this.language = 'ko',
   });
   final bool daily;
   final int target;
@@ -27,6 +30,7 @@ class SessionOptions {
   final String partOfSpeech;
   final String tag;
   final int? bookId;
+  final String language;
   String get key => jsonEncode([
     daily,
     queue.name,
@@ -37,7 +41,8 @@ class SessionOptions {
     tag,
     bookId,
   ]);
-  String get storageKey => 'learning_session:$key';
+  String get storageKey =>
+      '${normalizeLearningLanguage(language)}:learning_session:$key';
   Map<String, Object?> toJson() => {
     'daily': daily,
     'target': target,
@@ -74,6 +79,7 @@ class SessionOptions {
     partOfSpeech: data['pos'] as String? ?? '',
     tag: data['tag'] as String? ?? '',
     bookId: data['bookId'] as int?,
+    language: normalizeLearningLanguage(data['language'] as String?),
   );
 }
 
@@ -138,8 +144,12 @@ extension LearningDatabase on AppDatabase {
       }),
     );
     await saveSetting(
-      'selected_learning_session',
-      jsonEncode({...options.toJson(), 'day': dayKey(now)}),
+      scopedSetting(options.language, 'selected_learning_session'),
+      jsonEncode({
+        ...options.toJson(),
+        'language': normalizeLearningLanguage(options.language),
+        'day': dayKey(now),
+      }),
     );
   }
 
@@ -147,8 +157,13 @@ extension LearningDatabase on AppDatabase {
     SessionOptions options,
     DateTime now,
   ) async {
-    final variables = <Variable>[Variable<DateTime>(now.toUtc())];
+    final lang = normalizeLearningLanguage(options.language);
+    final variables = <Variable>[
+      Variable<String>(lang),
+      Variable<DateTime>(now.toUtc()),
+    ];
     final where = <String>[
+      'w.language = ?',
       "NOT EXISTS (SELECT 1 FROM app_settings a WHERE a.key='word_status:' || w.id AND a.value IN ('suspended','known'))",
       's.state IN (1, 3)',
       's.due > ?',
@@ -195,9 +210,12 @@ extension LearningDatabase on AppDatabase {
     final session = await loadSession(options, now);
     if (!options.daily && session.done >= session.target) return null;
     final variables = <Variable>[];
+    final lang = normalizeLearningLanguage(options.language);
     final where = <String>[
+      'w.language = ?',
       "NOT EXISTS (SELECT 1 FROM app_settings a WHERE a.key='word_status:' || w.id AND a.value IN ('suspended','known'))",
     ];
+    variables.add(Variable<String>(lang));
     if (options.filter == LibraryFilter.favorites) where.add('u.is_favorite=1');
     if (options.filter == LibraryFilter.wrong) where.add('u.is_difficult=1');
     if (options.partOfSpeech.isNotEmpty) {
@@ -315,8 +333,8 @@ extension LearningDatabase on AppDatabase {
         for (final key in [
           'correct_streak:$wordId',
           'word_status:$wordId',
-          'checkin:${dayKey(date)}',
-          'objective:${dayKey(date)}',
+          checkinSettingKey(options?.language ?? 'ko', dayKey(date)),
+          objectiveSettingKey(options?.language ?? 'ko', dayKey(date)),
           if (options != null) options.storageKey,
         ])
           key: await loadSetting(key),
@@ -331,11 +349,14 @@ extension LearningDatabase on AppDatabase {
     String token,
     Map<String, Object?> undo,
     SessionOptions? options,
+    String language,
   ) async {
+    final lang = normalizeLearningLanguage(language);
     final streak = rating >= 3
         ? (int.tryParse(await loadSetting('correct_streak:$id') ?? '') ?? 0) + 1
         : 0;
     await saveSetting('correct_streak:$id', '$streak');
+    // language is carried by the word; the streak key stays per word.
     if (streak >= 3) {
       await (update(userWords)..where((word) => word.wordId.equals(id))).write(
         const UserWordsCompanion(isDifficult: Value(false)),
@@ -353,7 +374,7 @@ extension LearningDatabase on AppDatabase {
         }),
       );
       if (options.mode != PracticeMode.cards) {
-        final key = 'objective:${dayKey(date)}';
+        final key = objectiveSettingKey(lang, dayKey(date));
         final raw = await loadSetting(key);
         final value = raw == null
             ? <String, dynamic>{'correct': 0, 'total': 0}
@@ -367,58 +388,63 @@ extension LearningDatabase on AppDatabase {
         );
       }
     }
-    if (await loadSetting('auto_checkin') != 'false') {
+    if (await loadSetting(scopedSetting(lang, 'auto_checkin')) != 'false') {
       // A learning or relearning step does not increase the daily counters.
       // Skipping check-in must not roll back the review.
-      await checkIn(date);
+      await checkIn(date, lang);
     }
     await saveSetting(
-      'last_review_undo',
+      scopedSetting(lang, 'last_review_undo'),
       jsonEncode({...undo, 'token': token}),
     );
   }
 
-  Future<Word?> undoLastReview(DateTime now) => transaction(() async {
-    final raw = await loadSetting('last_review_undo');
-    if (raw == null) return null;
-    final undo = jsonDecode(raw) as Map<String, dynamic>;
-    if (undo['day'] != dayKey(now)) {
-      throw const FormatException('只能撤销今天最近的一次评分');
-    }
-    final latest =
-        await (select(reviewLogs)
-              ..orderBy([(r) => OrderingTerm.desc(r.id)])
-              ..limit(1))
-            .getSingleOrNull();
-    if (latest == null || latest.submissionToken != undo['token']) {
-      throw const FormatException('评分记录已经变更，不能撤销');
-    }
-    final id = undo['wordId'] as int;
-    await (delete(reviewLogs)..where((r) => r.id.equals(latest.id))).go();
-    for (final table in ['study_cards', 'user_words']) {
-      await customStatement('DELETE FROM $table WHERE word_id=?', [id]);
-      final data = undo[table == 'study_cards' ? 'card' : 'user'] as Map?;
-      if (data != null) {
-        await _insertSnapshotRow(table, data);
-      }
-    }
-    await (delete(
-      dailyStatistics,
-    )..where((r) => r.date.equals(_dailyStatKey(now)))).go();
-    if (undo['statistics'] != null) {
-      await _insertSnapshotRow('daily_statistics', undo['statistics'] as Map);
-    }
-    for (final entry in (undo['settings'] as Map).entries) {
-      if ((entry.key as String).startsWith('checkin:') &&
-          entry.value == null &&
-          (await loadDailyPlanProgress(now)).totalDone > 0) {
-        continue;
-      }
-      await saveSetting(entry.key as String, entry.value as String?);
-    }
-    await saveSetting('last_review_undo', null);
-    return (select(words)..where((w) => w.id.equals(id))).getSingleOrNull();
-  });
+  Future<Word?> undoLastReview(DateTime now, [String language = 'ko']) =>
+      transaction(() async {
+        final lang = normalizeLearningLanguage(language);
+        final raw = await loadSetting(scopedSetting(lang, 'last_review_undo'));
+        if (raw == null) return null;
+        final undo = jsonDecode(raw) as Map<String, dynamic>;
+        if (undo['day'] != dayKey(now)) {
+          throw const FormatException('只能撤销今天最近的一次评分');
+        }
+        final latest =
+            await (select(reviewLogs)
+                  ..orderBy([(r) => OrderingTerm.desc(r.id)])
+                  ..limit(1))
+                .getSingleOrNull();
+        if (latest == null || latest.submissionToken != undo['token']) {
+          throw const FormatException('评分记录已经变更，不能撤销');
+        }
+        final id = undo['wordId'] as int;
+        await (delete(reviewLogs)..where((r) => r.id.equals(latest.id))).go();
+        for (final table in ['study_cards', 'user_words']) {
+          await customStatement('DELETE FROM $table WHERE word_id=?', [id]);
+          final data = undo[table == 'study_cards' ? 'card' : 'user'] as Map?;
+          if (data != null) {
+            await _insertSnapshotRow(table, data);
+          }
+        }
+        await (delete(
+          dailyStatistics,
+        )..where((r) => r.date.equals(_dailyStatKey(now)))).go();
+        if (undo['statistics'] != null) {
+          await _insertSnapshotRow(
+            'daily_statistics',
+            undo['statistics'] as Map,
+          );
+        }
+        for (final entry in (undo['settings'] as Map).entries) {
+          if ((entry.key as String).startsWith('checkin:') &&
+              entry.value == null &&
+              (await loadDailyPlanProgress(now, lang)).totalDone > 0) {
+            continue;
+          }
+          await saveSetting(entry.key as String, entry.value as String?);
+        }
+        await saveSetting(scopedSetting(lang, 'last_review_undo'), null);
+        return (select(words)..where((w) => w.id.equals(id))).getSingleOrNull();
+      });
 
   Future<void> _insertSnapshotRow(String table, Map row) => customStatement(
     'INSERT INTO $table (${row.keys.join(',')}) VALUES (${List.filled(row.length, '?').join(',')})',
@@ -427,20 +453,26 @@ extension LearningDatabase on AppDatabase {
 
   /// Records today's check-in once the day has a counted new word or review.
   /// Returns false when it is too early, without throwing.
-  Future<bool> checkIn(DateTime now) async {
-    if ((await loadDailyPlanProgress(now)).totalDone == 0) return false;
-    final key = 'checkin:${dayKey(now)}';
+  Future<bool> checkIn(DateTime now, [String language = 'ko']) async {
+    final lang = normalizeLearningLanguage(language);
+    if ((await loadDailyPlanProgress(now, lang)).totalDone == 0) return false;
+    final key = checkinSettingKey(lang, dayKey(now));
     if (await loadSetting(key) == null) {
       await saveSetting(key, now.toUtc().toIso8601String());
     }
     return true;
   }
 
-  Future<CheckinSummary> loadCheckins(DateTime now) async {
+  Future<CheckinSummary> loadCheckins(
+    DateTime now, [
+    String language = 'ko',
+  ]) async {
+    final lang = normalizeLearningLanguage(language);
+    final prefix = 'checkin:$lang:';
     final rows = await (select(
       appSettings,
-    )..where((r) => r.key.like('checkin:%'))).get();
-    final days = rows.map((r) => r.key.substring(8)).toSet();
+    )..where((r) => r.key.like('$prefix%'))).get();
+    final days = rows.map((r) => r.key.substring(prefix.length)).toSet();
     var cursor = _dailyStatKey(now);
     if (!days.contains(dayKey(cursor))) {
       cursor = cursor.subtract(const Duration(days: 1));
@@ -464,7 +496,11 @@ extension LearningDatabase on AppDatabase {
     return CheckinSummary(days, streak, longest);
   }
 
-  Future<List<Map<String, Object?>>> reviewForecast(DateTime now) async {
+  Future<List<Map<String, Object?>>> reviewForecast(
+    DateTime now, [
+    String language = 'ko',
+  ]) async {
+    final lang = normalizeLearningLanguage(language);
     final result = <Map<String, Object?>>[];
     final statuses = await (select(
       appSettings,
@@ -479,6 +515,7 @@ extension LearningDatabase on AppDatabase {
       final rows =
           await (select(studyCards)..where(
                 (r) =>
+                    r.language.equals(lang) &
                     (i == 0
                         ? const Constant<bool>(true)
                         : r.due.isBiggerOrEqualValue(start)) &

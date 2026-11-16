@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:excel/excel.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:korean_memo/core/database/app_database.dart';
+import 'package:korean_memo/core/language/learning_language.dart';
 import 'package:korean_memo/features/import/data/excel_import_service.dart';
 import 'package:korean_memo/features/study/domain/practice.dart';
 
@@ -175,11 +176,14 @@ void main() {
       await db.startSession(opts, day);
       await rate(id, 3, options: opts);
       expect(
-        await db.loadSetting('objective:${dayKey(day)}'),
+        await db.loadSetting(objectiveSettingKey('ko', dayKey(day))),
         contains('"correct":1'),
       );
       await db.undoLastReview(day);
-      expect(await db.loadSetting('objective:${dayKey(day)}'), isNull);
+      expect(
+        await db.loadSetting(objectiveSettingKey('ko', dayKey(day))),
+        isNull,
+      );
     },
   );
   test('restoring a backup cannot import a stale undo transaction', () async {

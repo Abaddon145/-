@@ -85,6 +85,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
             tags: _tags.text,
             note: _note.text,
           ),
+          language: ref.read(activeLanguageProvider),
         );
       } else {
         await db.updateWord(
@@ -112,6 +113,9 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final english =
+        widget.word?.language == 'en' ||
+        (widget.word == null && ref.watch(activeLanguageProvider) == 'en');
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: ConstrainedBox(
@@ -132,7 +136,9 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
             ),
             const SizedBox(height: 6),
             Text(
-              '所有单词进入统一词库。中文可暂缺，例句和标签可选填。',
+              english
+                  ? '英文单词进入英语词库，和韩语分开。先写单词和中文释义。'
+                  : '所有单词进入统一词库。中文可暂缺，例句和标签可选填。',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
@@ -144,12 +150,12 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
                     controller: _korean,
                     autofocus: widget.word == null,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      labelText: '韩语 / 英文单词',
-                      prefixIcon: Icon(Icons.translate_rounded),
+                    decoration: InputDecoration(
+                      labelText: english ? '英文单词' : '韩语单词',
+                      prefixIcon: const Icon(Icons.translate_rounded),
                     ),
                     validator: (value) => value == null || value.trim().isEmpty
-                        ? '请输入韩语单词'
+                        ? (english ? '请输入英文单词' : '请输入韩语单词')
                         : null,
                   ),
                   const SizedBox(height: 14),
@@ -161,35 +167,41 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
                       prefixIcon: Icon(Icons.menu_book_outlined),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _partOfSpeech,
-                    decoration: const InputDecoration(
-                      labelText: '词性',
-                      hintText: '例如：名词、动词',
-                      prefixIcon: Icon(Icons.label_outline),
+                  if (!english) ...[
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _partOfSpeech,
+                      decoration: const InputDecoration(
+                        labelText: '词性',
+                        hintText: '例如：名词、动词',
+                        prefixIcon: Icon(Icons.label_outline),
+                      ),
+                      onChanged: (_) => setState(() {}),
+                      validator: (value) =>
+                          value == null || value.trim().isEmpty
+                          ? '请标记词性'
+                          : null,
                     ),
-                    onChanged: (_) => setState(() {}),
-                    validator: (value) =>
-                        value == null || value.trim().isEmpty ? '请标记词性' : null,
-                  ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 2,
-              children: [
-                for (final part in _parts)
-                  ChoiceChip(
-                    label: Text(part),
-                    selected: _partOfSpeech.text.trim() == part,
-                    onSelected: (_) =>
-                        setState(() => _partOfSpeech.text = part),
-                  ),
-              ],
-            ),
+            if (!english) ...[
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 2,
+                children: [
+                  for (final part in _parts)
+                    ChoiceChip(
+                      label: Text(part),
+                      selected: _partOfSpeech.text.trim() == part,
+                      onSelected: (_) =>
+                          setState(() => _partOfSpeech.text = part),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: 14),
             TextField(
               controller: _exampleKo,
