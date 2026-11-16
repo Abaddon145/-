@@ -23,12 +23,26 @@ class AppNavigationShell extends ConsumerWidget {
         ref.read(visibleTabProvider.notifier).state = index;
       }
     });
+    final focus = ref.watch(readingProvider).valueOrNull?.focus == true;
+    final hideNav = active && (focus || ref.watch(studyHasCardProvider));
+    final motion = AppMotion.duration(context, 200);
     return Scaffold(
-      body: navigationShell,
-      bottomNavigationBar:
-          active && ref.watch(readingProvider).valueOrNull?.focus == true
-          ? null
-          : Container(
+      body: AnimatedPadding(
+        duration: motion,
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.only(bottom: hideNav ? 0 : 84),
+        child: navigationShell,
+      ),
+      bottomNavigationBar: AnimatedSlide(
+        offset: Offset(0, hideNav ? 1.2 : 0),
+        duration: motion,
+        curve: Curves.easeOutCubic,
+        child: AnimatedOpacity(
+          opacity: hideNav ? 0 : 1,
+          duration: motion,
+          child: IgnorePointer(
+            ignoring: hideNav,
+            child: Container(
               margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
@@ -89,6 +103,9 @@ class AppNavigationShell extends ConsumerWidget {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
     );
   }
 }

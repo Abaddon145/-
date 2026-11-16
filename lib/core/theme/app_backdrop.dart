@@ -12,7 +12,13 @@ class AppBackdrop extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final appearance = ref.watch(appearanceProvider).valueOrNull;
-    final preset = AppTheme.preset(appearance?.styleId ?? 'porcelain');
+    final saved = AppTheme.preset(appearance?.styleId ?? 'porcelain');
+    final darkNow = Theme.of(context).brightness == Brightness.dark;
+    final preset = appearance?.followSystem == true
+        ? (darkNow
+              ? AppTheme.preset('night')
+              : (saved.dark ? AppTheme.presets.first : saved))
+        : saved;
     final background = appearance?.backgroundBytes;
     final decodeWidth =
         (MediaQuery.sizeOf(context).width *

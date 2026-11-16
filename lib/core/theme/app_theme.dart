@@ -81,11 +81,16 @@ abstract final class AppTheme {
     final scheme = ColorScheme.fromSeed(
       seedColor: preset.seed,
       brightness: preset.dark ? Brightness.dark : Brightness.light,
+      dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
     );
     return ThemeData(
       useMaterial3: true,
       fontFamily: fontFamily,
       fontFamilyFallback: const [fontFamily, 'Roboto'],
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+      ),
       colorScheme: scheme,
       scaffoldBackgroundColor: Colors.transparent,
       visualDensity: VisualDensity.standard,
@@ -134,13 +139,12 @@ abstract final class AppTheme {
         elevation: 0,
       ),
       cardTheme: CardThemeData(
-        elevation: 1,
-        shadowColor: scheme.shadow.withValues(alpha: preset.dark ? .12 : .035),
+        elevation: preset.dark ? 0 : 2,
+        shadowColor: scheme.shadow.withValues(alpha: preset.dark ? 0 : .06),
         surfaceTintColor: Colors.transparent,
-        color: Color.alphaBlend(
-          scheme.surface.withValues(alpha: .96),
-          preset.start,
-        ),
+        color: preset.dark
+            ? scheme.surfaceContainerHigh
+            : scheme.surfaceContainerLowest,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
           side: BorderSide(
