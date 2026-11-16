@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/theme/app_motion.dart';
 import '../../study/domain/providers.dart';
 import '../domain/providers.dart';
 import '../data/learning_report.dart';
@@ -113,12 +115,19 @@ class StatisticsPage extends ConsumerWidget {
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 12),
-                        Text('新词  ${today?.newWords ?? 0}'),
-                        Text('复习  ${today?.reviews ?? 0}'),
-                        Text('自评记忆率  $todayAccuracy%'),
-                        Text('学习时长  ${(today?.durationMs ?? 0) ~/ 60000} 分钟'),
+                        _StatGrid(
+                          cells: [
+                            ('${today?.newWords ?? 0}', '新词'),
+                            ('${today?.reviews ?? 0}', '复习'),
+                            ('$todayAccuracy%', '自评记忆率'),
+                            ('${(today?.durationMs ?? 0) ~/ 60000}', '学习分钟'),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
                         Text(
                           '客观测试  ${todayTest['correct']}/${todayTest['total']}',
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(color: colors.onSurfaceVariant),
                         ),
                       ],
                     ),
@@ -161,13 +170,22 @@ class StatisticsPage extends ConsumerWidget {
                   ),
                 ),
                 Text('客观测试：$testCorrect / $testTotal'),
-                for (final day in days)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('${day.date.month}月${day.date.day}日'),
-                    subtitle: Text('新词 ${day.newWords} · 复习 ${day.reviews}'),
-                    trailing: Text('${day.correct} 认识 / ${day.wrong} 忘记'),
-                  ),
+                const SizedBox(height: 12),
+                SizedBox(height: 120, child: _WeekBars(days: days)),
+                ExpansionTile(
+                  title: const Text('查看明细'),
+                  children: [
+                    for (final day in days)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('${day.date.month}月${day.date.day}日'),
+                        subtitle: Text(
+                          '新词 ${day.newWords} · 复习 ${day.reviews}',
+                        ),
+                        trailing: Text('${day.correct} 认识 / ${day.wrong} 忘记'),
+                      ),
+                  ],
+                ),
                 const Divider(),
                 Text(
                   '近30天学习热力图',
@@ -242,4 +260,158 @@ class StatisticsPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({required this.cells});
+  final List<(String, String)> cells;
+  @override
+  Widget build(BuildContext context) {
+    final label = Theme.of(context).textTheme.labelMedium?.copyWith(
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+    final number = Theme.of(context).textTheme.headlineSmall?.copyWith(
+      fontWeight: FontWeight.w700,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 2.4,
+      children: [
+        for (final cell in cells)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(cell.$1, style: number),
+              Text(cell.$2, style: label),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _WeekBars extends StatelessWidget {
+  const _WeekBars({required this.days});
+  final List<DailyStatisticsSummary> days;
+  static const _weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final quiet =
+        days.isEmpty || days.every((day) => day.newWords + day.reviews == 0);
+    final description = quiet
+        ? '完成第一次学习后，这里会显示近 7 天的柱状图'
+        : '近 7 天学习次数：${days.map((day) => '周${_weekdays[day.date.weekday - 1]} ${day.newWords + day.reviews}次').join('，')}';
+    final maxValue = days.fold<int>(
+      1,
+      (max, day) => math.max(max, day.newWords + day.reviews),
+    );
+    return Semantics(
+      label: description,
+      child: ExcludeSemantics(
+        child: quiet
+            ? Center(
+                child: Text(
+                  '完成第一次学习后，这里会显示近 7 天的柱状图',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              )
+            : Column(
+                children: [
+                  Expanded(
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: AppMotion.duration(context, 300),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, t, _) => CustomPaint(
+                        painter: _WeekBarPainter(
+                          days: days,
+                          maxValue: maxValue,
+                          progress: t,
+                          primary: colors.primary,
+                          again: colors.errorContainer,
+                        ),
+                        child: const SizedBox.expand(),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      for (final day in days)
+                        Expanded(
+                          child: Text(
+                            _weekdays[day.date.weekday - 1],
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: colors.onSurfaceVariant),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+}
+
+class _WeekBarPainter extends CustomPainter {
+  _WeekBarPainter({
+    required this.days,
+    required this.maxValue,
+    required this.progress,
+    required this.primary,
+    required this.again,
+  });
+  final List<DailyStatisticsSummary> days;
+  final int maxValue;
+  final double progress;
+  final Color primary, again;
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (days.isEmpty) return;
+    final slot = size.width / days.length;
+    final barWidth = slot * 0.55;
+    for (var i = 0; i < days.length; i++) {
+      final day = days[i];
+      final total = day.newWords + day.reviews;
+      final height = size.height * (total / maxValue) * progress;
+      final left = slot * i + (slot - barWidth) / 2;
+      final top = size.height - height;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(left, top, barWidth, height),
+          const Radius.circular(6),
+        ),
+        Paint()..color = primary,
+      );
+      if (day.wrong > 0 && total > 0) {
+        final wrongHeight = height * (day.wrong / total);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(
+              left,
+              size.height - wrongHeight,
+              barWidth,
+              wrongHeight,
+            ),
+            const Radius.circular(6),
+          ),
+          Paint()..color = again,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WeekBarPainter oldDelegate) =>
+      oldDelegate.progress != progress || oldDelegate.days != days;
 }

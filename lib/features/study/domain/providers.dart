@@ -24,6 +24,7 @@ final ttsServiceProvider = Provider<TtsService>((ref) {
 
 final studyBookProvider = StateProvider<int?>((ref) => null);
 final studyVisibleProvider = StateProvider<bool>((ref) => false);
+final studyHasCardProvider = StateProvider<bool>((ref) => false);
 
 class SessionOptionsController extends StateNotifier<SessionOptions> {
   SessionOptionsController(this.database) : super(const SessionOptions()) {

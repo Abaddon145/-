@@ -116,6 +116,29 @@ class _AppearancePageState extends ConsumerState<AppearancePage> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('跟随系统'),
+              subtitle: const Text('浅色用当前风格，深色用深夜'),
+              value: selected?.followSystem ?? false,
+              onChanged: _busy
+                  ? null
+                  : (value) async {
+                      setState(() => _busy = true);
+                      try {
+                        await ref
+                            .read(databaseProvider)
+                            .saveSetting(
+                              AppearanceSettings.followKey,
+                              '$value',
+                            );
+                        ref.invalidate(appearanceProvider);
+                      } finally {
+                        if (mounted) setState(() => _busy = false);
+                      }
+                    },
+            ),
+            const SizedBox(height: 8),
             Text('预设风格', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             Wrap(

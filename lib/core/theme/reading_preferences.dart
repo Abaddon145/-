@@ -3,9 +3,9 @@ import '../../features/study/domain/providers.dart';
 
 class ReadingPreferences {
   const ReadingPreferences({
-    this.wordSize = 32,
+    this.wordSize = 40,
     this.meaningSize = 24,
-    this.lineHeight = 1.4,
+    this.lineHeight = 1.25,
     this.focus = false,
   });
   final double wordSize;
@@ -17,11 +17,11 @@ class ReadingPreferences {
 final readingProvider = FutureProvider<ReadingPreferences>((ref) async {
   final db = ref.watch(databaseProvider);
   return ReadingPreferences(
-    wordSize: double.tryParse(await db.loadSetting('word_size') ?? '') ?? 32,
+    wordSize: double.tryParse(await db.loadSetting('word_size') ?? '') ?? 40,
     meaningSize:
         double.tryParse(await db.loadSetting('meaning_size') ?? '') ?? 24,
     lineHeight:
-        double.tryParse(await db.loadSetting('line_height') ?? '') ?? 1.4,
+        double.tryParse(await db.loadSetting('line_height') ?? '') ?? 1.25,
     focus: await db.loadSetting('focus_mode') == 'true',
   );
 });

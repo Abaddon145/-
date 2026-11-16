@@ -111,12 +111,16 @@ void main() {
     await tester.tap(find.text('查看答案'));
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byType(Card)), before);
-    for (final label in ['忘记', '困难', '认识', '简单']) {
+    for (final label in ['忘记', '困难', '认识']) {
       expect(
         tester.getSize(find.widgetWithText(FilledButton, label)).height,
         greaterThanOrEqualTo(48),
       );
     }
+    expect(
+      tester.getSize(find.widgetWithText(OutlinedButton, '简单')).height,
+      greaterThanOrEqualTo(48),
+    );
     await tester.tap(find.text('认识'));
     await tester.pumpAndSettle();
     expect(ratings, 1);

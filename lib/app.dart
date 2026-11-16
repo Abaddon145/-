@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
@@ -14,12 +15,23 @@ class KoreanMemoApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(aiApiKeyProvider);
     final appearance = ref.watch(appearanceProvider).valueOrNull;
-    final preset = AppTheme.preset(appearance?.styleId ?? 'porcelain');
+    final saved = AppTheme.preset(appearance?.styleId ?? 'porcelain');
+    final follow = appearance?.followSystem ?? false;
+    final light = saved.dark ? AppTheme.presets.first : saved;
+    final dark = AppTheme.preset('night');
     return MaterialApp.router(
       title: 'KoreanMemo',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.forPreset(preset),
-      themeMode: preset.dark ? ThemeMode.dark : ThemeMode.light,
+      locale: const Locale('zh', 'CN'),
+      supportedLocales: const [Locale('zh', 'CN')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      theme: AppTheme.forPreset(follow ? light : saved),
+      darkTheme: AppTheme.forPreset(
+        follow ? dark : (saved.dark ? saved : dark),
+      ),
+      themeMode: follow
+          ? ThemeMode.system
+          : (saved.dark ? ThemeMode.dark : ThemeMode.light),
       routerConfig: appRouter,
       builder: (context, child) =>
           LocalDayObserver(child: child ?? const SizedBox.shrink()),

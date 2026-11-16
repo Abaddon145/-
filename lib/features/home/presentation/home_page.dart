@@ -22,21 +22,7 @@ class HomePage extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('KoreanMemo'),
-        actions: [
-          IconButton(
-            tooltip: 'AI 设置',
-            onPressed: () => context.push('/settings/ai'),
-            icon: const Icon(Icons.auto_awesome_outlined),
-          ),
-          IconButton(
-            tooltip: '每日学习计划',
-            onPressed: () => context.push('/settings/daily-plan'),
-            icon: const Icon(Icons.tune_rounded),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('KoreanMemo')),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -73,27 +59,24 @@ class HomePage extends ConsumerWidget {
                   child: const Text('开始今天的学习'),
                 ),
               ),
-              const SizedBox(height: 12),
-              Card(
-                margin: EdgeInsets.zero,
-                child: ListTile(
-                  leading: Icon(
-                    Icons.local_fire_department_outlined,
-                    color: colors.primary,
-                  ),
-                  title: ref
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => context.push('/checkin'),
+                  child: ref
                       .watch(checkinsProvider)
                       .when(
-                        data: (c) =>
-                            Text('连续 ${c.streak} 天 · 累计打卡 ${c.days.length} 天'),
+                        data: (c) => Text(
+                          '连续 ${c.streak} 天 · 累计打卡 ${c.days.length} 天',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                         loading: () => const Text('学习打卡'),
                         error: (_, _) => const Text('学习打卡'),
                       ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => context.push('/checkin'),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Text('学习概览', style: Theme.of(context).textTheme.titleLarge),
@@ -105,35 +88,22 @@ class HomePage extends ConsumerWidget {
                 ],
               ),
               counts.when(
-                data: (v) => Row(
-                  children: [
-                    Expanded(
-                      child: _MetricCard(
-                        '待复习',
-                        v.due,
-                        Icons.history_rounded,
-                        detail: v.learningDue == 0
-                            ? null
-                            : '学习中 ${v.learningDue}',
+                data: (v) => Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        children: [
+                          _CountCell('待复习', v.due, emphasize: v.due > 0),
+                          const VerticalDivider(),
+                          _CountCell('学习中', v.learningDue, emphasize: false),
+                          const VerticalDivider(),
+                          _CountCell('未学习', v.newWords, emphasize: false),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _MetricCard(
-                        '未学习',
-                        v.newWords,
-                        Icons.layers_outlined,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _MetricCard(
-                        '累计评分',
-                        v.completed,
-                        Icons.check_circle_outline,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
                 loading: () => const LinearProgressIndicator(),
                 error: (_, _) => const Text('暂时无法读取统计，下拉可重试。'),
@@ -145,41 +115,34 @@ class HomePage extends ConsumerWidget {
               const SizedBox(height: 20),
               Text('常用入口', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
-              for (final entry in [
-                (Icons.menu_book_outlined, '我的词库', '搜索、收藏与编辑单词', '/library'),
-                (
-                  Icons.auto_awesome_outlined,
-                  'AI 学习助手',
-                  '配置 DeepSeek API Key',
-                  '/settings/ai',
-                ),
-                (
-                  Icons.fact_check_outlined,
-                  '本机 AI 任务',
-                  '继续任务与审核生成结果',
-                  '/ai/tasks',
-                ),
-                (
-                  Icons.file_upload_outlined,
-                  '导入 Excel 词库',
-                  '把自己的单词带进来',
-                  '/import',
-                ),
-              ])
-                PressFeedback(
-                  child: Card(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: ListTile(
-                      leading: Icon(entry.$1, color: colors.primary),
-                      title: Text(entry.$2),
-                      subtitle: Text(entry.$3),
+              Card(
+                margin: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        Icons.fact_check_outlined,
+                        color: colors.primary,
+                      ),
+                      title: const Text('本机 AI 任务'),
+                      subtitle: const Text('继续任务与审核生成结果'),
                       trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () => entry.$4 == '/library'
-                          ? context.go(entry.$4)
-                          : context.push(entry.$4),
+                      onTap: () => context.push('/ai/tasks'),
                     ),
-                  ),
+                    const Divider(indent: 56, height: 1),
+                    ListTile(
+                      leading: Icon(
+                        Icons.file_upload_outlined,
+                        color: colors.primary,
+                      ),
+                      title: const Text('导入 Excel 词库'),
+                      subtitle: const Text('把自己的单词带进来'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () => context.push('/import'),
+                    ),
+                  ],
                 ),
+              ),
               if (seed.hasError)
                 Text(
                   '内置词库未准备完成，请保持此页并重试。',
@@ -207,6 +170,10 @@ class _TodayCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final started = progress.newWordsDone + progress.reviewsDone > 0;
+    final base = Theme.of(context).brightness == Brightness.dark
+        ? colors.surfaceContainerHigh
+        : colors.surfaceContainerLowest;
+    final tint = Color.alphaBlend(colors.primary.withValues(alpha: .14), base);
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
@@ -215,13 +182,7 @@ class _TodayCard extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              colors.primaryContainer,
-              Color.alphaBlend(
-                colors.primary.withValues(alpha: .06),
-                colors.surface,
-              ),
-            ],
+            colors: [tint, base],
           ),
         ),
         child: Padding(
@@ -287,54 +248,52 @@ class _PlanRow extends StatelessWidget {
   final String label;
   final int done, target;
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      Row(children: [Text(label), const Spacer(), Text('$done / $target')]),
-      const SizedBox(height: 6),
-      SmoothProgress(
-        value: target == 0 ? 1 : (done / target).clamp(0, 1).toDouble(),
-      ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Row(children: [Text(label), const Spacer(), Text('$done / $target')]),
+        const SizedBox(height: 6),
+        Theme(
+          data: theme.copyWith(
+            progressIndicatorTheme: theme.progressIndicatorTheme.copyWith(
+              linearTrackColor: theme.colorScheme.primary.withValues(
+                alpha: .24,
+              ),
+            ),
+          ),
+          child: SmoothProgress(
+            value: target == 0 ? 1 : (done / target).clamp(0, 1).toDouble(),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard(this.label, this.value, this.icon, {this.detail});
+class _CountCell extends StatelessWidget {
+  const _CountCell(this.label, this.value, {required this.emphasize});
   final String label;
   final int value;
-  final IconData icon;
-  final String? detail;
+  final bool emphasize;
   @override
-  Widget build(BuildContext context) => Card(
-    margin: EdgeInsets.zero,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Expanded(
       child: Column(
         children: [
-          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(height: 8),
           Text(
             '$value',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: emphasize ? scheme.primary : scheme.onSurface,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (detail != null)
-            Text(
-              detail!,
-              style: Theme.of(context).textTheme.bodySmall,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
