@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../../../core/database/app_database.dart';
 
 class CsvImportResult {
@@ -7,6 +8,19 @@ class CsvImportResult {
 }
 
 class CsvImportService {
+  CsvImportResult parseBytes(List<int> bytes) {
+    if (bytes.length > 2 * 1024 * 1024) {
+      throw const FormatException('文件过大，请分成小于 2MB 的文件');
+    }
+    final String text;
+    try {
+      text = utf8.decode(bytes);
+    } on FormatException {
+      throw const FormatException('文件编码不是 UTF-8，请将 CSV/TSV 另存为 UTF-8 后重试');
+    }
+    return parse(text);
+  }
+
   CsvImportResult parse(String text) {
     final rows = _rows(text);
     if (rows.isEmpty) {
@@ -84,7 +98,8 @@ _CsvColumns _columns(List<String> header) {
 }
 
 List<List<String>> _rows(String text) {
-  final source = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
+  final clean = text.startsWith('\uFEFF') ? text.substring(1) : text;
+  final source = clean.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
   if (source.isEmpty) return const [];
   final firstLine = source.split('\n').first;
   final delimiter =

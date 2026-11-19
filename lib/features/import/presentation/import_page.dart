@@ -347,11 +347,8 @@ class _EnglishCsvImportPageState extends ConsumerState<_EnglishCsvImportPage> {
           !name.endsWith('.txt')) {
         throw const FormatException('请选择 .csv、.tsv 或 .txt');
       }
-      final text = String.fromCharCodes(await file.readAsBytes());
-      if (text.length > 2 * 1024 * 1024) {
-        throw const FormatException('文件过大，请分成小于 2MB 的文件');
-      }
-      final preview = _service.parse(text);
+      final bytes = await file.readAsBytes();
+      final preview = _service.parseBytes(bytes);
       if (!mounted) return;
       setState(() {
         _fileName = file.name;
