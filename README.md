@@ -1,5 +1,7 @@
 # 词忆
 
+v0.14.1 修复英语 CSV/TSV 导入的中文乱码，支持 UTF-8 BOM，并提示不支持的编码。[更新应用](https://abaddon145.github.io/-/update.html?v=0.14.1)
+
 v0.14.0 英语卡片可以写音标、词性和例句，发音按当前语言播放。英语词库可以导入 CSV，备份可以只恢复一种语言。打开应用时会补上缺失的语言列，避免旧数据打不开今日学习和统计。[更新应用](https://abaddon145.github.io/-/update.html?v=0.14.0)
 
 v0.13.1 应用显示名改为词忆。韩语和英语仍分开学习，本机数据不变。[更新应用](https://abaddon145.github.io/-/update.html?v=0.13.1)
