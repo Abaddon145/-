@@ -6,8 +6,8 @@ void main() {
   for (final delimiter in [',', '\t']) {
     for (final bom in [false, true]) {
       test('UTF-8 import handles Chinese headers and content ($delimiter, BOM $bom)', () {
-        final text = '${bom ? '\uFEFF' : ''}词头${delimiter}中文${delimiter}例句中文\n'
-            'sky${delimiter}天空${delimiter}天空是蓝色的';
+        final text = '${bom ? '\uFEFF' : ''}${['词头', '中文', '例句中文'].join(delimiter)}\n'
+            '${['sky', '天空', '天空是蓝色的'].join(delimiter)}';
         final result = CsvImportService().parseBytes(utf8.encode(text));
         expect(result.drafts.single.meaningZh, '天空');
         expect(result.drafts.single.exampleZh, '天空是蓝色的');
