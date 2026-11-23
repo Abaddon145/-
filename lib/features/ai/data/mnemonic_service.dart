@@ -13,11 +13,15 @@ Future<String> loadOrCreateMnemonic(
   final cached = await database.loadSetting(key);
   if (cached != null && cached.trim().isNotEmpty) return cached;
   final ready = gateway is AiDeferredGateway ? await gateway.ready : gateway;
-  final text = switch (ready) {
-    AiDeepSeekClient client => await client.mnemonic(word, AiCancellation()),
-    AiProxyClient client => await client.mnemonic(word, AiCancellation()),
-    _ => throw const AiException('not_configured'),
-  };
-  await database.saveSetting(key, text);
-  return text;
+  final Future<String> text;
+  if (ready is AiDeepSeekClient) {
+    text = ready.mnemonic(word, AiCancellation());
+  } else if (ready is AiProxyClient) {
+    text = ready.mnemonic(word, AiCancellation());
+  } else {
+    throw const AiException('not_configured');
+  }
+  final note = await text;
+  await database.saveSetting(key, note);
+  return note;
 }

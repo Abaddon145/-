@@ -120,7 +120,6 @@ class AiProxyClient implements AiGateway {
     }
   }
 
-  @override
   Future<String> mnemonic(Word word, AiCancellation cancellation) async {
     try {
       final json = await _send(
@@ -146,6 +145,7 @@ class AiProxyClient implements AiGateway {
     }
   }
 
+  @override
   Future<String> health() async {
     final json = await _send('GET', '/health', AiCancellation());
     if (json['promptVersion'] != aiPromptVersion) {
