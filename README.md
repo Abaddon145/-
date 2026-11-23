@@ -1,5 +1,7 @@
 # 词忆
 
+v0.17.0 可以把手动备份之外的进度自动放到 GitHub Gist 或 WebDAV。令牌和密码只留在这台设备，备份文件里没有它们；Gist 令牌请只给 gist 权限。打开应用或学完一轮时备份，并保留最近几份。学习统计可以按韩语、英语或全部查看，并排比较掌握程度、复习次数和学习分钟。[更新应用](https://abaddon145.github.io/-/update.html?v=0.17.0)
+
 v0.16.0 英语词库可以一键导入 CET-4、CET-6、考研和 IELTS 词表（词和中文释义来自 MIT 许可的 [ECDICT](https://github.com/skywind3000/ECDICT)，只在点导入时下载，不进首屏缓存）。英语空间的拼写和听写按 en-US 发音，忽略大小写和空格。学习卡可以生成按语言分开缓存的助记。每日提醒先记住时间；iPhone 主屏幕在页面关掉后的后台推送还要代理上的 VAPID 密钥，目前没有这份密钥。[更新应用](https://abaddon145.github.io/-/update.html?v=0.16.0)
 
 v0.15.0 私有代理可以按语言生成英语释义。词头在数据库里改名为 headword，旧备份里的 korean 字段仍能恢复。[更新应用](https://abaddon145.github.io/-/update.html?v=0.15.0)

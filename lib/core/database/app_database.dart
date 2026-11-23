@@ -1484,6 +1484,7 @@ class AppDatabase extends _$AppDatabase {
     DateTime now, {
     int days = 7,
     String language = 'ko',
+    bool combineLanguages = false,
   }) async {
     final lang = normalizeLearningLanguage(language);
     final today = DateTime.utc(now.year, now.month, now.day),
@@ -1492,30 +1493,43 @@ class AppDatabase extends _$AppDatabase {
           now.month,
           now.day,
         ).subtract(Duration(days: days - 1));
-    final rows =
-        await (select(dailyStatistics)
-              ..where(
-                (r) =>
-                    r.language.equals(lang) &
-                    r.date.isBiggerOrEqualValue(start) &
-                    r.date.isSmallerOrEqualValue(today),
-              )
-              ..orderBy([(r) => OrderingTerm.asc(r.date)]))
-            .get();
+    final query = select(dailyStatistics)
+      ..where(
+        (r) =>
+            r.date.isBiggerOrEqualValue(start) &
+            r.date.isSmallerOrEqualValue(today),
+      )
+      ..orderBy([(r) => OrderingTerm.asc(r.date)]);
+    if (!combineLanguages) {
+      query.where((r) => r.language.equals(lang));
+    }
+    final rows = await query.get();
     // Drift decodes SQLite timestamps as local DateTime objects. DateTime
     // equality distinguishes UTC and local objects even for the same instant.
     // Use the stored instant as the key so existing rows match in every timezone.
-    final values = {for (final r in rows) r.date.millisecondsSinceEpoch: r};
+    final values = <int, DailyStatisticsSummary>{};
+    for (final row in rows) {
+      final key = row.date.millisecondsSinceEpoch;
+      final previous = values[key];
+      values[key] = DailyStatisticsSummary(
+        date: previous?.date ?? row.date,
+        newWords: (previous?.newWords ?? 0) + row.newWords,
+        reviews: (previous?.reviews ?? 0) + row.reviewWords,
+        correct: (previous?.correct ?? 0) + row.correctCount,
+        wrong: (previous?.wrong ?? 0) + row.wrongCount,
+        durationMs: (previous?.durationMs ?? 0) + row.studyDurationMs,
+      );
+    }
     return List.generate(days, (i) {
-      final d = start.add(Duration(days: i)),
-          r = values[d.millisecondsSinceEpoch];
+      final d = start.add(Duration(days: i));
+      final row = values[d.millisecondsSinceEpoch];
       return DailyStatisticsSummary(
         date: d,
-        newWords: r?.newWords ?? 0,
-        reviews: r?.reviewWords ?? 0,
-        correct: r?.correctCount ?? 0,
-        wrong: r?.wrongCount ?? 0,
-        durationMs: r?.studyDurationMs ?? 0,
+        newWords: row?.newWords ?? 0,
+        reviews: row?.reviews ?? 0,
+        correct: row?.correct ?? 0,
+        wrong: row?.wrong ?? 0,
+        durationMs: row?.durationMs ?? 0,
       );
     });
   }

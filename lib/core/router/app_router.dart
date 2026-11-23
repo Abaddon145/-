@@ -7,6 +7,7 @@ import '../../features/import/presentation/import_page.dart';
 import '../../features/library/presentation/library_page.dart';
 import '../../features/settings/presentation/appearance_page.dart';
 import '../../features/settings/presentation/daily_plan_page.dart';
+import '../../features/settings/presentation/cloud_backup_page.dart';
 import '../../features/settings/presentation/settings_page.dart';
 import '../../features/statistics/presentation/statistics_page.dart';
 import '../../features/study/presentation/study_page.dart';
@@ -83,6 +84,11 @@ final appRouter = GoRouter(
                 backdrop: false,
               ),
               routes: [
+                GoRoute(
+                  path: 'cloud-backup',
+                  pageBuilder: (context, state) =>
+                      appPage(state, const CloudBackupPage(), backdrop: true),
+                ),
                 GoRoute(
                   path: 'daily-plan',
                   pageBuilder: (context, state) =>

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
@@ -6,6 +8,7 @@ import '../../../services/fsrs_service.dart';
 import '../data/study_repository.dart';
 import '../../home/presentation/visible_tab.dart';
 import '../../library/domain/providers.dart';
+import '../../settings/data/cloud_backup_service.dart';
 import '../domain/providers.dart';
 
 class StudyUiState {
@@ -60,12 +63,17 @@ class StudyUiState {
 }
 
 class StudyController extends StateNotifier<StudyUiState> {
-  StudyController(this._repository, {this.onRatingSaved, this.beforeLoad})
-    : super(const StudyUiState(isLoading: true));
+  StudyController(
+    this._repository, {
+    this.onRatingSaved,
+    this.beforeLoad,
+    this.onSessionComplete,
+  }) : super(const StudyUiState(isLoading: true));
 
   final StudyRepository _repository;
   final void Function()? onRatingSaved;
   final Future<void> Function()? beforeLoad;
+  final Future<void> Function()? onSessionComplete;
   final Stopwatch _clock = Stopwatch();
   bool _visible = true;
   bool _appActive = true;
@@ -240,7 +248,12 @@ class StudyController extends StateNotifier<StudyUiState> {
           : null;
       onRatingSaved?.call();
       await load();
-      if (!mounted || notice == null) return;
+      if (!mounted) return;
+      if (state.word == null && state.error == null) {
+        final pending = onSessionComplete?.call();
+        if (pending != null) unawaited(pending);
+      }
+      if (notice == null) return;
       state = state.copyWith(notice: notice);
     } catch (error) {
       if (!mounted) return;
@@ -257,6 +270,8 @@ final studyControllerProvider =
         beforeLoad: () async {
           await ref.read(bundledWordSeedProvider.future);
         },
+        onSessionComplete: () =>
+            ref.read(cloudBackupServiceProvider).afterSession(),
         onRatingSaved: () {
           ref.invalidate(dailyPlanProgressProvider);
           ref.invalidate(studyRoundProgressProvider);

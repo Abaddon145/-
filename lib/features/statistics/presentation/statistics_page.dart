@@ -10,6 +10,7 @@ import '../../../core/theme/app_motion.dart';
 import '../../study/domain/providers.dart';
 import '../domain/providers.dart';
 import '../data/learning_report.dart';
+import 'language_comparison_card.dart';
 
 class StatisticsPage extends ConsumerWidget {
   const StatisticsPage({super.key});
@@ -38,6 +39,7 @@ class StatisticsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(recentStatisticsProvider),
         colors = Theme.of(context).colorScheme;
+    final scope = ref.watch(statisticsScopeProvider);
     final objective = ref.watch(objectiveStatisticsProvider).valueOrNull ?? {};
     return Scaffold(
       appBar: AppBar(
@@ -107,6 +109,27 @@ class StatisticsPage extends ConsumerWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(18),
               children: [
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SegmentedButton<String>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment(value: 'active', label: Text('当前')),
+                      ButtonSegment(value: 'ko', label: Text('韩语')),
+                      ButtonSegment(value: 'en', label: Text('英语')),
+                      ButtonSegment(value: 'all', label: Text('全部')),
+                    ],
+                    selected: {scope},
+                    onSelectionChanged: (value) =>
+                        ref.read(statisticsScopeProvider.notifier).state =
+                            value.first,
+                  ),
+                ),
+                if (scope == 'all') ...[
+                  const SizedBox(height: 12),
+                  const LanguageComparisonCard(),
+                ],
+                const SizedBox(height: 12),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(20),
@@ -154,7 +177,7 @@ class StatisticsPage extends ConsumerWidget {
                   child: ListTile(
                     leading: const Icon(Icons.calendar_month_rounded),
                     title: ref
-                        .watch(checkinsProvider)
+                        .watch(statisticsCheckinsProvider)
                         .when(
                           data: (v) =>
                               Text('连续打卡 ${v.streak} 天 · 最长 ${v.longest} 天'),
