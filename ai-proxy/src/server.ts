@@ -50,7 +50,7 @@ export function createApp(config: Config, provider: Provider) {
         const raw = await body(req) as {term?: unknown; meaning?: unknown; language?: unknown};
         const term = typeof raw.term === 'string' ? raw.term.trim() : '';
         const meaning = typeof raw.meaning === 'string' ? raw.meaning.trim() : '';
-        const language = raw.language === 'en' ? 'en' : 'ko';
+        const language = (raw.language === 'en' ? 'en' : 'ko') as 'en' | 'ko';
         if (!term) throw new AiError('invalid_request', 400);
         const request = {
           requestId: '00000000-0000-4000-8000-000000000001',
