@@ -111,7 +111,7 @@ void main() {
           task = await repo.createTask(selected, '工厂设备');
       await db.updateWord(
         wordId: selected[0].id,
-        korean: selected[0].korean,
+        korean: selected[0].headword,
         meaningZh: '人工释义',
       );
       await db.deleteWord(selected[1].id);
@@ -138,7 +138,7 @@ void main() {
       final gateway = TestGateway(typo: true),
           runner = AiTaskRunner(repo, () => gateway);
       await runner.start(task);
-      expect((await repo.word(word.id))!.korean, 'clrculation');
+      expect((await repo.word(word.id))!.headword, 'clrculation');
       expect((await repo.word(word.id))!.meaningZh, '（待补中文）');
       expect((await repo.items(task)).single.status, 'awaitingReview');
     },
@@ -165,7 +165,7 @@ class TestGateway implements AiGateway {
     try {
       await Future<void>.delayed(const Duration(milliseconds: 10));
       cancellation.check();
-      if (failOnce.contains(r.word.korean) && failed.add(r.word.korean)) {
+      if (failOnce.contains(r.word.headword) && failed.add(r.word.headword)) {
         throw const AiException('provider_error');
       }
       return suggestionFor(

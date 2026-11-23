@@ -61,7 +61,7 @@ class AiRepository {
       if (result.wordId != request.word.id ||
           result.requestId != row.id ||
           result.context != request.context ||
-          result.result['originalTerm'] != request.word.korean) {
+          result.result['originalTerm'] != request.word.headword) {
         return null;
       }
       return result;
@@ -166,7 +166,7 @@ class AiRepository {
             !original.spellings.contains(spelling))) {
       throw const AiException('invalid_response');
     }
-    final newTerm = spelling ?? current.korean;
+    final newTerm = spelling ?? current.headword;
     final newBase = fields.contains('baseForm')
         ? edited.fieldText('baseForm')
         : current.baseForm;
@@ -175,7 +175,7 @@ class AiRepository {
               (r) =>
                   r.id.isNotValue(current.id) &
                   r.language.equals(current.language) &
-                  r.normalizedKorean.equals(normalizeLookup(newTerm)) &
+                  r.normalizedHeadword.equals(normalizeLookup(newTerm)) &
                   r.normalizedBaseForm.equals(normalizeLookup(newBase)),
             ))
             .get();
@@ -195,8 +195,8 @@ class AiRepository {
     if (hasWordFields) {
       await (db.update(db.words)..where((r) => r.id.equals(current.id))).write(
         WordsCompanion(
-          korean: spelling == null ? const Value.absent() : Value(newTerm),
-          normalizedKorean: spelling == null
+          headword: spelling == null ? const Value.absent() : Value(newTerm),
+          normalizedHeadword: spelling == null
               ? const Value.absent()
               : Value(normalizeLookup(newTerm)),
           baseForm: fields.contains('baseForm')

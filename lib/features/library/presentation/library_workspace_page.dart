@@ -100,7 +100,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除词条？'),
-        content: Text('“${item.word.korean}”的复习记录和学习状态也会被删除，此操作无法撤销。'),
+        content: Text('“${item.word.headword}”的复习记录和学习状态也会被删除，此操作无法撤销。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -570,7 +570,7 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                                           )
                                         : null,
                                     title: Text(
-                                      item.word.korean,
+                                      item.word.headword,
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleMedium

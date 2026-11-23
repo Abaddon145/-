@@ -53,7 +53,7 @@ class _WordEditorSheetState extends ConsumerState<_WordEditorSheet> {
   @override
   void initState() {
     super.initState();
-    _korean = TextEditingController(text: widget.word?.korean ?? '');
+    _korean = TextEditingController(text: widget.word?.headword ?? '');
     _meaning = TextEditingController(text: widget.word?.meaningZh ?? '');
     _partOfSpeech = TextEditingController(
       text: widget.word?.partOfSpeech ?? '',

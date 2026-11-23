@@ -310,13 +310,13 @@ void main() {
       ],
     );
     final options = SessionOptions(bookId: special);
-    expect((await database.nextTrainingWord(options, now))?.korean, '사랑');
+    expect((await database.nextTrainingWord(options, now))?.headword, '사랑');
     expect(
       (await database.searchLibraryWords(
         query: '',
         filter: LibraryFilter.all,
         bookId: special,
-      )).map((entry) => entry.word.korean),
+      )).map((entry) => entry.word.headword),
       ['사랑'],
     );
   });

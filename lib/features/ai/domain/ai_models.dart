@@ -9,7 +9,7 @@ export 'ai_response.dart';
 /// Content and normalized instants avoid local/UTC equality and same-second edits.
 Map<String, Object?> aiWordSnapshot(Word word) => {
   'wordId': word.id,
-  'originalTerm': word.korean,
+  'originalTerm': word.headword,
   'meaningZh': word.meaningZh,
   'partOfSpeech': word.partOfSpeech ?? '',
   'baseForm': word.baseForm,
@@ -64,12 +64,13 @@ class AiRequest implements AiRequestIdentity {
   @override
   String get learningLanguage => word.language;
   @override
-  String get originalTerm => word.korean;
+  String get originalTerm => word.headword;
   final int exampleCount;
-  Map<String, Object?> toJson() => {
+  Map<String, Object?> toJson({bool includeLanguage = false}) => {
     'requestId': requestId,
+    if (includeLanguage) 'language': learningLanguage,
     'wordId': word.id,
-    'originalTerm': word.korean,
+    'originalTerm': word.headword,
     'context': context,
     'meaningZh': word.meaningZh,
     'partOfSpeech': word.partOfSpeech ?? '',
@@ -80,8 +81,8 @@ class AiRequest implements AiRequestIdentity {
     'exampleCount': exampleCount,
   };
   void validate() {
-    if (word.korean.isEmpty ||
-        word.korean.length > 200 ||
+    if (word.headword.isEmpty ||
+        word.headword.length > 200 ||
         context.isEmpty ||
         context.length > 600 ||
         word.meaningZh.length > 2000 ||

@@ -79,7 +79,7 @@ void main() {
     final database = AppDatabase(NativeDatabase(target));
     addTearDown(database.close);
     final version = await database.customSelect('PRAGMA user_version').get();
-    expect(version.single.read<int>('user_version'), 7);
+    expect(version.single.read<int>('user_version'), 8);
     for (final table in [
       'words',
       'word_books',

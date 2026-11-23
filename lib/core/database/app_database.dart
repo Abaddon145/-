@@ -16,8 +16,8 @@ part 'backup_snapshot.dart';
 
 class Words extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get korean => text()();
-  TextColumn get normalizedKorean => text()();
+  TextColumn get headword => text()();
+  TextColumn get normalizedHeadword => text()();
   TextColumn get baseForm => text().withDefault(const Constant(''))();
   TextColumn get normalizedBaseForm => text().withDefault(const Constant(''))();
   TextColumn get meaningZh => text()();
@@ -39,7 +39,7 @@ class Words extends Table {
 
   @override
   List<Set<Column<Object>>> get uniqueKeys => [
-    {language, normalizedKorean, normalizedBaseForm},
+    {language, normalizedHeadword, normalizedBaseForm},
   ];
 }
 
@@ -230,7 +230,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -268,6 +268,14 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 6) await _migrateToLanguageSpace();
       if (from < 7) await _repairLanguageColumns();
+      if (from < 8) {
+        await customStatement('PRAGMA foreign_keys = OFF');
+        try {
+          await _renameHeadwordColumn();
+        } finally {
+          await customStatement('PRAGMA foreign_keys = ON');
+        }
+      }
     },
   );
 
@@ -279,8 +287,11 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('PRAGMA foreign_keys = OFF');
     try {
       await transaction(() async {
+        final normalized = await _hasColumn('words', 'normalized_headword')
+            ? 'normalized_headword'
+            : 'normalized_korean';
         final duplicate = await customSelect(
-          'SELECT 1 AS hit FROM words GROUP BY normalized_korean, normalized_base_form HAVING COUNT(*) > 1 LIMIT 1',
+          'SELECT 1 AS hit FROM words GROUP BY $normalized, normalized_base_form HAVING COUNT(*) > 1 LIMIT 1',
         ).get();
         if (duplicate.isNotEmpty) {
           throw StateError('词条有重复，已中止语言迁移，没有合并任何词');
@@ -314,6 +325,12 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<void> _rebuildWordsForLanguage() async {
+    if (await _hasColumn('words', 'headword')) {
+      if (!await _hasColumn('words', 'ipa')) {
+        await customStatement('ALTER TABLE words ADD COLUMN ipa TEXT NULL');
+      }
+      return;
+    }
     if (!await _hasColumn('words', 'ipa')) {
       await customStatement('ALTER TABLE words ADD COLUMN ipa TEXT NULL');
     }
@@ -435,6 +452,7 @@ class AppDatabase extends _$AppDatabase {
             await saveSetting(activeLanguageSettingKey, 'ko');
           }
         }
+        await _renameHeadwordColumn();
       });
     } finally {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -455,6 +473,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   Future<bool> _wordsUniqueIncludesLanguage() async {
+    if (await _hasColumn('words', 'headword')) return true;
     try {
       final indexes = await customSelect('PRAGMA index_list(words)').get();
       for (final index in indexes) {
@@ -521,6 +540,64 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'ALTER TABLE daily_statistics__repair RENAME TO daily_statistics',
     );
+  }
+
+  Future<void> _renameHeadwordColumn() async {
+    if (!await _tableExists('words') ||
+        await _hasColumn('words', 'headword') ||
+        !await _hasColumn('words', 'korean')) {
+      return;
+    }
+    await transaction(() async {
+      if (await _hasColumn('words', 'headword') ||
+          !await _hasColumn('words', 'korean')) {
+        return;
+      }
+      final hasIpa = await _hasColumn('words', 'ipa');
+      final hasLanguage = await _hasColumn('words', 'language');
+      await customStatement('''
+      CREATE TABLE words__headword (
+        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        headword TEXT NOT NULL,
+        normalized_headword TEXT NOT NULL,
+        base_form TEXT NOT NULL DEFAULT '',
+        normalized_base_form TEXT NOT NULL DEFAULT '',
+        meaning_zh TEXT NOT NULL,
+        pronunciation TEXT NULL,
+        ipa TEXT NULL,
+        part_of_speech TEXT NULL,
+        example_ko TEXT NULL,
+        example_zh TEXT NULL,
+        topik_level TEXT NULL,
+        category TEXT NULL,
+        tags TEXT NULL,
+        note TEXT NULL,
+        hanja TEXT NULL,
+        etymology TEXT NULL,
+        source TEXT NULL,
+        language TEXT NOT NULL DEFAULT 'ko',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        UNIQUE (language, normalized_headword, normalized_base_form)
+      )
+    ''');
+      await customStatement('''
+      INSERT INTO words__headword (
+        id, headword, normalized_headword, base_form, normalized_base_form,
+        meaning_zh, pronunciation, ipa, part_of_speech, example_ko, example_zh,
+        topik_level, category, tags, note, hanja, etymology, source,
+        language, created_at, updated_at
+      )
+      SELECT
+        id, korean, normalized_korean, base_form, normalized_base_form,
+        meaning_zh, pronunciation, ${hasIpa ? 'ipa' : 'NULL'}, part_of_speech,
+        example_ko, example_zh, topik_level, category, tags, note, hanja,
+        etymology, source, ${hasLanguage ? 'language' : "'ko'"}, created_at, updated_at
+      FROM words
+    ''');
+      await customStatement('DROP TABLE words');
+      await customStatement('ALTER TABLE words__headword RENAME TO words');
+    });
   }
 
   Future<void> _rebuildWordsIncludingIpa() async {
@@ -932,7 +1009,7 @@ class AppDatabase extends _$AppDatabase {
             await (select(words)..where(
                   (word) =>
                       word.language.equals(lang) &
-                      word.normalizedKorean.equals(draft.normalizedKorean) &
+                      word.normalizedHeadword.equals(draft.normalizedKorean) &
                       word.normalizedBaseForm.equals(draft.normalizedBaseForm),
                 ))
                 .getSingleOrNull();
@@ -991,11 +1068,11 @@ class AppDatabase extends _$AppDatabase {
           await (select(words)..where(
                 (word) =>
                     word.language.equals(lang) &
-                    word.normalizedKorean.isIn(keys),
+                    word.normalizedHeadword.isIn(keys),
               ))
               .get();
       for (final row in rows) {
-        found[(row.normalizedKorean, row.normalizedBaseForm)] = row;
+        found[(row.normalizedHeadword, row.normalizedBaseForm)] = row;
       }
     }
     return found;
@@ -1233,7 +1310,7 @@ class AppDatabase extends _$AppDatabase {
     ];
     if (normalized.isNotEmpty) {
       where.add(
-        '(lower(w.korean) LIKE ? OR lower(w.meaning_zh) LIKE ? OR lower(w.base_form) LIKE ? OR lower(coalesce(w.tags, \'\')) LIKE ? OR lower(coalesce(w.part_of_speech, \'\')) LIKE ?)',
+        '(lower(w.headword) LIKE ? OR lower(w.meaning_zh) LIKE ? OR lower(w.base_form) LIKE ? OR lower(coalesce(w.tags, \'\')) LIKE ? OR lower(coalesce(w.part_of_speech, \'\')) LIKE ?)',
       );
       final like = '%$normalized%';
       variables.addAll([for (var i = 0; i < 5; i++) Variable<String>(like)]);
@@ -1301,7 +1378,7 @@ class AppDatabase extends _$AppDatabase {
     );
     final variables = [...clause.variables];
     var sql =
-        'SELECT w.id $_libraryFrom WHERE ${clause.where} ORDER BY w.korean, w.id';
+        'SELECT w.id $_libraryFrom WHERE ${clause.where} ORDER BY w.headword, w.id';
     if (limit != null) {
       sql += ' LIMIT ? OFFSET ?';
       variables.addAll([Variable<int>(limit), Variable<int>(offset)]);
@@ -1356,8 +1433,8 @@ class AppDatabase extends _$AppDatabase {
     }
     await (update(words)..where((word) => word.id.equals(wordId))).write(
       WordsCompanion(
-        korean: Value(term),
-        normalizedKorean: Value(normalizeLookup(term)),
+        headword: Value(term),
+        normalizedHeadword: Value(normalizeLookup(term)),
         meaningZh: Value(meaning),
         partOfSpeech: partOfSpeech == null
             ? const Value.absent()
@@ -1571,8 +1648,8 @@ class WordDraft {
   WordsCompanion toCompanion({required String source, String language = 'ko'}) {
     final now = DateTime.now().toUtc();
     return WordsCompanion.insert(
-      korean: korean.trim(),
-      normalizedKorean: normalizedKorean,
+      headword: korean.trim(),
+      normalizedHeadword: normalizedKorean,
       baseForm: Value(baseForm.trim()),
       normalizedBaseForm: Value(normalizedBaseForm),
       meaningZh: meaningZh.trim(),

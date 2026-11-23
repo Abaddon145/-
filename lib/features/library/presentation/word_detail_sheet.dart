@@ -104,7 +104,10 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
           children: [
-            Text(word.korean, style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              word.headword,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
             if (word.language == 'en' && word.ipa?.isNotEmpty == true)
               Text(word.ipa!),
             Text(word.meaningZh),
@@ -149,7 +152,7 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(12),
-                      child: AiPlainText(entry.value, term: word.korean),
+                      child: AiPlainText(entry.value, term: word.headword),
                     ),
                   ],
                 ),

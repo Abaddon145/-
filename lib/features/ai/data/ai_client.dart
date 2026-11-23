@@ -88,15 +88,35 @@ class AiProxyClient implements AiGateway {
     AiCancellation cancellation,
   ) async {
     request.validate();
-    return AiSuggestion.fromJson(
-      await _send(
-        'POST',
-        '/v1/${request.type}',
-        cancellation,
-        data: request.toJson(),
-      ),
-      request: request,
-    );
+    try {
+      return AiSuggestion.fromJson(
+        await _send(
+          'POST',
+          '/v1/${request.type}',
+          cancellation,
+          data: request.toJson(includeLanguage: true),
+        ),
+        request: request,
+      );
+    } on AiException catch (error) {
+      // A proxy from before the language field rejects unknown JSON keys.
+      if (error.code != 'invalid_request') rethrow;
+      final suggestion = AiSuggestion.fromJson(
+        await _send(
+          'POST',
+          '/v1/${request.type}',
+          cancellation,
+          data: request.toJson(),
+        ),
+      );
+      if (suggestion.requestId != request.requestId ||
+          suggestion.wordId != request.wordId ||
+          suggestion.result['originalTerm'] != request.originalTerm ||
+          suggestion.context != request.context) {
+        throw const AiException('identity_mismatch');
+      }
+      return suggestion;
+    }
   }
 
   @override

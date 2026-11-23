@@ -7,7 +7,8 @@ import {readFile} from 'node:fs/promises';
 import {runInNewContext} from 'node:vm';
 import type {Config} from '../src/config.js';
 import {loadConfig} from '../src/config.js';
-import {AiError, parseResult, PROMPT_VERSION, type AiRequest, type AiResult} from '../src/schema.js';
+import {AiError, ENGLISH_PROMPT_VERSION, parseResult, PROMPT_VERSION, type AiRequest, type AiResult} from '../src/schema.js';
+import {systemPromptFor} from '../src/prompts.js';
 import {OpenAIProvider, type Provider} from '../src/provider.js';
 import {Scheduler} from '../src/scheduler.js';
 import {createApp} from '../src/server.js';
@@ -216,6 +217,26 @@ test('invalid startup configuration does not leak secret values to logs', () => 
   });
   assert.equal(child.status, 1); assert.ok(!child.stderr.includes(sentinel)); assert.ok(!child.stdout.includes(sentinel));
   assert.throws(() => loadConfig({PROXY_ACCESS_TOKEN: config.accessToken, CONCURRENCY: '3'}));
+});
+test('requests without language stay Korean and English uses en-zh-v1', async t => {
+  assert.match(systemPromptFor(undefined), /韩语学习助手/);
+  assert.match(systemPromptFor('en'), /英文例句/);
+  assert.doesNotMatch(systemPromptFor('en'), /韩文例句/);
+  const seen: Array<string | undefined> = [];
+  const server = createApp(config, {async generate(r) {seen.push(r.language); return result(r);}});
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise<void>(resolve => server.close(() => resolve())));
+  const address = server.address(); assert.ok(address && typeof address !== 'string');
+  const headers = {authorization: `Bearer ${config.accessToken}`, 'content-type': 'application/json'};
+  const url = `http://127.0.0.1:${address.port}`;
+  const health = await (await fetch(`${url}/health`, {headers})).json() as {languages: string[]; promptVersion: string};
+  assert.equal(health.promptVersion, PROMPT_VERSION);
+  assert.deepEqual(health.languages, ['ko', 'en']);
+  const korean = await (await fetch(`${url}/v1/explain`, {method: 'POST', headers, body: JSON.stringify(request())})).json() as {promptVersion: string};
+  const english = await (await fetch(`${url}/v1/explain`, {method: 'POST', headers, body: JSON.stringify({...request(), language: 'en'})})).json() as {promptVersion: string};
+  assert.equal(korean.promptVersion, PROMPT_VERSION);
+  assert.equal(english.promptVersion, ENGLISH_PROMPT_VERSION);
+  assert.deepEqual(seen, [undefined, 'en']);
 });
 test('PWA worker never caches authenticated requests, even for same-origin proxies', async () => {
   let handler!: (event: {request: Request; respondWith: (reply: unknown) => void}) => void;

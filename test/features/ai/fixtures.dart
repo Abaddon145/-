@@ -19,7 +19,7 @@ Future<Word> addAiWord(
   return (await db.searchLibraryWords(
     query: term,
     filter: LibraryFilter.all,
-  )).firstWhere((r) => r.word.korean == term).word;
+  )).firstWhere((r) => r.word.headword == term).word;
 }
 
 AiSuggestion suggestionFor(
@@ -29,7 +29,7 @@ AiSuggestion suggestionFor(
   'result': {
     'requestId': r.requestId,
     'wordId': r.word.id,
-    'originalTerm': r.word.korean,
+    'originalTerm': r.word.headword,
     'context': r.context,
     'meaningZh': '测试释义',
     'partOfSpeech': '名词',

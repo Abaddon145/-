@@ -3,7 +3,7 @@ import {createHash, timingSafeEqual} from 'node:crypto';
 import type {Config} from './config.js';
 import type {Provider} from './provider.js';
 import {Scheduler} from './scheduler.js';
-import {AiError, MAX_BODY_BYTES, PROMPT_VERSION, requestSchema} from './schema.js';
+import {AiError, ENGLISH_PROMPT_VERSION, MAX_BODY_BYTES, PROMPT_VERSION, promptVersionFor, requestSchema} from './schema.js';
 
 async function body(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = []; let size = 0;
@@ -41,7 +41,8 @@ export function createApp(config: Config, provider: Provider) {
     try {
       if (req.method === 'GET' && req.url === '/health') {
         reply(200, {status: config.apiKey && config.model ? 'ready' : 'not_configured',
-          promptVersion: PROMPT_VERSION, api: config.api, outputMode: config.outputMode,
+          promptVersion: PROMPT_VERSION, prompts: {ko: PROMPT_VERSION, en: ENGLISH_PROMPT_VERSION},
+          languages: ['ko', 'en'], api: config.api, outputMode: config.outputMode,
           limitScope: 'single_process', concurrency: config.concurrency}); return;
       }
       if (req.method !== 'POST' || !['/v1/complete', '/v1/explain'].includes(req.url ?? '')) {
@@ -52,7 +53,8 @@ export function createApp(config: Config, provider: Provider) {
       const parsed = requestSchema.safeParse(await body(req));
       if (!parsed.success) throw new AiError('invalid_request', 400);
       const result = await scheduler.run(parsed.data, req.url === '/v1/complete' ? 'complete' : 'explain', cancellation.signal);
-      reply(200, {result, model: config.model, generatedAt: new Date().toISOString(), promptVersion: PROMPT_VERSION});
+      reply(200, {result, model: config.model, generatedAt: new Date().toISOString(),
+        promptVersion: promptVersionFor(parsed.data.language)});
     } catch (error) {
       const safe = error instanceof AiError ? error : new AiError('internal_error', 500);
       if (safe.status === 429) res.setHeader('Retry-After', '60');

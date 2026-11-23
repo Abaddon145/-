@@ -67,7 +67,7 @@ void main() {
       expect((await db.nextTrainingWord(const SessionOptions(), day))?.id, id);
       await db.saveSetting('word_status:$id', 'suspended');
       expect(
-        (await db.nextTrainingWord(const SessionOptions(), day))?.korean,
+        (await db.nextTrainingWord(const SessionOptions(), day))?.headword,
         '하늘',
       );
     },
