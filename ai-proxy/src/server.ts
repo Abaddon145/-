@@ -45,6 +45,34 @@ export function createApp(config: Config, provider: Provider) {
           languages: ['ko', 'en'], api: config.api, outputMode: config.outputMode,
           limitScope: 'single_process', concurrency: config.concurrency}); return;
       }
+      if (req.method === 'POST' && req.url === '/v1/mnemonic') {
+        if (!req.headers['content-type']?.startsWith('application/json')) throw new AiError('invalid_request', 415);
+        const raw = await body(req) as {term?: unknown; meaning?: unknown; language?: unknown};
+        const term = typeof raw.term === 'string' ? raw.term.trim() : '';
+        const meaning = typeof raw.meaning === 'string' ? raw.meaning.trim() : '';
+        const language = raw.language === 'en' ? 'en' : 'ko';
+        if (!term) throw new AiError('invalid_request', 400);
+        const request = {
+          requestId: '00000000-0000-4000-8000-000000000001',
+          wordId: 1,
+          originalTerm: term.slice(0, 200),
+          context: language === 'en' ? '英语助记' : '韩语助记',
+          meaningZh: meaning.slice(0, 2000),
+          partOfSpeech: '',
+          baseForm: '',
+          exampleKo: '',
+          exampleZh: '',
+          style: 'default' as const,
+          exampleCount: 1,
+          language,
+        };
+        const result = await scheduler.run(request, 'explain', cancellation.signal);
+        const mnemonic = language === 'en'
+          ? [result.partOfSpeech, result.exampleKo, result.exampleZh].filter(Boolean).join('\n')
+          : [result.grammarNote, result.exampleKo, result.exampleZh].filter(Boolean).join('\n');
+        reply(200, {mnemonic: mnemonic || result.meaningZh, language, promptVersion: promptVersionFor(language)});
+        return;
+      }
       if (req.method !== 'POST' || !['/v1/complete', '/v1/explain'].includes(req.url ?? '')) {
         throw new AiError('not_found', 404);
       }

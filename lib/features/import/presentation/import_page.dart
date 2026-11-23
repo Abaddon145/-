@@ -8,6 +8,7 @@ import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 import '../../library/domain/providers.dart';
 import '../data/csv_import_service.dart';
+import '../data/english_list_service.dart';
 import '../data/excel_import_service.dart';
 import '../domain/import_models.dart';
 
@@ -332,6 +333,54 @@ class _EnglishCsvImportPageState extends ConsumerState<_EnglishCsvImportPage> {
   String? _fileName, _error;
   bool _busy = false;
 
+  Future<void> _importBuiltIn(EnglishBuiltInList list) async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final drafts = await loadEnglishBuiltInList(list);
+      final db = ref.read(databaseProvider);
+      final source = 'english-list://${list.id}';
+      final result = await db.transaction(() async {
+        final existing =
+            await (db.select(db.wordBooks)
+                  ..where((row) => row.sourceFileName.equals(source))
+                  ..where((row) => row.language.equals('en')))
+                .getSingleOrNull();
+        final book =
+            existing?.id ??
+            await db.createWordBook(
+              name: list.title,
+              sourceFileName: source,
+              language: 'en',
+            );
+        return db.importWords(
+          wordBookId: book,
+          drafts: drafts,
+          source: source,
+          language: 'en',
+        );
+      });
+      ref.invalidate(homeCountsProvider);
+      ref.invalidate(wordBooksProvider);
+      ref.invalidate(libraryWordsProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${list.title} 新增 ${result.inserted} · 已有 ${result.reused}',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = '$error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _pick() async {
     setState(() {
       _busy = true;
@@ -407,9 +456,18 @@ class _EnglishCsvImportPageState extends ConsumerState<_EnglishCsvImportPage> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            const Text(
-              '第一行是表头。需要「词头」和「中文」，可以带上 IPA、词性、例句、例句中文。支持 CSV 和 TSV。这些词只进入英语词库。',
-            ),
+            const Text('可以一键导入内置词表，或自己选择 CSV / TSV。这些词只进入英语词库。'),
+            const SizedBox(height: 12),
+            for (final list in englishBuiltInLists)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton(
+                  onPressed: _busy ? null : () => _importBuiltIn(list),
+                  child: Text('导入${list.title}'),
+                ),
+              ),
+            const SizedBox(height: 8),
+            const Text('自己的表：第一行是表头。需要「词头」和「中文」，可以带上 IPA、词性、例句、例句中文。'),
             const SizedBox(height: 16),
             OutlinedButton.icon(
               onPressed: _busy ? null : _pick,

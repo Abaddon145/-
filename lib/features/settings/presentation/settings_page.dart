@@ -21,6 +21,7 @@ import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 import '../../../core/app_version.dart';
 import '../../ai/domain/ai_providers.dart';
+import 'reminder_tile.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key, this.focusBackup = false});
@@ -402,6 +403,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   '查看自己的学习节奏',
                   () => context.push('/checkin'),
                 ),
+                const ReviewReminderTile(),
               ]),
               group('文件备份与迁移', [
                 Padding(

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../core/database/app_database.dart';
 import '../domain/ai_models.dart';
 
 class AiCancellation {
@@ -120,6 +121,31 @@ class AiProxyClient implements AiGateway {
   }
 
   @override
+  Future<String> mnemonic(Word word, AiCancellation cancellation) async {
+    try {
+      final json = await _send(
+        'POST',
+        '/v1/mnemonic',
+        cancellation,
+        data: {
+          'term': word.headword,
+          'meaning': word.meaningZh,
+          'language': word.language,
+        },
+      );
+      final text = json['mnemonic'];
+      if (text is! String || text.trim().isEmpty) {
+        throw const AiException('empty_response');
+      }
+      return text.trim();
+    } on AiException catch (error) {
+      if (error.code == 'not_found' || error.code == 'invalid_request') {
+        throw const AiException('prompt_mismatch');
+      }
+      rethrow;
+    }
+  }
+
   Future<String> health() async {
     final json = await _send('GET', '/health', AiCancellation());
     if (json['promptVersion'] != aiPromptVersion) {

@@ -18,6 +18,8 @@ import 'study_controller.dart';
 import 'study_content.dart';
 import '../../../core/theme/app_motion.dart';
 import 'session_sheet.dart';
+import '../../ai/data/mnemonic_service.dart';
+import '../../ai/domain/ai_providers.dart';
 import '../../ai/presentation/ai_assistant_sheet.dart';
 
 class StudyPage extends ConsumerStatefulWidget {
@@ -101,6 +103,33 @@ class _StudyPageState extends ConsumerState<StudyPage>
     if (saved == true) {
       ref.invalidate(libraryWordsProvider);
       await controller.load();
+    }
+  }
+
+  Future<void> _mnemonic(Word word) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final text = await loadOrCreateMnemonic(
+        ref.read(databaseProvider),
+        ref.read(aiGatewayProvider),
+        word,
+      );
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(word.language == 'en' ? '词根助记' : '语法助记'),
+          content: SingleChildScrollView(child: Text(text)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('关闭'),
+            ),
+          ],
+        ),
+      );
+    } catch (error) {
+      messenger.showSnackBar(SnackBar(content: Text('$error')));
     }
   }
 
@@ -545,6 +574,17 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                                       Icons.auto_awesome,
                                                     ),
                                                     label: const Text('AI 解释'),
+                                                  ),
+                                                  TextButton.icon(
+                                                    onPressed:
+                                                        state.isSubmitting
+                                                        ? null
+                                                        : () => _mnemonic(word),
+                                                    icon: const Icon(
+                                                      Icons
+                                                          .account_tree_outlined,
+                                                    ),
+                                                    label: const Text('助记'),
                                                   ),
                                                   if (quiz) ...[
                                                     const SizedBox(height: 18),

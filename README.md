@@ -1,5 +1,7 @@
 # 词忆
 
+v0.16.0 英语词库可以一键导入 CET-4、CET-6、考研和 IELTS 词表（词和中文释义来自 MIT 许可的 [ECDICT](https://github.com/skywind3000/ECDICT)，只在点导入时下载，不进首屏缓存）。英语空间的拼写和听写按 en-US 发音，忽略大小写和空格。学习卡可以生成按语言分开缓存的助记。每日提醒先记住时间；iPhone 主屏幕在页面关掉后的后台推送还要代理上的 VAPID 密钥，目前没有这份密钥。[更新应用](https://abaddon145.github.io/-/update.html?v=0.16.0)
+
 v0.15.0 私有代理可以按语言生成英语释义。词头在数据库里改名为 headword，旧备份里的 korean 字段仍能恢复。[更新应用](https://abaddon145.github.io/-/update.html?v=0.15.0)
 
 v0.14.1 修复英语 CSV/TSV 导入的中文乱码，支持 UTF-8 BOM，并提示不支持的编码。[更新应用](https://abaddon145.github.io/-/update.html?v=0.14.1)
