@@ -29,7 +29,7 @@ void main() {
       final words = await db.select(db.words).get();
       expect(words, hasLength(806));
       expect(words.firstWhere((w) => w.id == existingId).meaningZh, '已有释义');
-      expect(words.firstWhere((w) => w.korean == '단어0').meaningZh, '释义0');
+      expect(words.firstWhere((w) => w.headword == '단어0').meaningZh, '释义0');
       final ids = words.map((w) => w.id).toList();
       final repeated = await db.importWords(
         wordBookId: book,
@@ -53,7 +53,8 @@ void main() {
       expect(
         links
             .firstWhere(
-              (l) => l.wordId == words.firstWhere((w) => w.korean == '단어0').id,
+              (l) =>
+                  l.wordId == words.firstWhere((w) => w.headword == '단어0').id,
             )
             .sortOrder,
         805,

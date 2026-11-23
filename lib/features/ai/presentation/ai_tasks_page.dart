@@ -113,7 +113,7 @@ class _AiTaskPageState extends ConsumerState<AiTaskPage> {
               title: const Text('重新确认当前词条'),
               content: SingleChildScrollView(
                 child: Text(
-                  '原快照：${item.originalSnapshot}\n\n当前词：${word.korean}\n当前中文：${word.meaningZh}\n仅仍缺中文的词可重新排队。',
+                  '原快照：${item.originalSnapshot}\n\n当前词：${word.headword}\n当前中文：${word.meaningZh}\n仅仍缺中文的词可重新排队。',
                 ),
               ),
               actions: [

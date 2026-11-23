@@ -137,9 +137,48 @@ const _excludedBackupSettings = {
   'backup_reminders_enabled',
 };
 
+const _legacyWordColumns = {
+  'headword': 'korean',
+  'normalized_headword': 'normalized_korean',
+};
+
+String _sqlWordColumn(String name) => switch (name) {
+  'korean' => 'headword',
+  'normalized_korean' => 'normalized_headword',
+  _ => name,
+};
+
+Object? _backupCell(Map row, String name) {
+  if (row.containsKey(name)) return row[name];
+  final legacy = _legacyWordColumns[name];
+  if (legacy != null && row.containsKey(legacy)) return row[legacy];
+  return null;
+}
+
+bool _backupRowMatches(String table, Map row, List<String> columns) {
+  final keys = row.keys.map((key) => key.toString()).toSet();
+  if (keys.length == columns.length && columns.every(keys.contains)) {
+    return true;
+  }
+  if (table != 'words') return false;
+  final legacy = [for (final name in columns) _legacyWordColumns[name] ?? name];
+  return keys.length == legacy.length && legacy.every(keys.contains);
+}
+
 List<String> _columnsFor(String table, int version) {
-  final base = _backupColumnsV1[table] ?? _aiColumnsV1[table];
-  if (base == null) return const [];
+  final source = _backupColumnsV1[table] ?? _aiColumnsV1[table];
+  if (source == null) return const [];
+  final renamed = version >= 2 && table == 'words'
+      ? [
+          for (final name in source)
+            switch (name) {
+              'korean' => 'headword',
+              'normalized_korean' => 'normalized_headword',
+              _ => name,
+            },
+        ]
+      : source;
+  final base = renamed;
   if (version < 2 || !_backupLanguageTables.contains(table)) return base;
   final extra = table == 'words' ? ['language', 'ipa'] : ['language'];
   if (base.contains('created_at')) {
@@ -274,9 +313,7 @@ extension BackupSnapshots on AppDatabase {
         throw FormatException('备份表无效：${entry.key}');
       }
       for (final row in list) {
-        if (row is! Map ||
-            row.keys.toSet().length != entry.value.length ||
-            !entry.value.every(row.containsKey)) {
+        if (row is! Map || !_backupRowMatches(entry.key, row, entry.value)) {
           throw FormatException('备份字段无效：${entry.key}');
         }
       }
@@ -598,11 +635,12 @@ extension BackupSnapshots on AppDatabase {
       row[replaceTextId] =
           '${row[replaceTextId] ?? 'row'}-${_backupIdSerial++}';
     }
-    final names = [
+    final fileNames = [
       for (final name in columns)
         if (!omit.contains(name)) name,
     ];
-    final values = [for (final name in names) row[name]];
+    final values = [for (final name in fileNames) _backupCell(row, name)];
+    final names = [for (final name in fileNames) _sqlWordColumn(name)];
     if (_backupLanguageTables.contains(table) && !names.contains('language')) {
       names.add('language');
       values.add('ko');

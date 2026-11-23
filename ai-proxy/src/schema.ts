@@ -1,6 +1,10 @@
 import {z} from 'zod';
 
 export const PROMPT_VERSION = 'ko-zh-v1';
+export const ENGLISH_PROMPT_VERSION = 'en-zh-v1';
+export function promptVersionFor(language: string | undefined) {
+  return language === 'en' ? ENGLISH_PROMPT_VERSION : PROMPT_VERSION;
+}
 export const MAX_BODY_BYTES = 16384;
 export const MAX_OUTPUT_BYTES = 32768;
 const text = (limit: number) => z.string().max(limit);
@@ -14,6 +18,7 @@ export const requestSchema = z.object({
   exampleKo: text(1000), exampleZh: text(1000),
   style: z.enum(['default', 'simpler', 'work', 'confusing', 'example']),
   exampleCount: z.number().int().min(1).max(3),
+  language: z.enum(['ko', 'en']).optional(),
 }).strict();
 export type AiRequest = z.infer<typeof requestSchema>;
 export type TaskType = 'complete' | 'explain';

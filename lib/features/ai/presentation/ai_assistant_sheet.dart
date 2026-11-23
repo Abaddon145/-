@@ -269,7 +269,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
               builder: (ctx) => AlertDialog(
                 title: const Text('单独确认拼写变更'),
                 content: Text(
-                  '原词：${_word.korean}\n候选：$_spelling\n请依据原表和语境核对。保存时将检查重复词。',
+                  '原词：${_word.headword}\n候选：$_spelling\n请依据原表和语境核对。保存时将检查重复词。',
                 ),
                 actions: [
                   TextButton(
@@ -317,7 +317,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
               title: const Text('原词已修改，请重新确认'),
               content: SingleChildScrollView(
                 child: Text(
-                  '生成时：${suggestion.result['originalTerm']}\n当前：${conflict.current.korean}\n当前中文：${conflict.current.meaningZh}\n建议中文：${_fields['meaningZh']?.text ?? ''}\n\n将加载当前内容，请重新勾选要保存的字段。',
+                  '生成时：${suggestion.result['originalTerm']}\n当前：${conflict.current.headword}\n当前中文：${conflict.current.meaningZh}\n建议中文：${_fields['meaningZh']?.text ?? ''}\n\n将加载当前内容，请重新勾选要保存的字段。',
                 ),
               ),
               actions: [
@@ -445,7 +445,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                       padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
                       children: [
                         SelectableText(
-                          _word.korean,
+                          _word.headword,
                           style: Theme.of(context).textTheme.headlineSmall,
                         ),
                         Align(
@@ -603,7 +603,7 @@ class _AiAssistantSheetState extends ConsumerState<AiAssistantSheet> {
                                         alignment: Alignment.centerLeft,
                                         child: AiPlainText(
                                           suggestion.fieldText(key),
-                                          term: _word.korean,
+                                          term: _word.headword,
                                         ),
                                       ),
                                     ),

@@ -205,7 +205,7 @@ void main() {
     addTearDown(restored.close);
     await restored.restoreBackupSnapshot(snapshot);
     final rows = await restored.select(restored.words).get();
-    expect(rows.map((row) => row.korean).toSet(), {'하늘', '바다'});
+    expect(rows.map((row) => row.headword).toSet(), {'하늘', '바다'});
 
     final legacy = {
       'format': 'korean-memo-backup',
@@ -254,7 +254,7 @@ void main() {
     await fromV1.restoreBackupSnapshot(legacy);
     final koreanOnly = await fromV1.select(fromV1.words).get();
     expect(koreanOnly, hasLength(1));
-    expect(koreanOnly.single.korean, '바다');
+    expect(koreanOnly.single.headword, '바다');
     expect(koreanOnly.single.language, 'ko');
     expect(koreanOnly.single.ipa, isNull);
   });
@@ -277,7 +277,7 @@ void main() {
     );
     await database.restoreBackupSnapshot(snapshot, onlyLanguage: 'en');
     final rows = await database.select(database.words).get();
-    expect(rows.map((row) => '${row.language}:${row.korean}').toSet(), {
+    expect(rows.map((row) => '${row.language}:${row.headword}').toSet(), {
       'ko:바다',
       'en:old',
     });

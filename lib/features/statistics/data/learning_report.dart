@@ -52,7 +52,7 @@ class LearningReport {
         '有效学习 ${rows.fold<int>(0, (n, r) => n + r.durationMs) ~/ 60000} 分钟\n'
         '连续打卡 ${checkins.streak} 天 · 累计 ${checkins.days.length} 天\n'
         '客观测试 ${total == 0 ? '暂无记录' : '$correct/$total'}\n\n'
-        '## 待强化词\n${wrong.take(100).map((e) => '- ${e.word.korean} — ${e.word.meaningZh}').join('\n')}\n\n'
+        '## 待强化词\n${wrong.take(100).map((e) => '- ${e.word.headword} — ${e.word.meaningZh}').join('\n')}\n\n'
         '## 未来七天复习\n${forecast.map((d) => '- ${d['day']}：${d['count']} 个').join('\n')}\n';
   }
 }

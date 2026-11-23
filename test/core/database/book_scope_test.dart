@@ -29,7 +29,7 @@ void main() {
       final special = books.first.id;
       final now = DateTime(2026, 10, 9, 12);
       expect(
-        (await db.nextStudyWord(now.toUtc(), localNow: now))?.korean,
+        (await db.nextStudyWord(now.toUtc(), localNow: now))?.headword,
         'curl',
       );
       expect(
@@ -37,7 +37,7 @@ void main() {
           now.toUtc(),
           localNow: now,
           bookId: special,
-        ))?.korean,
+        ))?.headword,
         'curl',
       );
       expect(
@@ -45,7 +45,7 @@ void main() {
           query: '',
           filter: LibraryFilter.all,
           bookId: special,
-        )).map((e) => e.word.korean),
+        )).map((e) => e.word.headword),
         ['curl'],
       );
       expect(

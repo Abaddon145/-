@@ -17,7 +17,7 @@ PracticeItem practiceItem(
   String forms = '',
   int formIndex = 0,
 }) {
-  final parts = word.korean.split('/').map((s) => s.trim()).toList();
+  final parts = word.headword.split('/').map((s) => s.trim()).toList();
   final ko = parts.where((s) => RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]').hasMatch(s)).join(' / ');
   final en = parts
       .where(
@@ -25,14 +25,14 @@ PracticeItem practiceItem(
       )
       .join(' / ');
   final translated = !isMissingMeaning(word.meaningZh);
-  final front = ko.isNotEmpty ? ko : word.korean;
+  final front = ko.isNotEmpty ? ko : word.headword;
   final back = translated
       ? word.meaningZh
       : en.isNotEmpty && ko.isNotEmpty
       ? en
       : '暂无翻译，请在编辑中补充';
   if (options.mode == PracticeMode.cloze) {
-    final target = clozeTarget(word.korean);
+    final target = clozeTarget(word.headword);
     return PracticeItem(
       (word.exampleKo ?? '').replaceAll(target, '＿＿＿'),
       target,

@@ -276,13 +276,16 @@ extension LearningDatabase on AppDatabase {
         'LEFT JOIN user_words u ON u.word_id=w.id WHERE ${where.join(' AND ')} $order';
     if (options.mode == PracticeMode.cloze) {
       final rows = await customSelect(
-        'SELECT w.id, w.korean, w.example_ko $from',
+        'SELECT w.id, w.headword, w.example_ko $from',
         variables: variables,
         readsFrom: {words, studyCards, userWords, appSettings, wordBookWords},
       ).get();
       for (final row in rows) {
         final example = row.data['example_ko'] as String?;
-        if (!exampleContainsClozeTarget(row.read<String>('korean'), example)) {
+        if (!exampleContainsClozeTarget(
+          row.read<String>('headword'),
+          example,
+        )) {
           continue;
         }
         return (select(
@@ -541,7 +544,7 @@ extension LearningDatabase on AppDatabase {
       )..where((w) => w.id.equals(id))).getSingle();
       await updateWord(
         wordId: id,
-        korean: word.korean,
+        korean: word.headword,
         meaningZh: word.meaningZh,
         partOfSpeech: partOfSpeech,
         tags: tag == null

@@ -236,7 +236,7 @@ class StudyController extends StateNotifier<StudyUiState> {
       );
       if (!mounted) return;
       final notice = outcome.leechSuspended
-          ? '「${word.korean}」已忘记 ${outcome.lapses} 次，已暂停并列入待强化。打开词条详情，点「恢复正常学习」即可继续。'
+          ? '「${word.headword}」已忘记 ${outcome.lapses} 次，已暂停并列入待强化。打开词条详情，点「恢复正常学习」即可继续。'
           : null;
       onRatingSaved?.call();
       await load();

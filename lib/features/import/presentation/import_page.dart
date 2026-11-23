@@ -111,7 +111,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
           .select(ref.read(databaseProvider).words)
           .get();
       final existing = words
-          .map((w) => '${w.normalizedKorean}\u0000${w.normalizedBaseForm}')
+          .map((w) => '${w.normalizedHeadword}\u0000${w.normalizedBaseForm}')
           .toSet();
       var duplicates = 0;
       for (final draft in preview.drafts) {

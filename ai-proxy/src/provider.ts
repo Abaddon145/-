@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import {z} from 'zod';
 import type {Config} from './config.js';
-import {systemPrompt, promptFor} from './prompts.js';
+import {promptFor, systemPromptFor} from './prompts.js';
 import {AiError, resultSchema, parseResult, type AiRequest, type AiResult, type TaskType} from './schema.js';
 
 export interface Provider {
@@ -17,10 +17,11 @@ export class OpenAIProvider implements Provider {
     if (!this.config.apiKey || !this.config.model) throw new AiError('not_configured', 503);
     const schema = z.toJSONSchema(resultSchema);
     const prompt = promptFor(request, type);
+    const instructions = systemPromptFor(request.language);
     try {
       if (this.config.api === 'responses') {
         const response = await this.client.responses.create({
-          model: this.config.model, instructions: systemPrompt, input: prompt,
+          model: this.config.model, instructions, input: prompt,
           store: false, max_output_tokens: 4000,
           ...(this.config.outputMode === 'text' ? {} : {text: {format: this.config.outputMode === 'json_schema'
             ? {type: 'json_schema' as const, name: 'korean_memo', strict: true, schema}
@@ -37,7 +38,7 @@ export class OpenAIProvider implements Provider {
         model: this.config.model,
         ...(this.config.chatMaxTokens ? {max_tokens: this.config.chatMaxTokens} : {}),
         ...(this.config.chatReasoningEffort ? {reasoning_effort: this.config.chatReasoningEffort} : {}),
-        messages: [{role: 'system', content: systemPrompt}, {role: 'user', content: prompt}],
+        messages: [{role: 'system', content: instructions}, {role: 'user', content: prompt}],
         ...(this.config.outputMode === 'text' ? {} : {response_format: this.config.outputMode === 'json_schema'
           ? {type: 'json_schema' as const, json_schema: {name: 'korean_memo', strict: true, schema}}
           : {type: 'json_object' as const}}),

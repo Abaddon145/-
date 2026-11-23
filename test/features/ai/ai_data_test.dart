@@ -75,7 +75,7 @@ void main() {
         db.restoreBackupSnapshot(backup),
         throwsA(isA<FormatException>()),
       );
-      expect((await repo.word(word.id))!.korean, word.korean);
+      expect((await repo.word(word.id))!.headword, word.headword);
       expect(await db.select(db.aiSuggestions).get(), hasLength(1));
     },
   );
@@ -104,7 +104,7 @@ void main() {
         query: '',
         filter: LibraryFilter.missingMeaning,
       );
-      expect(missing.map((r) => r.word.korean), ['시험']);
+      expect(missing.map((r) => r.word.headword), ['시험']);
     },
   );
   test(
@@ -210,7 +210,7 @@ void main() {
           suggestion = await generated(word);
       await db.updateWord(
         wordId: word.id,
-        korean: word.korean,
+        korean: word.headword,
         meaningZh: '人工填写',
       );
       await expectLater(
@@ -221,7 +221,7 @@ void main() {
       expect(current.meaningZh, '人工填写');
       await db.updateWord(
         wordId: word.id,
-        korean: word.korean,
+        korean: word.headword,
         meaningZh: '再次人工修改',
       );
       await expectLater(
@@ -281,9 +281,9 @@ void main() {
         ),
         throwsA(isA<AiException>()),
       );
-      expect((await repo.word(word.id))!.korean, 'acuum');
+      expect((await repo.word(word.id))!.headword, 'acuum');
       await repo.save(s.requestId, s, {'ambiguityNotes'});
-      expect((await repo.word(word.id))!.korean, 'acuum');
+      expect((await repo.word(word.id))!.headword, 'acuum');
     },
   );
   test(
@@ -307,7 +307,7 @@ void main() {
       expect(s.promptVersion, aiPromptVersion);
       await db.updateWord(
         wordId: word.id,
-        korean: word.korean,
+        korean: word.headword,
         meaningZh: '编辑',
       );
       expect(await repo.cached(request((await repo.word(word.id))!)), isNull);

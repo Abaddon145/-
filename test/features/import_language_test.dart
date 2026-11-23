@@ -21,9 +21,9 @@ void main() {
     expect(find.text('导入英语词表'), findsNothing);
 
     final context = tester.element(find.byType(ImportPage));
-    await ProviderScope.containerOf(context)
-        .read(activeLanguageProvider.notifier)
-        .select('en');
+    await ProviderScope.containerOf(
+      context,
+    ).read(activeLanguageProvider.notifier).select('en');
     await tester.pumpAndSettle();
     expect(find.text('导入英语词表'), findsOneWidget);
     expect(find.text('选择 CSV 或 TSV'), findsOneWidget);
