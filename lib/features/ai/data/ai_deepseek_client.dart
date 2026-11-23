@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../core/database/app_database.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_prompts.dart';
+import '../domain/mnemonic.dart';
 import 'ai_client.dart';
 
 /// Direct personal-key mode: key only goes to DeepSeek.
@@ -108,6 +110,34 @@ class AiDeepSeekClient implements AiGateway {
       'generatedAt': DateTime.now().toUtc().toIso8601String(),
       'promptVersion': aiPromptVersionFor(request.learningLanguage),
     }, request: request);
+  }
+
+  Future<String> mnemonic(Word word, AiCancellation cancellation) async {
+    final transport = await _transport();
+    cancellation.check();
+    final response = await transport.send(
+      'POST',
+      Uri.https('api.deepseek.com', '/chat/completions'),
+      cancellation,
+      data: {
+        'model': model.trim(),
+        'stream': false,
+        'max_tokens': 800,
+        'messages': [
+          {'role': 'user', 'content': mnemonicPrompt(word)},
+        ],
+      },
+    );
+    final choices = response['choices'];
+    if (choices is! List || choices.isEmpty) {
+      throw const AiException('empty_response');
+    }
+    final message = (choices.first as Map)['message'];
+    final content = message is Map ? message['content'] : null;
+    if (content is! String || content.trim().isEmpty) {
+      throw const AiException('empty_response');
+    }
+    return content.trim();
   }
 
   @override
