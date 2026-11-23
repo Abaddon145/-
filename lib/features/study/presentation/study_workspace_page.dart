@@ -565,26 +565,41 @@ class _StudyPageState extends ConsumerState<StudyPage>
                                                       Icons.volume_up_rounded,
                                                     ),
                                                   ),
-                                                  TextButton.icon(
-                                                    onPressed:
-                                                        state.isSubmitting
-                                                        ? null
-                                                        : () => _explain(word),
-                                                    icon: const Icon(
-                                                      Icons.auto_awesome,
-                                                    ),
-                                                    label: const Text('AI 解释'),
-                                                  ),
-                                                  TextButton.icon(
-                                                    onPressed:
-                                                        state.isSubmitting
-                                                        ? null
-                                                        : () => _mnemonic(word),
-                                                    icon: const Icon(
-                                                      Icons
-                                                          .account_tree_outlined,
-                                                    ),
-                                                    label: const Text('助记'),
+                                                  Wrap(
+                                                    alignment:
+                                                        WrapAlignment.center,
+                                                    crossAxisAlignment:
+                                                        WrapCrossAlignment
+                                                            .center,
+                                                    children: [
+                                                      TextButton.icon(
+                                                        onPressed:
+                                                            state.isSubmitting
+                                                            ? null
+                                                            : () => _explain(
+                                                                word,
+                                                              ),
+                                                        icon: const Icon(
+                                                          Icons.auto_awesome,
+                                                        ),
+                                                        label: const Text(
+                                                          'AI 解释',
+                                                        ),
+                                                      ),
+                                                      TextButton.icon(
+                                                        onPressed:
+                                                            state.isSubmitting
+                                                            ? null
+                                                            : () => _mnemonic(
+                                                                word,
+                                                              ),
+                                                        icon: const Icon(
+                                                          Icons
+                                                              .account_tree_outlined,
+                                                        ),
+                                                        label: const Text('助记'),
+                                                      ),
+                                                    ],
                                                   ),
                                                   if (quiz) ...[
                                                     const SizedBox(height: 18),
