@@ -406,6 +406,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const ReviewReminderTile(),
               ]),
               group('文件备份与迁移', [
+                tile(
+                  Icons.cloud_upload_outlined,
+                  '自动云端备份',
+                  'GitHub Gist 或 WebDAV，令牌只留在本机',
+                  () => context.push('/settings/cloud-backup'),
+                ),
                 Padding(
                   key: _backupKey,
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),

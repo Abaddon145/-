@@ -132,6 +132,8 @@ const _excludedBackupSettings = {
   'ai_access_token',
   'ai_credential',
   'model_api_key',
+  'backup_cloud_github_token',
+  'backup_cloud_webdav_password',
   'last_backup_at',
   'backup_snoozed_until',
   'backup_reminders_enabled',
@@ -186,6 +188,12 @@ List<String> _columnsFor(String table, int version) {
     return [...base.sublist(0, index), ...extra, ...base.sublist(index)];
   }
   return [...base, ...extra];
+}
+
+bool _skipSettingRow(Map row) {
+  final key = row['key'];
+  return key is String &&
+      (key.startsWith('cloud_') || _excludedBackupSettings.contains(key));
 }
 
 bool _keepBackupRow(String table, Map<String, Object?> row) {
@@ -359,7 +367,7 @@ extension BackupSnapshots on AppDatabase {
         "DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'",
       );
       await customStatement(
-        "DELETE FROM app_settings WHERE key IN ('ai_access_token','ai_credential','model_api_key')",
+        "DELETE FROM app_settings WHERE key IN ('ai_access_token','ai_credential','model_api_key','backup_cloud_github_token','backup_cloud_webdav_password')",
       );
       await customStatement(
         "UPDATE ai_tasks SET status = 'paused' WHERE status = 'running'",
@@ -395,6 +403,7 @@ extension BackupSnapshots on AppDatabase {
     }
     for (final table in columns.keys) {
       for (final raw in payload[table] as List) {
+        if (table == 'app_settings' && _skipSettingRow(raw as Map)) continue;
         await _insertBackupRow(table, columns[table]!, raw as Map);
       }
     }

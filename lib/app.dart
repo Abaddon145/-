@@ -7,6 +7,7 @@ import 'core/time/local_day.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/appearance_settings.dart';
 import 'features/ai/domain/ai_providers.dart';
+import 'features/settings/presentation/cloud_backup_scheduler.dart';
 
 class KoreanMemoApp extends ConsumerWidget {
   const KoreanMemoApp({super.key});
@@ -33,8 +34,9 @@ class KoreanMemoApp extends ConsumerWidget {
           ? ThemeMode.system
           : (saved.dark ? ThemeMode.dark : ThemeMode.light),
       routerConfig: appRouter,
-      builder: (context, child) =>
-          LocalDayObserver(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => LocalDayObserver(
+        child: CloudBackupScheduler(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }
