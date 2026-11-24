@@ -14,7 +14,9 @@ class AppBackdrop extends ConsumerWidget {
     final appearance = ref.watch(appearanceProvider).valueOrNull;
     final saved = AppTheme.preset(appearance?.styleId ?? 'porcelain');
     final darkNow = Theme.of(context).brightness == Brightness.dark;
-    final preset = appearance?.followSystem == true
+    final preset = saved.id == 'paper-atlas'
+        ? (darkNow ? AppTheme.paperAtlasNight : saved)
+        : appearance?.followSystem == true
         ? (darkNow
               ? AppTheme.preset('night')
               : (saved.dark ? AppTheme.presets.first : saved))

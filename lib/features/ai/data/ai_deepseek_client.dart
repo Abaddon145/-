@@ -5,6 +5,8 @@ import '../domain/ai_models.dart';
 import '../domain/ai_prompts.dart';
 import '../domain/mnemonic.dart';
 import 'ai_client.dart';
+import '../../atlas/domain/atlas_fill.dart';
+import '../../atlas/domain/atlas_models.dart';
 
 /// Direct personal-key mode: key only goes to DeepSeek.
 class AiDeepSeekClient implements AiGateway {
@@ -138,6 +140,51 @@ class AiDeepSeekClient implements AiGateway {
       throw const AiException('empty_response');
     }
     return content.trim();
+  }
+
+  Future<AtlasEntryDraft> atlasFill(
+    Word word,
+    AiCancellation cancellation,
+  ) async {
+    final transport = await _transport();
+    cancellation.check();
+    final response = await transport.send(
+      'POST',
+      Uri.https('api.deepseek.com', '/chat/completions'),
+      cancellation,
+      data: {
+        'model': model.trim(),
+        'stream': false,
+        'max_tokens': 1200,
+        'response_format': {'type': 'json_object'},
+        'messages': [
+          {
+            'role': 'system',
+            'content': '你是词汇编辑。只输出 JSON。不要改写词头，不要声称官方词表或词典出处。',
+          },
+          {
+            'role': 'user',
+            'content': atlasFillPrompt(
+              headword: word.headword,
+              language: word.language,
+              meaning: word.meaningZh,
+            ),
+          },
+        ],
+      },
+    );
+    final choices = response['choices'];
+    if (choices is! List || choices.isEmpty) {
+      throw const AiException('empty_response');
+    }
+    final message = (choices.first as Map)['message'];
+    final content = message is Map ? message['content'] : null;
+    if (content is! String || content.trim().isEmpty) {
+      throw const AiException('empty_response');
+    }
+    final draft = parseAtlasFill(content, headword: word.headword);
+    if (draft == null) throw const AiException('invalid_json');
+    return draft;
   }
 
   @override

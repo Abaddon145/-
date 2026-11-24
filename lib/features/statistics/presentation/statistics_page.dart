@@ -11,6 +11,7 @@ import '../../study/domain/providers.dart';
 import '../domain/providers.dart';
 import '../data/learning_report.dart';
 import 'language_comparison_card.dart';
+import '../../atlas/domain/atlas_providers.dart';
 
 class StatisticsPage extends ConsumerWidget {
   const StatisticsPage({super.key});
@@ -41,6 +42,7 @@ class StatisticsPage extends ConsumerWidget {
         colors = Theme.of(context).colorScheme;
     final scope = ref.watch(statisticsScopeProvider);
     final objective = ref.watch(objectiveStatisticsProvider).valueOrNull ?? {};
+    final atlasStats = ref.watch(atlasStatsProvider).valueOrNull;
     return Scaffold(
       appBar: AppBar(
         title: const Text('学习统计'),
@@ -123,6 +125,15 @@ class StatisticsPage extends ConsumerWidget {
                     onSelectionChanged: (value) =>
                         ref.read(statisticsScopeProvider.notifier).state =
                             value.first,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      '已掌握 ${atlasStats?.mastered ?? 0}（复习态且稳定度 ≥ 21 天） · 首次作答正确率 ${atlasStats?.firstAccuracy ?? 0}%',
+                    ),
                   ),
                 ),
                 if (scope == 'all') ...[

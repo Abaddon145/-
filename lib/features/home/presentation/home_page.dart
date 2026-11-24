@@ -7,6 +7,9 @@ import '../../../core/theme/app_motion.dart';
 import '../../settings/presentation/backup_reminder_card.dart';
 import 'web_storage_banner.dart';
 import '../../settings/domain/backup_status.dart';
+import '../../atlas/domain/atlas_models.dart';
+import '../../atlas/domain/atlas_providers.dart';
+import '../../atlas/presentation/atlas_thumb.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -15,9 +18,31 @@ class HomePage extends ConsumerWidget {
     final counts = ref.watch(homeCountsProvider);
     final seed = ref.watch(bundledWordSeedProvider);
     final plan = ref.watch(dailyPlanProgressProvider);
+    final journey = ref.watch(todayJourneyProvider);
     final colors = Theme.of(context).colorScheme;
-    void start() {
-      ref.read(sessionOptionsProvider.notifier).daily();
+    void start({bool reviewsOnly = false, bool atlas = false}) {
+      final language = ref.read(activeLanguageProvider);
+      if (!reviewsOnly && !atlas) {
+        ref.read(sessionOptionsProvider.notifier).daily();
+        context.go('/study');
+        return;
+      }
+      final books =
+          ref.read(wordBooksProvider).valueOrNull ?? const <WordBook>[];
+      final atlasBook = books.where(
+        (book) => book.stableId == atlasBookStableId,
+      );
+      ref
+          .read(sessionOptionsProvider.notifier)
+          .start(
+            SessionOptions(
+              daily: true,
+              language: language,
+              queue: reviewsOnly ? QueueKind.reviews : QueueKind.mixed,
+              mode: atlas ? PracticeMode.atlas : PracticeMode.cards,
+              bookId: atlas && atlasBook.isNotEmpty ? atlasBook.first.id : null,
+            ),
+          );
       context.go('/study');
     }
 
@@ -69,13 +94,21 @@ class HomePage extends ConsumerWidget {
                 skipLoadingOnRefresh: true,
                 data: (p) => _TodayCard(
                   progress: p,
+                  journey: journey.valueOrNull,
                   ready: seed.hasValue,
-                  onStart: start,
+                  onStart: () => start(),
+                  onReviews: () => start(reviewsOnly: true),
+                  onAtlas: () => start(atlas: true),
+                  showAtlas:
+                      ref.watch(activeLanguageProvider) == 'en' &&
+                      (ref.watch(wordBooksProvider).valueOrNull ??
+                              const <WordBook>[])
+                          .any((book) => book.stableId == atlasBookStableId),
                   onPlan: () => context.push('/settings/daily-plan'),
                 ),
                 loading: () => const LinearProgressIndicator(),
                 error: (_, _) => FilledButton(
-                  onPressed: seed.hasValue ? start : null,
+                  onPressed: seed.hasValue ? () => start() : null,
                   child: const Text('开始今天的学习'),
                 ),
               ),
@@ -197,13 +230,19 @@ class HomePage extends ConsumerWidget {
 class _TodayCard extends StatelessWidget {
   const _TodayCard({
     required this.progress,
+    required this.journey,
     required this.ready,
     required this.onStart,
+    required this.onReviews,
+    required this.onAtlas,
     required this.onPlan,
+    required this.showAtlas,
   });
   final DailyPlanProgress progress;
+  final TodayJourney? journey;
   final bool ready;
-  final VoidCallback onStart, onPlan;
+  final bool showAtlas;
+  final VoidCallback onStart, onReviews, onAtlas, onPlan;
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -246,6 +285,15 @@ class _TodayCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
+              Text(
+                journey == null
+                    ? '今日复习与新词正在计算'
+                    : '今日复习 ${journey!.reviews} · 新词 ${journey!.newWords} · 约 ${journey!.estimatedMinutes} 分钟（估算）',
+              ),
+              if (journey?.interrupted == true) ...[
+                const SizedBox(height: 8),
+                const Text('上次学习还没完成，可以接着来。'),
+              ],
               _PlanRow(
                 '新词',
                 progress.newWordsDone,
@@ -265,12 +313,48 @@ class _TodayCard extends StatelessWidget {
                   label: Text(
                     !ready
                         ? '正在准备词库…'
+                        : journey?.interrupted == true
+                        ? '继续未完成的学习'
                         : started
                         ? '继续今日学习'
                         : '开始今天的学习',
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: ready ? onReviews : null,
+                child: const Text('只复习'),
+              ),
+              if (showAtlas)
+                TextButton(
+                  onPressed: ready ? onAtlas : null,
+                  child: const Text('图鉴测验'),
+                ),
+              if (journey != null && journey!.headword.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('今日一词', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    if (journey!.atlasId.isNotEmpty)
+                      AtlasThumb(atlasId: journey!.atlasId, size: 64),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            journey!.headword,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          Text(journey!.meaning),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 8),
               const Text('完成目标后仍可继续新词、复习或混合练习。'),
             ],

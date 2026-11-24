@@ -8,6 +8,12 @@ final libraryFilterProvider = StateProvider.autoDispose<LibraryFilter>(
   (ref) => LibraryFilter.all,
 );
 final libraryBookProvider = StateProvider.autoDispose<int?>((ref) => null);
+final libraryAtlasLayoutProvider = StateProvider.autoDispose<String>(
+  (ref) => 'list',
+);
+final libraryCefrProvider = StateProvider.autoDispose<String?>((ref) => null);
+final libraryTopicProvider = StateProvider.autoDispose<String?>((ref) => null);
+final libraryStatusProvider = StateProvider.autoDispose<String>((ref) => 'any');
 
 const libraryPageSize = 40;
 
@@ -28,6 +34,9 @@ final libraryWordsProvider = FutureProvider.autoDispose<List<LibraryWordEntry>>(
       bookId: ref.watch(libraryBookProvider),
       limit: limit,
       language: ref.watch(activeLanguageProvider),
+      cefr: ref.watch(libraryCefrProvider),
+      topic: ref.watch(libraryTopicProvider),
+      status: ref.watch(libraryStatusProvider),
     );
   },
 );
@@ -40,5 +49,8 @@ final libraryCountProvider = FutureProvider.autoDispose<int>((ref) async {
     filter: ref.watch(libraryFilterProvider),
     bookId: ref.watch(libraryBookProvider),
     language: ref.watch(activeLanguageProvider),
+    cefr: ref.watch(libraryCefrProvider),
+    topic: ref.watch(libraryTopicProvider),
+    status: ref.watch(libraryStatusProvider),
   );
 });

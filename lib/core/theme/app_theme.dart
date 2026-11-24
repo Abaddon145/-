@@ -22,6 +22,23 @@ class AppearancePreset {
 
 abstract final class AppTheme {
   static const fontFamily = 'KoreanMemoSans';
+  static const serifFamily = 'SourceSerif4';
+
+  static TextStyle headword(TextStyle? style, {required bool atlas}) =>
+      (style ?? const TextStyle()).copyWith(
+        fontFamily: atlas ? serifFamily : fontFamily,
+        fontFamilyFallback: atlas
+            ? const [
+                serifFamily,
+                'Songti SC',
+                'Noto Serif',
+                'serif',
+                fontFamily,
+              ]
+            : const [fontFamily, 'Roboto'],
+        fontWeight: FontWeight.w600,
+        letterSpacing: atlas ? 0.2 : null,
+      );
   static const presets = <AppearancePreset>[
     AppearancePreset(
       id: 'porcelain',
@@ -72,6 +89,14 @@ abstract final class AppTheme {
       end: Color(0xFF293358),
       dark: true,
     ),
+    AppearancePreset(
+      id: 'paper-atlas',
+      name: '纸笺图鉴',
+      description: '象牙纸与夜空，衬线词头',
+      seed: Color(0xFF8C5A3C),
+      start: Color(0xFFF6F1E7),
+      end: Color(0xFFE7DCC8),
+    ),
   ];
 
   static AppearancePreset preset(String id) =>
@@ -83,7 +108,7 @@ abstract final class AppTheme {
       brightness: preset.dark ? Brightness.dark : Brightness.light,
       dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
     );
-    return ThemeData(
+    final theme = ThemeData(
       useMaterial3: true,
       fontFamily: fontFamily,
       fontFamilyFallback: const [fontFamily, 'Roboto'],
@@ -209,5 +234,16 @@ abstract final class AppTheme {
         ),
       ),
     );
+    return theme;
   }
+
+  static const paperAtlasNight = AppearancePreset(
+    id: 'paper-atlas-night',
+    name: '纸笺图鉴',
+    description: '夜空',
+    seed: Color(0xFFD7C4A3),
+    start: Color(0xFF0D1120),
+    end: Color(0xFF1A2038),
+    dark: true,
+  );
 }

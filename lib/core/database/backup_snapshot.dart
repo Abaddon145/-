@@ -181,14 +181,53 @@ List<String> _columnsFor(String table, int version) {
         ]
       : source;
   final base = renamed;
-  if (version < 2 || !_backupLanguageTables.contains(table)) return base;
+  if (version < 2 || !_backupLanguageTables.contains(table)) {
+    return _withAtlasColumns(table, base, version);
+  }
   final extra = table == 'words' ? ['language', 'ipa'] : ['language'];
   if (base.contains('created_at')) {
     final index = base.indexOf('created_at');
-    return [...base.sublist(0, index), ...extra, ...base.sublist(index)];
+    return _withAtlasColumns(table, [
+      ...base.sublist(0, index),
+      ...extra,
+      ...base.sublist(index),
+    ], version);
   }
-  return [...base, ...extra];
+  return _withAtlasColumns(table, [...base, ...extra], version);
 }
+
+List<String> _withAtlasColumns(
+  String table,
+  List<String> columns,
+  int version,
+) {
+  if (version < 3) return columns;
+  if (table == 'word_books' && !columns.contains('stable_id')) {
+    return [...columns, 'stable_id'];
+  }
+  if (table == 'daily_statistics' && !columns.contains('first_attempt_count')) {
+    return [...columns, 'first_correct_count', 'first_attempt_count'];
+  }
+  return columns;
+}
+
+const atlasBackupColumns = [
+  'word_id',
+  'atlas_id',
+  'ipa_uk',
+  'ipa_us',
+  'senses_json',
+  'examples_json',
+  'collocations_json',
+  'family_json',
+  'synonyms_json',
+  'antonyms_json',
+  'tip',
+  'cefr',
+  'topic',
+  'media_flags',
+  'usage_note',
+];
 
 bool _skipSettingRow(Map row) {
   final key = row['key'];
@@ -280,12 +319,19 @@ extension BackupSnapshots on AppDatabase {
           data[table] = [
             for (final row in rows)
               if (_keepBackupRow(table, row.data))
-                _projectBackupRow(table, row.data, 2),
+                _projectBackupRow(table, row.data, 3),
           ];
         }
+        final atlasRows = await customSelect(
+          'SELECT * FROM atlas_entries',
+        ).get();
+        data['atlas_entries'] = [
+          for (final row in atlasRows)
+            {for (final name in atlasBackupColumns) name: row.data[name]},
+        ];
         return {
           'format': 'korean-memo-backup',
-          'version': 2,
+          'version': 3,
           'createdAt': DateTime.now().toUtc().toIso8601String(),
           'tables': data,
         };
@@ -298,7 +344,7 @@ extension BackupSnapshots on AppDatabase {
   }) async {
     final version = snapshot['version'];
     if (snapshot['format'] != 'korean-memo-backup' ||
-        (version != 1 && version != 2)) {
+        (version != 1 && version != 2 && version != 3)) {
       throw const FormatException('不支持的备份格式');
     }
     final payload = snapshot['tables'];
@@ -313,6 +359,17 @@ extension BackupSnapshots on AppDatabase {
       }
       for (final entry in _aiColumnsV1.entries) {
         columns[entry.key] = _columnsFor(entry.key, version);
+      }
+    }
+    if (version >= 3) {
+      final atlas = payload['atlas_entries'];
+      if (atlas is! List) throw const FormatException('备份表无效：atlas_entries');
+      columns['atlas_entries'] = atlasBackupColumns;
+      for (final row in atlas) {
+        if (row is! Map ||
+            !_backupRowMatches('atlas_entries', row, atlasBackupColumns)) {
+          throw const FormatException('备份字段无效：atlas_entries');
+        }
       }
     }
     for (final entry in columns.entries) {
@@ -396,15 +453,23 @@ extension BackupSnapshots on AppDatabase {
       'user_words',
       'daily_statistics',
       'app_settings',
+      'atlas_entries',
       'words',
       'word_books',
     ]) {
       await customStatement('DELETE FROM $table');
     }
     for (final table in columns.keys) {
+      if (table == 'atlas_entries') continue;
       for (final raw in payload[table] as List) {
         if (table == 'app_settings' && _skipSettingRow(raw as Map)) continue;
         await _insertBackupRow(table, columns[table]!, raw as Map);
+      }
+    }
+    final atlas = payload['atlas_entries'];
+    if (atlas is List) {
+      for (final raw in atlas) {
+        await _insertBackupRow('atlas_entries', atlasBackupColumns, raw as Map);
       }
     }
   }
@@ -465,6 +530,10 @@ extension BackupSnapshots on AppDatabase {
     await customStatement('DELETE FROM daily_statistics WHERE language = ?', [
       language,
     ]);
+    await customStatement(
+      'DELETE FROM atlas_entries WHERE word_id IN (SELECT id FROM words WHERE language = ?)',
+      [language],
+    );
     await customStatement('DELETE FROM words WHERE language = ?', [language]);
     await customStatement('DELETE FROM word_books WHERE language = ?', [
       language,
@@ -571,7 +640,10 @@ extension BackupSnapshots on AppDatabase {
       }
       await _insertBackupRow('app_settings', columns['app_settings']!, row);
     }
-    if (!columns.containsKey('ai_suggestions')) return;
+    if (!columns.containsKey('ai_suggestions')) {
+      await _restoreAtlasLanguage(payload, wordIds);
+      return;
+    }
     final suggestionIds = <String, String>{};
     final taskIds = <String, String>{};
     for (final raw in payload['ai_tasks'] as List) {
@@ -620,6 +692,24 @@ extension BackupSnapshots on AppDatabase {
       final wordId = wordIds[row['word_id']];
       if (wordId == null) continue;
       await _insertBackupRow('ai_word_contents', columns['ai_word_contents']!, {
+        ...row,
+        'word_id': wordId,
+      });
+    }
+    await _restoreAtlasLanguage(payload, wordIds);
+  }
+
+  Future<void> _restoreAtlasLanguage(
+    Map<dynamic, dynamic> payload,
+    Map<int, int> wordIds,
+  ) async {
+    final atlas = payload['atlas_entries'];
+    if (atlas is! List) return;
+    for (final raw in atlas) {
+      final row = raw as Map;
+      final wordId = wordIds[row['word_id']];
+      if (wordId == null) continue;
+      await _insertBackupRow('atlas_entries', atlasBackupColumns, {
         ...row,
         'word_id': wordId,
       });

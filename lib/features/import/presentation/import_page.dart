@@ -7,10 +7,13 @@ import 'package:go_router/go_router.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
 import '../../library/domain/providers.dart';
+import '../../../core/database/app_database.dart';
 import '../data/csv_import_service.dart';
 import '../data/english_list_service.dart';
 import '../data/excel_import_service.dart';
 import '../domain/import_models.dart';
+import '../../atlas/data/atlas_remote.dart';
+import '../../atlas/domain/atlas_models.dart';
 
 class ImportPage extends ConsumerStatefulWidget {
   const ImportPage({super.key});
@@ -332,6 +335,7 @@ class _EnglishCsvImportPageState extends ConsumerState<_EnglishCsvImportPage> {
   CsvImportResult? _preview;
   String? _fileName, _error;
   bool _busy = false;
+  String _stage = '';
 
   Future<void> _importBuiltIn(EnglishBuiltInList list) async {
     if (_busy) return;
@@ -447,6 +451,47 @@ class _EnglishCsvImportPageState extends ConsumerState<_EnglishCsvImportPage> {
     }
   }
 
+  Future<void> _importAtlas() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _stage = '正在读取图鉴索引';
+    });
+    try {
+      const remote = AtlasRemote();
+      final index = await remote.loadIndex();
+      var inserted = 0;
+      var reused = 0;
+      for (var chunk = 0; chunk < index.chunks; chunk++) {
+        if (!mounted) return;
+        setState(() => _stage = '正在导入 ${chunk + 1} / ${index.chunks}');
+        final entries = await remote.loadChunk(chunk);
+        final result = await ref
+            .read(databaseProvider)
+            .importAtlasEntries(entries);
+        inserted += result.inserted;
+        reused += result.reused;
+      }
+      ref.invalidate(homeCountsProvider);
+      ref.invalidate(wordBooksProvider);
+      ref.invalidate(libraryWordsProvider);
+      ref.invalidate(studyControllerProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('词光图鉴新增 $inserted · 合并 $reused。已有进度保持不变。')),
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = '$error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _stage = '';
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final preview = _preview;
@@ -457,6 +502,16 @@ class _EnglishCsvImportPageState extends ConsumerState<_EnglishCsvImportPage> {
           padding: const EdgeInsets.all(20),
           children: [
             const Text('可以一键导入内置词表，或自己选择 CSV / TSV。这些词只进入英语词库。'),
+            const SizedBox(height: 8),
+            const Text(
+              '$atlasAttribution。$atlasDisclaimer 插画和录音在打开词条时再下载，不会写入备份。',
+            ),
+            const SizedBox(height: 12),
+            FilledButton(
+              onPressed: _busy ? null : _importAtlas,
+              child: const Text('导入词光图鉴（7,298 词）'),
+            ),
+            if (_stage.isNotEmpty) ...[const SizedBox(height: 8), Text(_stage)],
             const SizedBox(height: 12),
             for (final list in englishBuiltInLists)
               Padding(

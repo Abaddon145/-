@@ -21,6 +21,7 @@ import 'session_sheet.dart';
 import '../../ai/data/mnemonic_service.dart';
 import '../../ai/domain/ai_providers.dart';
 import '../../ai/presentation/ai_assistant_sheet.dart';
+import '../../atlas/presentation/atlas_study_page.dart';
 
 class StudyPage extends ConsumerStatefulWidget {
   const StudyPage({super.key});
@@ -150,6 +151,9 @@ class _StudyPageState extends ConsumerState<StudyPage>
     final state = ref.watch(studyControllerProvider);
     final controller = ref.read(studyControllerProvider.notifier);
     final options = ref.watch(sessionOptionsProvider);
+    if (options.mode == PracticeMode.atlas) {
+      return const AtlasStudyPage();
+    }
     final colors = Theme.of(context).colorScheme;
     final reading =
         ref.watch(readingProvider).valueOrNull ?? const ReadingPreferences();

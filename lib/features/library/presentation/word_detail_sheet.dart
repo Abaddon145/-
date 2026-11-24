@@ -3,6 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../services/fsrs_service.dart';
 import '../../study/domain/providers.dart';
 import '../../study/presentation/study_controller.dart';
@@ -10,6 +11,11 @@ import '../domain/providers.dart';
 import '../../ai/presentation/ai_assistant_sheet.dart';
 import '../../ai/domain/ai_models.dart';
 import '../../ai/domain/ai_providers.dart';
+import '../../atlas/domain/atlas_models.dart';
+import '../../atlas/domain/share_card.dart';
+import '../../atlas/presentation/atlas_fill_sheet.dart';
+import '../../atlas/presentation/atlas_thumb.dart';
+import 'package:file_picker/file_picker.dart';
 
 Future<void> showWordDetail(BuildContext context, Word word) =>
     showModalBottomSheet<void>(
@@ -50,6 +56,7 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
         db.userWords,
       )..where((r) => r.wordId.equals(id))).getSingleOrNull(),
       'status': await db.loadSetting('word_status:$id'),
+      'atlas': await db.atlasForWord(id),
       'logs':
           await (db.select(db.reviewLogs)
                 ..where((r) => r.wordId.equals(id))
@@ -101,16 +108,61 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
         final word = snapshot.data!['word'] as Word?;
         if (word == null) return const Center(child: Text('词条已删除'));
         final ai = snapshot.data!['ai'] as Map<String, String>;
+        final atlas = snapshot.data!['atlas'] as AtlasRecord?;
+        final ipa = [
+          if ((atlas?.ipaUk ?? '').isNotEmpty) '英 ${atlas!.ipaUk}',
+          if ((atlas?.ipaUs ?? '').isNotEmpty) '美 ${atlas!.ipaUs}',
+          if (atlas == null && word.ipa?.isNotEmpty == true) word.ipa!,
+        ].join('  ');
         return ListView(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
           children: [
+            if (atlas != null && atlas.hasImage)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AtlasThumb(atlasId: atlas.atlasId, size: 160),
+              ),
             Text(
               word.headword,
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: AppTheme.headword(
+                Theme.of(context).textTheme.headlineMedium,
+                atlas: atlas != null,
+              ),
             ),
-            if (word.language == 'en' && word.ipa?.isNotEmpty == true)
-              Text(word.ipa!),
+            if (ipa.isNotEmpty) Text(ipa),
             Text(word.meaningZh),
+            if (atlas != null && atlas.senses.length > 1)
+              for (final sense in atlas.senses)
+                Text(
+                  '${sense.pos} ${sense.zh}${sense.en.isEmpty ? '' : ' · ${sense.en}'}',
+                ),
+            if (atlas != null) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  if (atlas.cefr.isNotEmpty) Chip(label: Text(atlas.cefr)),
+                  if (atlas.topic.isNotEmpty)
+                    Chip(label: Text(topicLabel(atlas.topic))),
+                ],
+              ),
+              for (final example in atlas.examples)
+                ListTile(title: Text(example.en), subtitle: Text(example.zh)),
+              if (atlas.collocations.isNotEmpty)
+                Text('搭配：${atlas.collocations.join('、')}'),
+              if (atlas.family.isNotEmpty) Text('词族：${atlas.family.join('、')}'),
+              if (atlas.synonyms.isNotEmpty)
+                Text('近义：${atlas.synonyms.join('、')}'),
+              if (atlas.antonyms.isNotEmpty)
+                Text('反义：${atlas.antonyms.join('、')}'),
+              if (atlas.tip.isNotEmpty) Text(atlas.tip),
+              if (atlas.usageNote.isNotEmpty) Text(atlas.usageNote),
+              const SizedBox(height: 8),
+              const Text(
+                '$atlasAttribution。$atlasDisclaimer',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
             const SizedBox(height: 10),
             Text('${word.partOfSpeech ?? '未标词性'} · ${word.tags ?? '未标场景'}'),
             if (word.language != 'en' && word.hanja?.isNotEmpty == true)
@@ -134,6 +186,35 @@ class _WordDetailSheetState extends ConsumerState<WordDetailSheet> {
               },
               icon: const Icon(Icons.auto_awesome),
               label: const Text('AI 补全'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await showAtlasFill(context, word);
+                if (mounted) setState(() => _data = _load());
+              },
+              icon: const Icon(Icons.account_tree_outlined),
+              label: const Text('按图鉴结构补全'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final bytes = await renderShareCard(
+                  ShareCardData.word(
+                    headword: word.headword,
+                    meaning: word.meaningZh,
+                    ipa: ipa,
+                    example: atlas?.examples.isNotEmpty == true
+                        ? atlas!.examples.first.en
+                        : (word.exampleKo ?? ''),
+                    cefr: atlas?.cefr ?? '',
+                    topic: topicLabel(atlas?.topic),
+                  ),
+                );
+                await FilePicker.saveFile(
+                  fileName: 'ciyi-${word.headword}.png',
+                  bytes: bytes,
+                );
+              },
+              child: const Text('导出词卡'),
             ),
             if (ai.isNotEmpty) const Text('AI 生成·用户已确认'),
             for (final entry in ai.entries)
