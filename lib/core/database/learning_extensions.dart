@@ -120,13 +120,21 @@ extension LearningDatabase on AppDatabase {
   ) async {
     final raw = await loadSetting(options.storageKey);
     if (raw != null) {
-      final data = jsonDecode(raw) as Map;
-      if (data['day'] == dayKey(now)) {
-        return SessionProgress(
-          data['done'] as int,
-          data['target'] as int,
-          (data['seen'] as List).cast<int>(),
-        );
+      try {
+        final data = jsonDecode(raw);
+        if (data is Map && data['day'] == dayKey(now)) {
+          final done = data['done'];
+          final target = data['target'];
+          final seen = data['seen'];
+          if (done is int && target is int && seen is List) {
+            return SessionProgress(done, target, [
+              for (final id in seen)
+                if (id is int) id,
+            ]);
+          }
+        }
+      } catch (_) {
+        // A damaged saved session falls back to a fresh queue.
       }
     }
     return SessionProgress(0, options.target, const []);
@@ -203,7 +211,8 @@ extension LearningDatabase on AppDatabase {
       variables: variables,
       readsFrom: {words, studyCards, userWords, appSettings, wordBookWords},
     ).getSingleOrNull();
-    return row?.read<DateTime>('due');
+    if (row == null || row.data['due'] == null) return null;
+    return row.read<DateTime>('due');
   }
 
   Future<Word?> nextTrainingWord(SessionOptions options, DateTime now) async {
@@ -251,8 +260,8 @@ extension LearningDatabase on AppDatabase {
     }
     final due = now.toUtc();
     if (options.daily) {
-      final plan = await loadDailyPlanProgress(now);
-      final round = await loadStudyRoundProgress(now);
+      final plan = await loadDailyPlanProgress(now, lang);
+      final round = await loadStudyRoundProgress(now, lang);
       final fresh = plan.newWordsDone < round.baseline + round.target;
       final review = plan.reviewsDone < plan.settings.reviewsPerDay;
       where.add(

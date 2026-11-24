@@ -1,5 +1,5 @@
 // Own the app cache explicitly instead of relying on Flutter's deprecated worker.
-const CACHE = 'korean-memo-0.18.0';
+const CACHE = 'korean-memo-0.18.1';
 // Atlas illustrations and recordings are cross-origin and must stay out of CORE.
 function canvasKitFiles() {
   const nav = self.navigator || {};
