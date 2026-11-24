@@ -150,6 +150,28 @@ String _sqlWordColumn(String name) => switch (name) {
   _ => name,
 };
 
+int _backupCount(Map row, String name) {
+  final value = row[name];
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse('${value ?? ''}') ?? 0;
+}
+
+void _fillBackupCount(
+  List<String> names,
+  List<Object?> values,
+  String name,
+  int fallback,
+) {
+  final index = names.indexOf(name);
+  if (index < 0) {
+    names.add(name);
+    values.add(fallback);
+    return;
+  }
+  if (values[index] == null) values[index] = fallback;
+}
+
 Object? _backupCell(Map row, String name) {
   if (row.containsKey(name)) return row[name];
   final legacy = _legacyWordColumns[name];
@@ -747,6 +769,12 @@ extension BackupSnapshots on AppDatabase {
     if (table == 'words' && !names.contains('ipa')) {
       names.add('ipa');
       values.add(null);
+    }
+    if (table == 'daily_statistics') {
+      final correct = _backupCount(row, 'correct_count');
+      final wrong = _backupCount(row, 'wrong_count');
+      _fillBackupCount(names, values, 'first_correct_count', correct);
+      _fillBackupCount(names, values, 'first_attempt_count', correct + wrong);
     }
     await customStatement(
       'INSERT INTO $table (${names.join(',')}) VALUES (${List.filled(names.length, '?').join(',')})',

@@ -350,33 +350,71 @@ class AppDatabase extends _$AppDatabase {
       'CREATE INDEX IF NOT EXISTS idx_atlas_entries_topic ON atlas_entries (topic, cefr)',
     );
     if (await _tableExists('daily_statistics')) {
-      final addedCorrect = !await _hasColumn(
-        'daily_statistics',
-        'first_correct_count',
-      );
-      if (addedCorrect) {
+      if (!await _hasColumn('daily_statistics', 'first_correct_count')) {
         await customStatement(
           'ALTER TABLE daily_statistics ADD COLUMN first_correct_count INTEGER NOT NULL DEFAULT 0',
         );
       }
-      final addedAttempt = !await _hasColumn(
-        'daily_statistics',
-        'first_attempt_count',
-      );
-      if (addedAttempt) {
+      if (!await _hasColumn('daily_statistics', 'first_attempt_count')) {
         await customStatement(
           'ALTER TABLE daily_statistics ADD COLUMN first_attempt_count INTEGER NOT NULL DEFAULT 0',
         );
       }
-      if (addedCorrect || addedAttempt) {
-        await customStatement('''
-          UPDATE daily_statistics
-          SET first_correct_count = correct_count,
-              first_attempt_count = correct_count + wrong_count
-          WHERE first_attempt_count = 0
-            AND correct_count + wrong_count > 0
-        ''');
-      }
+      // ALTER TABLE stores the default in the schema. SQLite then reports 0,
+      // but a web driver can still hand Dart a null until the value is written
+      // into the row. Drift unwraps these non-null ints with `!`, which is the
+      // "Null check operator used on a null value" failure on 今日学习.
+      // `NULL = 0` is not true, so a comparison with 0 never repairs real nulls.
+      await customStatement('''
+        UPDATE daily_statistics
+        SET first_correct_count = CASE
+              WHEN first_correct_count IS NULL
+                OR first_attempt_count IS NULL
+                OR IFNULL(first_attempt_count, 0) = 0
+                THEN IFNULL(correct_count, 0)
+              ELSE first_correct_count
+            END,
+            first_attempt_count = CASE
+              WHEN first_attempt_count IS NULL
+                OR IFNULL(first_attempt_count, 0) = 0
+                THEN IFNULL(correct_count, 0) + IFNULL(wrong_count, 0)
+              ELSE first_attempt_count
+            END
+        WHERE first_correct_count IS NULL
+           OR first_attempt_count IS NULL
+           OR (
+             IFNULL(first_attempt_count, 0) = 0
+             AND IFNULL(correct_count, 0) + IFNULL(wrong_count, 0) > 0
+           )
+      ''');
+      await _materializeFirstAttemptCounts();
+    }
+  }
+
+  /// Writes a real integer into any attempt counter the SQL engine still
+  /// presents as null. Safe to repeat: rows that already store an int are left
+  /// alone, including a legitimate first-correct of 0.
+  Future<void> _materializeFirstAttemptCounts() async {
+    final rows = await customSelect(
+      'SELECT date, language, correct_count, wrong_count, '
+      'first_correct_count, first_attempt_count FROM daily_statistics',
+    ).get();
+    for (final row in rows) {
+      final rawCorrect = row.data['first_correct_count'];
+      final rawAttempt = row.data['first_attempt_count'];
+      if (rawCorrect != null && rawAttempt != null) continue;
+      final legacyCorrect = _storedInt(row.data['correct_count']);
+      final legacyWrong = _storedInt(row.data['wrong_count']);
+      await customStatement(
+        'UPDATE daily_statistics SET first_correct_count = ?, '
+        'first_attempt_count = ? WHERE date IS ? AND language IS ?',
+        [
+          _storedInt(rawCorrect, legacyCorrect),
+          _storedInt(rawAttempt, legacyCorrect + legacyWrong),
+          row.data['date'],
+          row.data['language'],
+        ],
+      );
     }
   }
 
@@ -615,6 +653,16 @@ class AppDatabase extends _$AppDatabase {
       return;
     }
     final languageExpr = names.contains('language') ? 'language' : "'ko'";
+    final hasCorrect = names.contains('first_correct_count');
+    final hasAttempt = names.contains('first_attempt_count');
+    // Copy counters that already exist. A missing counter is derived from the
+    // legacy correct/wrong totals so the rebuilt rows are never null.
+    final correctSelect = hasCorrect
+        ? 'COALESCE(first_correct_count, correct_count, 0)'
+        : 'COALESCE(correct_count, 0)';
+    final attemptSelect = hasAttempt
+        ? 'COALESCE(first_attempt_count, correct_count + wrong_count, 0)'
+        : 'COALESCE(correct_count, 0) + COALESCE(wrong_count, 0)';
     await customStatement('''
       CREATE TABLE daily_statistics__repair (
         date INTEGER NOT NULL,
@@ -624,17 +672,19 @@ class AppDatabase extends _$AppDatabase {
         wrong_count INTEGER NOT NULL DEFAULT 0,
         study_duration_ms INTEGER NOT NULL DEFAULT 0,
         language TEXT NOT NULL DEFAULT 'ko',
+        first_correct_count INTEGER NOT NULL DEFAULT 0,
+        first_attempt_count INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY (date, language)
       )
     ''');
     await customStatement('''
       INSERT INTO daily_statistics__repair (
         date, new_words, review_words, correct_count, wrong_count,
-        study_duration_ms, language
+        study_duration_ms, language, first_correct_count, first_attempt_count
       )
       SELECT
         date, new_words, review_words, correct_count, wrong_count,
-        study_duration_ms, $languageExpr
+        study_duration_ms, $languageExpr, $correctSelect, $attemptSelect
       FROM daily_statistics
     ''');
     await customStatement('DROP TABLE daily_statistics');
@@ -1871,6 +1921,11 @@ int _integer(Object? value) {
   if (value is int) return value;
   if (value is num) return value.toInt();
   return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+int _storedInt(Object? value, [int fallback = 0]) {
+  if (value == null) return fallback;
+  return _integer(value);
 }
 
 double _double(Object? value) {
