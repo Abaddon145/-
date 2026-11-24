@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
@@ -9,10 +10,12 @@ import 'backup_limits.dart';
 import '../../services/fsrs_service.dart';
 import 'missing_meaning.dart';
 import 'ai_backup_validation.dart';
+import '../../features/atlas/domain/atlas_models.dart';
 
 part 'app_database.g.dart';
 part 'learning_extensions.dart';
 part 'backup_snapshot.dart';
+part 'atlas_extensions.dart';
 
 class Words extends Table {
   IntColumn get id => integer().autoIncrement()();
@@ -49,8 +52,31 @@ class WordBooks extends Table {
   TextColumn get description => text().nullable()();
   TextColumn get sourceFileName => text().nullable()();
   TextColumn get language => text().withDefault(const Constant('ko'))();
+  TextColumn get stableId => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+}
+
+/// Optional illustrated-entry fields. Korean rows never need a row here.
+class AtlasEntries extends Table {
+  IntColumn get wordId => integer().references(Words, #id)();
+  TextColumn get atlasId => text()();
+  TextColumn get ipaUk => text().nullable()();
+  TextColumn get ipaUs => text().nullable()();
+  TextColumn get sensesJson => text().withDefault(const Constant('[]'))();
+  TextColumn get examplesJson => text().withDefault(const Constant('[]'))();
+  TextColumn get collocationsJson => text().withDefault(const Constant('[]'))();
+  TextColumn get familyJson => text().withDefault(const Constant('[]'))();
+  TextColumn get synonymsJson => text().withDefault(const Constant('[]'))();
+  TextColumn get antonymsJson => text().withDefault(const Constant('[]'))();
+  TextColumn get tip => text().nullable()();
+  TextColumn get cefr => text().nullable()();
+  TextColumn get topic => text().nullable()();
+  IntColumn get mediaFlags => integer().withDefault(const Constant(0))();
+  TextColumn get usageNote => text().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {wordId};
 }
 
 class WordBookWords extends Table {
@@ -116,6 +142,8 @@ class DailyStatistics extends Table {
   IntColumn get wrongCount => integer().withDefault(const Constant(0))();
   IntColumn get studyDurationMs => integer().withDefault(const Constant(0))();
   TextColumn get language => text().withDefault(const Constant('ko'))();
+  IntColumn get firstCorrectCount => integer().withDefault(const Constant(0))();
+  IntColumn get firstAttemptCount => integer().withDefault(const Constant(0))();
 
   @override
   Set<Column<Object>> get primaryKey => {date, language};
@@ -201,6 +229,7 @@ class AiWordContents extends Table {
     Words,
     WordBooks,
     WordBookWords,
+    AtlasEntries,
     StudyCards,
     ReviewLogs,
     UserWords,
@@ -230,13 +259,14 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
       await _ensureStudyCardsDueIndex();
+      await _ensureAtlasSchema();
       await saveSetting(activeLanguageSettingKey, 'ko');
     },
     // Retire only obsolete cloud markers; keep every local learning table.
@@ -246,6 +276,7 @@ class AppDatabase extends _$AppDatabase {
       // database can already be at version 6 while daily_statistics is still
       // the old table. Repair from the live columns, not from user_version.
       await _repairLanguageColumns();
+      await _ensureAtlasSchema();
       await customStatement(
         "DELETE FROM app_settings WHERE substr(key,1,6) = 'cloud_'",
       );
@@ -276,8 +307,78 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('PRAGMA foreign_keys = ON');
         }
       }
+      if (from < 9) await _ensureAtlasSchema();
     },
   );
+
+  /// Nullable book id, atlas text table, and first-attempt counters.
+  /// Safe to run on every open. Does not rewrite Korean rows.
+  Future<void> _ensureAtlasSchema() async {
+    if (await _tableExists('word_books') &&
+        !await _hasColumn('word_books', 'stable_id')) {
+      await customStatement(
+        'ALTER TABLE word_books ADD COLUMN stable_id TEXT NULL',
+      );
+    }
+    if (await _tableExists('word_books')) {
+      await customStatement(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_word_books_stable_id ON word_books (stable_id)',
+      );
+    }
+    if (!await _tableExists('atlas_entries')) {
+      await customStatement('''
+        CREATE TABLE IF NOT EXISTS atlas_entries (
+          word_id INTEGER NOT NULL PRIMARY KEY REFERENCES words (id),
+          atlas_id TEXT NOT NULL,
+          ipa_uk TEXT NULL,
+          ipa_us TEXT NULL,
+          senses_json TEXT NOT NULL DEFAULT '[]',
+          examples_json TEXT NOT NULL DEFAULT '[]',
+          collocations_json TEXT NOT NULL DEFAULT '[]',
+          family_json TEXT NOT NULL DEFAULT '[]',
+          synonyms_json TEXT NOT NULL DEFAULT '[]',
+          antonyms_json TEXT NOT NULL DEFAULT '[]',
+          tip TEXT NULL,
+          cefr TEXT NULL,
+          topic TEXT NULL,
+          media_flags INTEGER NOT NULL DEFAULT 0,
+          usage_note TEXT NULL
+        )
+      ''');
+    }
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_atlas_entries_topic ON atlas_entries (topic, cefr)',
+    );
+    if (await _tableExists('daily_statistics')) {
+      final addedCorrect = !await _hasColumn(
+        'daily_statistics',
+        'first_correct_count',
+      );
+      if (addedCorrect) {
+        await customStatement(
+          'ALTER TABLE daily_statistics ADD COLUMN first_correct_count INTEGER NOT NULL DEFAULT 0',
+        );
+      }
+      final addedAttempt = !await _hasColumn(
+        'daily_statistics',
+        'first_attempt_count',
+      );
+      if (addedAttempt) {
+        await customStatement(
+          'ALTER TABLE daily_statistics ADD COLUMN first_attempt_count INTEGER NOT NULL DEFAULT 0',
+        );
+      }
+      if (addedCorrect || addedAttempt) {
+        await customStatement('''
+          UPDATE daily_statistics
+          SET first_correct_count = correct_count,
+              first_attempt_count = correct_count + wrong_count
+          WHERE first_attempt_count = 0
+            AND correct_count + wrong_count > 0
+        ''');
+      }
+    }
+  }
 
   Future<void> _ensureStudyCardsDueIndex() => customStatement(
     'CREATE INDEX IF NOT EXISTS idx_study_cards_language_due ON study_cards (language, due)',
@@ -1251,6 +1352,8 @@ class AppDatabase extends _$AppDatabase {
             correctCount: Value(isWrong ? 0 : 1),
             wrongCount: Value(isWrong ? 1 : 0),
             studyDurationMs: Value(durationMs),
+            firstCorrectCount: Value(isWrong ? 0 : 1),
+            firstAttemptCount: const Value(1),
           ),
         );
       } else {
@@ -1268,6 +1371,10 @@ class AppDatabase extends _$AppDatabase {
                 ),
                 wrongCount: Value(statistics.wrongCount + (isWrong ? 1 : 0)),
                 studyDurationMs: Value(statistics.studyDurationMs + durationMs),
+                firstCorrectCount: Value(
+                  statistics.firstCorrectCount + (isWrong ? 0 : 1),
+                ),
+                firstAttemptCount: Value(statistics.firstAttemptCount + 1),
               ),
             );
       }
@@ -1302,6 +1409,9 @@ class AppDatabase extends _$AppDatabase {
     required LibraryFilter filter,
     int? bookId,
     String language = 'ko',
+    String? cefr,
+    String? topic,
+    String status = 'any',
   }) {
     final normalized = normalizeLookup(query);
     final where = <String>['w.language = ?'];
@@ -1336,6 +1446,44 @@ class AppDatabase extends _$AppDatabase {
       );
       variables.add(Variable<int>(bookId));
     }
+    if (cefr != null && cefr.isNotEmpty) {
+      where.add(
+        'EXISTS (SELECT 1 FROM atlas_entries e WHERE e.word_id = w.id AND e.cefr = ?)',
+      );
+      variables.add(Variable<String>(cefr));
+    }
+    if (topic != null && topic.isNotEmpty) {
+      where.add(
+        'EXISTS (SELECT 1 FROM atlas_entries e WHERE e.word_id = w.id AND e.topic = ?)',
+      );
+      variables.add(Variable<String>(topic));
+    }
+    switch (status) {
+      case 'new':
+        where.add(
+          'NOT EXISTS (SELECT 1 FROM study_cards s WHERE s.word_id = w.id)',
+        );
+      case 'learning':
+        where.add(
+          'EXISTS (SELECT 1 FROM study_cards s WHERE s.word_id = w.id AND s.state IN (1, 3))',
+        );
+      case 'review':
+        where.add(
+          'EXISTS (SELECT 1 FROM study_cards s WHERE s.word_id = w.id AND s.state = 2 AND s.stability < ?)',
+        );
+        variables.add(Variable<double>(masteredStabilityDays.toDouble()));
+      case 'mastered':
+        where.add(
+          'EXISTS (SELECT 1 FROM study_cards s WHERE s.word_id = w.id AND s.state = 2 AND s.stability >= ?)',
+        );
+        variables.add(Variable<double>(masteredStabilityDays.toDouble()));
+      case 'suspended':
+        where.add(
+          "EXISTS (SELECT 1 FROM app_settings a WHERE a.key = 'word_status:' || w.id AND a.value = 'suspended')",
+        );
+      default:
+        break;
+    }
     return (where: where.join(' AND '), variables: variables);
   }
 
@@ -1347,17 +1495,23 @@ class AppDatabase extends _$AppDatabase {
     required LibraryFilter filter,
     int? bookId,
     String language = 'ko',
+    String? cefr,
+    String? topic,
+    String status = 'any',
   }) async {
     final clause = _libraryClause(
       query: query,
       filter: filter,
       bookId: bookId,
       language: language,
+      cefr: cefr,
+      topic: topic,
+      status: status,
     );
     final row = await customSelect(
       'SELECT COUNT(*) AS amount $_libraryFrom WHERE ${clause.where}',
       variables: clause.variables,
-      readsFrom: {words, userWords, wordBookWords},
+      readsFrom: {words, userWords, wordBookWords, atlasEntries, studyCards},
     ).getSingle();
     return row.read<int>('amount');
   }
@@ -1369,12 +1523,18 @@ class AppDatabase extends _$AppDatabase {
     int? limit,
     int offset = 0,
     String language = 'ko',
+    String? cefr,
+    String? topic,
+    String status = 'any',
   }) async {
     final clause = _libraryClause(
       query: query,
       filter: filter,
       bookId: bookId,
       language: language,
+      cefr: cefr,
+      topic: topic,
+      status: status,
     );
     final variables = [...clause.variables];
     var sql =
@@ -1386,7 +1546,7 @@ class AppDatabase extends _$AppDatabase {
     final idRows = await customSelect(
       sql,
       variables: variables,
-      readsFrom: {words, userWords, wordBookWords},
+      readsFrom: {words, userWords, wordBookWords, atlasEntries, studyCards},
     ).get();
     final ids = [for (final row in idRows) row.read<int>('id')];
     if (ids.isEmpty) return const [];
@@ -1398,6 +1558,14 @@ class AppDatabase extends _$AppDatabase {
     )..where((row) => row.wordId.isIn(ids))).get();
     final byId = {for (final word in loaded) word.id: word};
     final userById = {for (final row in users) row.wordId: row};
+    final atlasRows = await customSelect(
+      'SELECT word_id, atlas_id, media_flags, cefr, topic FROM atlas_entries WHERE word_id IN (${List.filled(ids.length, '?').join(',')})',
+      variables: [for (final id in ids) Variable<int>(id)],
+      readsFrom: {atlasEntries},
+    ).get();
+    final atlasById = {
+      for (final row in atlasRows) row.read<int>('word_id'): row,
+    };
     return [
       for (final id in ids)
         if (byId[id] != null)
@@ -1405,6 +1573,10 @@ class AppDatabase extends _$AppDatabase {
             word: byId[id]!,
             isFavorite: userById[id]?.isFavorite ?? false,
             wrongCount: userById[id]?.wrongCount ?? 0,
+            atlasId: '${atlasById[id]?.data['atlas_id'] ?? ''}',
+            mediaFlags: atlasById[id]?.data['media_flags'] as int? ?? 0,
+            cefr: '${atlasById[id]?.data['cefr'] ?? ''}',
+            topic: '${atlasById[id]?.data['topic'] ?? ''}',
           ),
     ];
   }
@@ -1721,10 +1893,20 @@ class LibraryWordEntry {
     required this.word,
     required this.isFavorite,
     required this.wrongCount,
+    this.atlasId = '',
+    this.mediaFlags = 0,
+    this.cefr = '',
+    this.topic = '',
   });
   final Word word;
   final bool isFavorite;
   final int wrongCount;
+  final String atlasId;
+  final int mediaFlags;
+  final String cefr;
+  final String topic;
+  bool get hasThumb =>
+      atlasId.isNotEmpty && (mediaFlags & atlasMediaImage) != 0;
 }
 
 class DailyStatisticsSummary {

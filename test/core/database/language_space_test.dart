@@ -195,7 +195,7 @@ void main() {
       const WordDraft(korean: '바다', meaningZh: '海', partOfSpeech: '名词'),
     );
     final snapshot = await database.createBackupSnapshot();
-    expect(snapshot['version'], 2);
+    expect(snapshot['version'], 3);
     final words = (snapshot['tables'] as Map)['words'] as List;
     expect(words, hasLength(2));
     expect(words.any((row) => row['language'] == 'en'), isTrue);

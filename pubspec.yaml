@@ -1,7 +1,7 @@
 name: korean_memo
 description: A local-first Korean vocabulary learning app with Excel import and FSRS.
 publish_to: none
-version: 0.17.0+26
+version: 0.18.0+27
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -28,6 +28,8 @@ dependencies:
   http: 1.6.0
   flutter_secure_storage: 11.2.0
   web: 1.1.1
+  path_provider: ^2.1.5
+  audioplayers: ^6.5.0
 
 dev_dependencies:
   flutter_test:

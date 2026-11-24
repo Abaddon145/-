@@ -7,9 +7,13 @@ final hangulPattern = RegExp(r'[가-힣ㄱ-ㅎㅏ-ㅣ]');
 ({String language, String spoken}) speechRequest(
   String text, {
   String learningLanguage = 'ko',
+  String englishAccent = 'en-US',
 }) {
   if (normalizeLearningLanguage(learningLanguage) == 'en') {
-    return (language: 'en-US', spoken: text.trim());
+    return (
+      language: englishAccent == 'en-GB' ? 'en-GB' : 'en-US',
+      spoken: text.trim(),
+    );
   }
   final hasKorean = hangulPattern.hasMatch(text);
   final spoken = hasKorean
@@ -27,36 +31,44 @@ class TtsService {
     String text, {
     double rate = .45,
     String learningLanguage = 'ko',
+    String englishAccent = 'en-US',
   }) async {
     await _tts.stop();
-    final request = speechRequest(text, learningLanguage: learningLanguage);
+    final request = speechRequest(
+      text,
+      learningLanguage: learningLanguage,
+      englishAccent: englishAccent,
+    );
     await _tts.setLanguage(request.language);
-    if (request.language == 'en-US') await _useEnglishVoice();
+    if (request.language.startsWith('en')) {
+      await _useEnglishVoice(request.language);
+    }
     await _tts.setSpeechRate(rate.clamp(.2, .8));
     await _tts.awaitSpeakCompletion(true);
     await _tts.speak(request.spoken);
   }
 
-  Future<void> _useEnglishVoice() async {
+  Future<void> _useEnglishVoice(String locale) async {
     try {
       final voices = await _tts.getVoices;
       if (voices is! List) return;
       Map? chosen;
+      final wanted = locale.toLowerCase();
       for (final voice in voices) {
         if (voice is! Map) continue;
-        final locale = '${voice['locale'] ?? voice['lang'] ?? ''}'
+        final voiceLocale = '${voice['locale'] ?? voice['lang'] ?? ''}'
             .toLowerCase()
             .replaceAll('_', '-');
-        if (locale.startsWith('en-us')) {
+        if (voiceLocale.startsWith(wanted)) {
           chosen = voice;
           break;
         }
-        if (chosen == null && locale.startsWith('en')) chosen = voice;
+        if (chosen == null && voiceLocale.startsWith('en')) chosen = voice;
       }
       if (chosen == null) return;
       await _tts.setVoice({
         'name': '${chosen['name'] ?? ''}',
-        'locale': '${chosen['locale'] ?? chosen['lang'] ?? 'en-US'}',
+        'locale': '${chosen['locale'] ?? chosen['lang'] ?? locale}',
       });
     } catch (_) {
       // The language is already en-US. A missing voice list should not block speech.

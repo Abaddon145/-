@@ -4,7 +4,7 @@ part of 'app_database.dart';
 
 enum QueueKind { mixed, newWords, reviews }
 
-enum PracticeMode { cards, spelling, listening, cloze, forms }
+enum PracticeMode { cards, spelling, listening, cloze, forms, atlas }
 
 enum StudyDirection { forward, reverse }
 

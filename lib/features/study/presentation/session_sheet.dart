@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../domain/providers.dart';
+import '../../atlas/domain/atlas_models.dart';
 
 Future<void> showSessionSheet(
   BuildContext context, {
@@ -129,7 +130,21 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                           child: Text(book.name),
                         ),
                     ],
-                    onChanged: (value) => setState(() => _bookId = value),
+                    onChanged: (value) {
+                      setState(() {
+                        _bookId = value;
+                        final books =
+                            ref.read(wordBooksProvider).valueOrNull ??
+                            const <WordBook>[];
+                        final selected = books.where(
+                          (book) => book.id == value,
+                        );
+                        if (selected.isNotEmpty &&
+                            selected.first.stableId == atlasBookStableId) {
+                          _mode = PracticeMode.atlas;
+                        }
+                      });
+                    },
                   ),
                   const SizedBox(height: 16),
                   Text('学习内容', style: Theme.of(context).textTheme.labelLarge),
@@ -183,6 +198,7 @@ class _SessionSheetState extends ConsumerState<SessionSheet> {
                           (PracticeMode.listening, '听写'),
                           (PracticeMode.cloze, '填空'),
                           (PracticeMode.forms, '词形'),
+                          (PracticeMode.atlas, '图鉴测验'),
                         ])
                           Padding(
                             padding: const EdgeInsets.only(right: 8),

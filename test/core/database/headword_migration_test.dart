@@ -64,7 +64,7 @@ void main() {
     final version = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(version.read<int>('user_version'), 8);
+    expect(version.read<int>('user_version'), 9);
   }
 
   test('a fresh database stores the headword column', () async {
