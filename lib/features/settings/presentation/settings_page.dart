@@ -22,6 +22,8 @@ import '../../study/presentation/study_controller.dart';
 import '../../../core/app_version.dart';
 import '../../ai/domain/ai_providers.dart';
 import 'reminder_tile.dart';
+import '../../atlas/domain/atlas_models.dart';
+import '../../atlas/domain/atlas_providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key, this.focusBackup = false});
@@ -215,7 +217,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (!mounted) return;
       final tables = decoded['tables'];
       if (decoded['format'] != 'korean-memo-backup' ||
-          (decoded['version'] != 1 && decoded['version'] != 2) ||
+          (decoded['version'] != 1 &&
+              decoded['version'] != 2 &&
+              decoded['version'] != 3) ||
           tables is! Map ||
           tables['words'] is! List ||
           tables['review_logs'] is! List) {
@@ -388,7 +392,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 tile(
                   Icons.palette_outlined,
                   '外观风格',
-                  '${style.name} · 六套主题与自定义背景',
+                  '${style.name} · 七套主题与自定义背景',
                   () => context.push('/settings/appearance'),
                 ),
                 tile(
@@ -397,6 +401,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   '字体、语速与专注模式',
                   () => context.push('/settings/reading'),
                 ),
+                tile(
+                  Icons.keyboard_alt_outlined,
+                  '打字工作室',
+                  '看义、抄写和听写，不改变熟悉程度',
+                  () => context.push('/typing'),
+                ),
+                tile(
+                  Icons.bubble_chart_outlined,
+                  '话题进度',
+                  '按 19 个话题查看掌握度',
+                  () => context.push('/topics'),
+                ),
+                const _AtlasPreferenceTiles(),
                 tile(
                   Icons.calendar_month_outlined,
                   '学习打卡与日历',
@@ -502,6 +519,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 icon: const Icon(Icons.open_in_new),
                 label: const Text('查看更新记录'),
               ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(8, 8, 8, 4),
+                child: Text('词光图鉴词库、插画与录音：$atlasAttribution。$atlasDisclaimer'),
+              ),
               const Center(child: Text('词忆 · v$appVersion')),
               if (_busy)
                 const Padding(
@@ -512,6 +533,75 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AtlasPreferenceTiles extends ConsumerWidget {
+  const _AtlasPreferenceTiles();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(englishAccentProvider).valueOrNull ?? 'en-US';
+    final sounds = ref.watch(uiSoundsProvider).valueOrNull ?? true;
+    final bytes = ref.watch(atlasCacheBytesProvider).valueOrNull ?? 0;
+    final megabytes = (bytes / (1024 * 1024)).toStringAsFixed(1);
+    return Column(
+      children: [
+        const Divider(height: 1),
+        ListTile(
+          leading: Icon(
+            Icons.record_voice_over_outlined,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          title: const Text('英语口音'),
+          subtitle: Text(accent == 'en-GB' ? '英音 en-GB' : '美音 en-US'),
+          trailing: SegmentedButton<String>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: 'en-US', label: Text('美')),
+              ButtonSegment(value: 'en-GB', label: Text('英')),
+            ],
+            selected: {accent},
+            onSelectionChanged: (value) async {
+              await ref
+                  .read(databaseProvider)
+                  .saveSetting(englishAccentKey, value.first);
+              ref.invalidate(englishAccentProvider);
+            },
+          ),
+        ),
+        SwitchListTile(
+          secondary: Icon(
+            Icons.volume_up_outlined,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          title: const Text('界面音效'),
+          subtitle: const Text('答对、答错和翻卡。减少动态效果时不播放。'),
+          value: sounds,
+          onChanged: (value) async {
+            await ref
+                .read(databaseProvider)
+                .saveSetting(uiSoundsKey, value ? 'true' : 'false');
+            ref.invalidate(uiSoundsProvider);
+          },
+        ),
+        ListTile(
+          leading: Icon(
+            Icons.sd_storage_outlined,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          title: const Text('图鉴缓存'),
+          subtitle: Text('插画和录音 $megabytes MB，上限 80 MB。不会进入备份。'),
+          trailing: TextButton(
+            onPressed: () async {
+              await ref.read(atlasMediaCacheProvider).clear();
+              ref.invalidate(atlasCacheBytesProvider);
+            },
+            child: const Text('清理'),
+          ),
+        ),
+      ],
     );
   }
 }

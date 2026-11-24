@@ -15,6 +15,8 @@ import '../../features/statistics/presentation/checkin_page.dart';
 import '../../features/settings/presentation/reading_page.dart';
 import '../../features/ai/presentation/ai_settings_page.dart';
 import '../../features/ai/presentation/ai_tasks_page.dart';
+import '../../features/atlas/presentation/topic_map_page.dart';
+import '../../features/typing/presentation/typing_studio_page.dart';
 
 Page<void> appPage(
   GoRouterState state,
@@ -137,6 +139,16 @@ final appRouter = GoRouter(
       path: '/import',
       pageBuilder: (context, state) =>
           appPage(state, const ImportPage(), backdrop: true),
+    ),
+    GoRoute(
+      path: '/typing',
+      pageBuilder: (context, state) =>
+          appPage(state, const TypingStudioPage(), backdrop: true),
+    ),
+    GoRoute(
+      path: '/topics',
+      pageBuilder: (context, state) =>
+          appPage(state, const TopicMapPage(), backdrop: true),
     ),
   ],
 );
