@@ -15,6 +15,8 @@ import '../../ai/presentation/ai_context_picker.dart';
 import '../domain/providers.dart';
 import 'word_editor_sheet.dart';
 import 'word_detail_sheet.dart';
+import '../../atlas/domain/atlas_models.dart';
+import '../../atlas/presentation/atlas_thumb.dart';
 
 class LibraryPage extends ConsumerStatefulWidget {
   const LibraryPage({super.key});
@@ -261,8 +263,12 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
     final books =
         ref.watch(wordBooksProvider).valueOrNull ?? const <WordBook>[];
     String? bookName;
+    var atlasBook = false;
     for (final book in books) {
-      if (book.id == bookId) bookName = book.name;
+      if (book.id == bookId) {
+        bookName = book.name;
+        atlasBook = book.stableId == atlasBookStableId;
+      }
     }
     final items = words.valueOrNull ?? [],
         selectable = items
@@ -450,6 +456,103 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                           ],
                         ),
                       ),
+                      if (atlasBook) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Text('词光图鉴'),
+                            const Spacer(),
+                            IconButton(
+                              tooltip: '列表',
+                              onPressed: () =>
+                                  ref
+                                          .read(
+                                            libraryAtlasLayoutProvider.notifier,
+                                          )
+                                          .state =
+                                      'list',
+                              icon: const Icon(Icons.view_list),
+                            ),
+                            IconButton(
+                              tooltip: '缩略图',
+                              onPressed: () =>
+                                  ref
+                                          .read(
+                                            libraryAtlasLayoutProvider.notifier,
+                                          )
+                                          .state =
+                                      'grid',
+                              icon: const Icon(Icons.grid_view),
+                            ),
+                          ],
+                        ),
+                        DropdownButton<String?>(
+                          value: ref.watch(libraryCefrProvider),
+                          hint: const Text('CEFR'),
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('全部级别'),
+                            ),
+                            for (final level in atlasCefrLevels)
+                              DropdownMenuItem(
+                                value: level,
+                                child: Text(level),
+                              ),
+                          ],
+                          onChanged: (value) =>
+                              ref.read(libraryCefrProvider.notifier).state =
+                                  value,
+                        ),
+                        DropdownButton<String?>(
+                          value: ref.watch(libraryTopicProvider),
+                          hint: const Text('话题'),
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('全部话题'),
+                            ),
+                            for (final topic in atlasTopics)
+                              DropdownMenuItem(
+                                value: topic.$1,
+                                child: Text(topic.$2),
+                              ),
+                          ],
+                          onChanged: (value) =>
+                              ref.read(libraryTopicProvider.notifier).state =
+                                  value,
+                        ),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              for (final entry in const [
+                                ('any', '全部状态'),
+                                ('new', '未学'),
+                                ('learning', '学习中'),
+                                ('review', '复习中'),
+                                ('mastered', '已掌握'),
+                              ])
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: ChoiceChip(
+                                    label: Text(entry.$2),
+                                    selected:
+                                        ref.watch(libraryStatusProvider) ==
+                                        entry.$1,
+                                    onSelected: (_) =>
+                                        ref
+                                            .read(
+                                              libraryStatusProvider.notifier,
+                                            )
+                                            .state = entry
+                                            .$1,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Row(
                         children: [
@@ -542,162 +645,220 @@ class _LibraryPageState extends ConsumerState<LibraryPage> {
                     : [
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(14, 6, 14, 96),
-                          sliver: SliverList.builder(
-                            itemCount: items.length,
-                            itemBuilder: (context, index) {
-                              final item = items[index],
-                                  missing = isMissingMeaning(
-                                    item.word.meaningZh,
-                                  );
-                              return Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ListTile(
-                                    onTap: () =>
-                                        showWordDetail(context, item.word),
-                                    leading: missing
-                                        ? Checkbox(
-                                            value: _selected.contains(
-                                              item.word.id,
-                                            ),
-                                            onChanged: (v) => setState(() {
-                                              if (v == true) {
-                                                _selected.add(item.word.id);
-                                              } else {
-                                                _selected.remove(item.word.id);
-                                              }
-                                            }),
-                                          )
-                                        : null,
-                                    title: Text(
-                                      item.word.headword,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                    visualDensity: const VisualDensity(
-                                      vertical: -1,
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          missing
-                                              ? '待补中文 · 可用 AI 生成建议'
-                                              : item.word.meaningZh,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme.onSurfaceVariant,
+                          sliver:
+                              ref.watch(libraryAtlasLayoutProvider) == 'grid' &&
+                                  atlasBook
+                              ? SliverGrid.builder(
+                                  gridDelegate:
+                                      const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 2,
+                                        mainAxisSpacing: 8,
+                                        crossAxisSpacing: 8,
+                                        childAspectRatio: .78,
+                                      ),
+                                  itemCount: items.length,
+                                  itemBuilder: (context, index) {
+                                    final item = items[index];
+                                    return Card(
+                                      child: InkWell(
+                                        onTap: () =>
+                                            showWordDetail(context, item.word),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8),
+                                          child: Column(
+                                            children: [
+                                              if (item.hasThumb)
+                                                AtlasThumb(
+                                                  atlasId: item.atlasId,
+                                                  size: 88,
+                                                ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                item.word.headword,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
+                                              Text(
+                                                item.word.meaningZh,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                        if (item
-                                                .word
-                                                .partOfSpeech
-                                                ?.isNotEmpty ==
-                                            true)
-                                          Text(
-                                            item.word.partOfSpeech!,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelSmall
-                                                ?.copyWith(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                          ),
-                                        if (item.word.tags?.isNotEmpty == true)
-                                          Text(
-                                            item.word.tags!,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelSmall
-                                                ?.copyWith(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                          ),
-                                        if (item.wrongCount > 0)
-                                          Text(
-                                            '错词 ×${item.wrongCount}',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelSmall
-                                                ?.copyWith(
-                                                  color: Theme.of(
-                                                    context,
-                                                  ).colorScheme.error,
-                                                ),
-                                          ),
-                                      ],
-                                    ),
-                                    trailing: Row(
+                                      ),
+                                    );
+                                  },
+                                )
+                              : SliverList.builder(
+                                  itemCount: items.length,
+                                  itemBuilder: (context, index) {
+                                    final item = items[index],
+                                        missing = isMissingMeaning(
+                                          item.word.meaningZh,
+                                        );
+                                    return Column(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        IconButton(
-                                          tooltip: item.isFavorite
-                                              ? '取消收藏'
-                                              : '收藏',
-                                          icon: Icon(
-                                            item.isFavorite
-                                                ? Icons.star
-                                                : Icons.star_border,
+                                        ListTile(
+                                          onTap: () => showWordDetail(
+                                            context,
+                                            item.word,
                                           ),
-                                          onPressed: () async {
-                                            await ref
-                                                .read(databaseProvider)
-                                                .setFavorite(
-                                                  item.word.id,
-                                                  !item.isFavorite,
-                                                );
-                                            if (mounted) {
-                                              ref.invalidate(
-                                                libraryWordsProvider,
-                                              );
-                                            }
-                                          },
+                                          leading: item.hasThumb
+                                              ? AtlasThumb(
+                                                  atlasId: item.atlasId,
+                                                  size: 48,
+                                                )
+                                              : missing
+                                              ? Checkbox(
+                                                  value: _selected.contains(
+                                                    item.word.id,
+                                                  ),
+                                                  onChanged: (v) =>
+                                                      setState(() {
+                                                        if (v == true) {
+                                                          _selected.add(
+                                                            item.word.id,
+                                                          );
+                                                        } else {
+                                                          _selected.remove(
+                                                            item.word.id,
+                                                          );
+                                                        }
+                                                      }),
+                                                )
+                                              : null,
+                                          title: Text(
+                                            item.word.headword,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          visualDensity: const VisualDensity(
+                                            vertical: -1,
+                                          ),
+                                          subtitle: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                missing
+                                                    ? '待补中文 · 可用 AI 生成建议'
+                                                    : item.word.meaningZh,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurfaceVariant,
+                                                    ),
+                                              ),
+                                              if (item
+                                                      .word
+                                                      .partOfSpeech
+                                                      ?.isNotEmpty ==
+                                                  true)
+                                                Text(
+                                                  item.word.partOfSpeech!,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .labelSmall
+                                                      ?.copyWith(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                ),
+                                              if (item.word.tags?.isNotEmpty ==
+                                                  true)
+                                                Text(
+                                                  item.word.tags!,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .labelSmall
+                                                      ?.copyWith(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurfaceVariant,
+                                                      ),
+                                                ),
+                                              if (item.wrongCount > 0)
+                                                Text(
+                                                  '错词 ×${item.wrongCount}',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .labelSmall
+                                                      ?.copyWith(
+                                                        color: Theme.of(
+                                                          context,
+                                                        ).colorScheme.error,
+                                                      ),
+                                                ),
+                                            ],
+                                          ),
+                                          trailing: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                tooltip: item.isFavorite
+                                                    ? '取消收藏'
+                                                    : '收藏',
+                                                icon: Icon(
+                                                  item.isFavorite
+                                                      ? Icons.star
+                                                      : Icons.star_border,
+                                                ),
+                                                onPressed: () async {
+                                                  await ref
+                                                      .read(databaseProvider)
+                                                      .setFavorite(
+                                                        item.word.id,
+                                                        !item.isFavorite,
+                                                      );
+                                                  if (mounted) {
+                                                    ref.invalidate(
+                                                      libraryWordsProvider,
+                                                    );
+                                                  }
+                                                },
+                                              ),
+                                              const SizedBox(width: 4),
+                                              PopupMenuButton<String>(
+                                                tooltip: '更多操作',
+                                                onSelected: (v) {
+                                                  if (v == 'edit') {
+                                                    _edit(word: item.word);
+                                                  } else {
+                                                    _delete(item);
+                                                  }
+                                                },
+                                                itemBuilder: (_) => const [
+                                                  PopupMenuItem(
+                                                    value: 'edit',
+                                                    child: Text('编辑 / 标记词性'),
+                                                  ),
+                                                  PopupMenuItem(
+                                                    value: 'delete',
+                                                    child: Text('删除'),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                        const SizedBox(width: 4),
-                                        PopupMenuButton<String>(
-                                          tooltip: '更多操作',
-                                          onSelected: (v) {
-                                            if (v == 'edit') {
-                                              _edit(word: item.word);
-                                            } else {
-                                              _delete(item);
-                                            }
-                                          },
-                                          itemBuilder: (_) => const [
-                                            PopupMenuItem(
-                                              value: 'edit',
-                                              child: Text('编辑 / 标记词性'),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'delete',
-                                              child: Text('删除'),
-                                            ),
-                                          ],
-                                        ),
+                                        if (index < items.length - 1)
+                                          const Divider(indent: 16, height: 1),
                                       ],
-                                    ),
-                                  ),
-                                  if (index < items.length - 1)
-                                    const Divider(indent: 16, height: 1),
-                                ],
-                              );
-                            },
-                          ),
+                                    );
+                                  },
+                                ),
                         ),
                       ],
               ),

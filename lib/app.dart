@@ -18,19 +18,20 @@ class KoreanMemoApp extends ConsumerWidget {
     final appearance = ref.watch(appearanceProvider).valueOrNull;
     final saved = AppTheme.preset(appearance?.styleId ?? 'porcelain');
     final follow = appearance?.followSystem ?? false;
+    final atlas = saved.id == 'paper-atlas';
     final light = saved.dark ? AppTheme.presets.first : saved;
-    final dark = AppTheme.preset('night');
+    final dark = atlas
+        ? AppTheme.forPreset(AppTheme.paperAtlasNight)
+        : AppTheme.forPreset(AppTheme.preset('night'));
     return MaterialApp.router(
       title: '词忆',
       debugShowCheckedModeBanner: false,
       locale: const Locale('zh', 'CN'),
       supportedLocales: const [Locale('zh', 'CN')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
-      theme: AppTheme.forPreset(follow ? light : saved),
-      darkTheme: AppTheme.forPreset(
-        follow ? dark : (saved.dark ? saved : dark),
-      ),
-      themeMode: follow
+      theme: AppTheme.forPreset(follow || atlas ? light : saved),
+      darkTheme: dark,
+      themeMode: follow || atlas
           ? ThemeMode.system
           : (saved.dark ? ThemeMode.dark : ThemeMode.light),
       routerConfig: appRouter,
